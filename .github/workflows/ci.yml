@@ -55,6 +55,9 @@ jobs:
         run: pnpm typecheck
       - name: Build web application
         run: pnpm --filter @predrive/web build
+      - name: Inspect Expo agent CLI commands
+        working-directory: frontend/apps/mobile
+        run: npx --yes @expo/agent-cli@latest --help
       - name: Bundle Android application
         working-directory: frontend/apps/mobile
         run: npx --yes @expo/agent-cli@latest export --platform android
