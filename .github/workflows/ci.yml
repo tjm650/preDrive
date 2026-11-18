@@ -4,6 +4,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
@@ -48,7 +49,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - name: Verify formatting
         run: pnpm format:check
       - name: Lint
