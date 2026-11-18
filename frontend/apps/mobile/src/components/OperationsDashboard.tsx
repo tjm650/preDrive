@@ -246,15 +246,15 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
 
   async function recordEvent(tripId: string, childId: string | null, type: 'boarded' | 'arrived_school' | 'dropped_home' | 'absent' | 'sos' | 'delay' | 'child_missing') {
     if (!client) return;
-    if (type === 'sos' && !connected) {
+    if ((type === 'sos' || type === 'child_missing') && !connected) {
       Alert.alert('No connection', 'The SOS alert has not been sent. Call your school emergency contact immediately, then retry when connectivity returns.');
       return;
     }
     setBusy(`${tripId}:${childId ?? 'trip'}:${type}`); setError(null);
     try {
-      if (type === 'sos') {
-        await runRpc('record_trip_event', { p_trip_id: tripId, p_child_id: childId, p_type: type, p_metadata: { source: 'mobile' }, p_idempotency_key: `sos-${Date.now()}` });
-        setNotice('SOS event sent to the school and relevant guardians.');
+      if (type === 'sos' || type === 'child_missing') {
+        await runRpc('record_trip_event', { p_trip_id: tripId, p_child_id: childId, p_type: type, p_metadata: { source: 'mobile' }, p_idempotency_key: `${type}-${Date.now()}` });
+        setNotice(type === 'sos' ? 'SOS event sent to the school and relevant guardians.' : 'Missing-child alert sent to the school and the child’s guardians.');
       } else {
         await enqueueTripEvent({ tripId, childId, type });
         const sync = connected ? await flushOfflineQueue(client) : { syncedEvents: 0, pendingEvents: await pendingEventCount() };
@@ -370,7 +370,7 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
                             <Action label="At school" onPress={() => void recordEvent(trip.id,child.id,'arrived_school')} />
                           ) : hasHandover ? (
                             <Action label="Dropped home" onPress={() => void recordEvent(trip.id,child.id,'dropped_home')} />
-                          ) : null}
+                          ) : <Action label="Missing child" onPress={() => void recordEvent(trip.id,child.id,'child_missing')} />}
                         </View>
                       ) : <Text style={styles.finalLabel}>Final status recorded</Text>}
                       {trip.routeType === 'dropoff' && hasBoarded && !hasHandover && !finalStatus ? (
