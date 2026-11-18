@@ -351,17 +351,62 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
                 {trip.children.map((child) => {
                   const events = trip.events.filter((event) => event.child_id === child.id);
                   const latest = events.slice(-1)[0];
+                  const hasBoarded = events.some((event) => event.type === 'boarded');
+                  const hasHandover = events.some((event) => event.type === 'handover_verified');
                   const finalStatus = events.some((event) => ['dropped_home','absent','arrived_school'].includes(event.type));
-                  return <View key={child.id} style={styles.manifestChild}>
-                    <View><Text style={styles.childName}>{child.first_name}</Text><Text style={styles.muted}>{latest?.type.replaceAll('_',' ') ?? 'Not yet recorded'}</Text></View>
-                    {!finalStatus ? <View style={styles.actionGrid}>
-                      <Action label="Boarded" onPress={() => void recordEvent(trip.id,child.id,'boarded')} />
-                      <Action label="Absent" onPress={() => void recordEvent(trip.id,child.id,'absent')} />
-                      <Action label="At school" onPress={() => void recordEvent(trip.id,child.id,'arrived_school')} />
-                      <Action label="Dropped home" onPress={() => void recordEvent(trip.id,child.id,'dropped_home')} />
-                    </View> : <Text style={styles.finalLabel}>Final status recorded</Text>}
-                    {trip.events.some((event) => event.type === 'boarded') && trip.routeName ? <View style={styles.handover}><TextInput value={pins[child.id] ?? ''} onChangeText={(value) => setPins((current) => ({ ...current,[child.id]:value }))} secureTextEntry keyboardType="number-pad" placeholder="Pickup PIN" style={styles.pinInput} /><Pressable onPress={() => void verifyHandover(trip.id,child.id)} style={styles.smallButton}><Text style={styles.smallButtonText}>Verify handover</Text></Pressable></View> : null}
-                  </View>;
+                  const childPickups = pickups.filter((pickup) => pickup.child_id === child.id);
+                  return (
+                    <View key={child.id} style={styles.manifestChild}>
+                      <View>
+                        <Text style={styles.childName}>{child.first_name}</Text>
+                        <Text style={styles.muted}>{latest?.type.replaceAll('_',' ') ?? 'Not yet recorded'}</Text>
+                      </View>
+                      {!finalStatus ? (
+                        <View style={styles.actionGrid}>
+                          {!hasBoarded ? <>
+                            <Action label="Boarded" onPress={() => void recordEvent(trip.id,child.id,'boarded')} />
+                            <Action label="Absent" onPress={() => void recordEvent(trip.id,child.id,'absent')} />
+                          </> : trip.routeType === 'pickup' ? (
+                            <Action label="At school" onPress={() => void recordEvent(trip.id,child.id,'arrived_school')} />
+                          ) : hasHandover ? (
+                            <Action label="Dropped home" onPress={() => void recordEvent(trip.id,child.id,'dropped_home')} />
+                          ) : null}
+                        </View>
+                      ) : <Text style={styles.finalLabel}>Final status recorded</Text>}
+                      {trip.routeType === 'dropoff' && hasBoarded && !hasHandover && !finalStatus ? (
+                        <View style={styles.handover}>
+                          {childPickups.length > 0 ? (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                              {childPickups.map((pickup) => (
+                                <Pressable
+                                  key={pickup.id}
+                                  onPress={() => setSelectedPickups((current) => ({ ...current, [child.id]: pickup.id }))}
+                                  style={[styles.pickupChoice, selectedPickups[child.id] === pickup.id && styles.pickupSelected]}
+                                >
+                                  <Text style={[styles.pickupChoiceText, selectedPickups[child.id] === pickup.id && styles.pickupSelectedText]}>{pickup.name}</Text>
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          ) : <Text style={styles.muted}>No authorised pickup person is registered. Do not release this child.</Text>}
+                          {childPickups.length > 0 ? (
+                            <View style={{ flexDirection: 'row', gap: 8 }}>
+                              <TextInput
+                                value={pins[child.id] ?? ''}
+                                onChangeText={(value) => setPins((current) => ({ ...current, [child.id]: value }))}
+                                secureTextEntry
+                                keyboardType="number-pad"
+                                placeholder="Pickup PIN"
+                                style={styles.pinInput}
+                              />
+                              <Pressable onPress={() => void verifyHandover(trip.id,child.id)} style={styles.smallButton}>
+                                <Text style={styles.smallButtonText}>Verify</Text>
+                              </Pressable>
+                            </View>
+                          ) : null}
+                        </View>
+                      ) : null}
+                    </View>
+                  );
                 })}
                 <View style={styles.tripActions}><Pressable onPress={() => void recordEvent(trip.id,null,'sos')} style={styles.sosButton}><Text style={styles.sosText}>SOS emergency</Text></Pressable><Pressable onPress={() => void completeTrip(trip.id)} style={styles.completeButton}><Text style={styles.completeText}>Complete trip</Text></Pressable></View>
               </> : null}
