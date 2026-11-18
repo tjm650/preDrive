@@ -18,6 +18,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: 'children', label: 'Children' },
   { id: 'fleet', label: 'Fleet' },
   { id: 'routes', label: 'Routes' },
+  { id: 'trips', label: 'Trips' },
   { id: 'billing', label: 'Billing' },
   { id: 'staff', label: 'Staff' },
 ];
