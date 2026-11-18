@@ -98,10 +98,10 @@ select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000003'
 select is((select count(*)::int from public.trips),1,'supervisor sees only their assigned trip');
 select is((select count(*)::int from public.route_children),2,'supervisor sees the assigned route manifest only');
 select is((select count(*)::int from public.children),2,'supervisor sees children on their assigned manifest only');
-select is((select count(*)::int from public.profiles),3,'supervisor sees self and guardians linked to assigned children only');
+select is((select count(id)::int from public.profiles),3,'supervisor sees self and guardians linked to assigned children only');
 select is((select count(*)::int from public.trip_events),2,'supervisor sees events for their assigned trip');
 select is((select count(*)::int from public.bus_live),1,'supervisor sees live location for their assigned trip');
-select is((select count(*)::int from public.authorized_pickups),1,'supervisor sees pickup authorizations only for assigned active trip children');
+select is((select count(id)::int from public.authorized_pickups),1,'supervisor sees pickup authorizations only for assigned active trip children');
 select is((select count(*)::int from public.routes),1,'supervisor sees only their assigned route');
 
 -- School admin: full read access inside their own school, never across tenants.
