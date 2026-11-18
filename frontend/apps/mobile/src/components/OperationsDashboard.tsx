@@ -27,7 +27,7 @@ type Child = { id: string; first_name: string; class_name: string | null };
 type EventRow = { trip_id: string; child_id: string | null; type: string; created_at: string };
 type Pickup = { id: string; child_id: string; name: string; relationship: string };
 type LivePoint = { trip_id: string; lat: number; lng: number; updated_at: string };
-type TripCard = Trip & { routeName: string; busName: string; children: Child[]; events: EventRow[]; location: LivePoint | null };
+type TripCard = Trip & { routeName: string; routeType: 'pickup' | 'dropoff'; busName: string; children: Child[]; events: EventRow[]; location: LivePoint | null };
 
 type RpcClient = {
   rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
@@ -118,7 +118,7 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
     const busIds = [...new Set(tripRows.map((trip) => trip.bus_id))];
     const tripIds = tripRows.map((trip) => trip.id);
     const [routeRows, busRows, relationRows, eventRows, liveRows] = await Promise.all([
-      routeIds.length ? client.from('routes').select('id,name').in('id', routeIds) : Promise.resolve({ data: [], error: null }),
+      routeIds.length ? client.from('routes').select('id,name,type').in('id', routeIds) : Promise.resolve({ data: [], error: null }),
       busIds.length ? client.from('buses').select('id,registration').in('id', busIds) : Promise.resolve({ data: [], error: null }),
       routeIds.length ? client.from('route_children').select('route_id,child_id').in('route_id', routeIds) : Promise.resolve({ data: [], error: null }),
       tripIds.length ? client.from('trip_events').select('trip_id,child_id,type,created_at').in('trip_id', tripIds).order('created_at') : Promise.resolve({ data: [], error: null }),
@@ -134,7 +134,7 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
     setPickups((pickupRows.data ?? []) as Pickup[]);
     setCards(tripRows.map((trip) => ({
       ...trip,
-      routeName: routeRows.data?.find((row) => row.id === trip.route_id)?.name ?? 'School route',
+      routeName: routeRows.data?.find((row) => row.id === trip.route_id)?.name ?? 'School route',\n      routeType: (routeRows.data?.find((row) => row.id === trip.route_id)?.type ?? 'pickup') as 'pickup' | 'dropoff',
       busName: busRows.data?.find((row) => row.id === trip.bus_id)?.registration ?? 'Assigned vehicle',
       children: childList.filter((child) => (relationRows.data ?? []).some((relation) => relation.route_id === trip.route_id && relation.child_id === child.id) && (profile.role !== 'parent' || childIds.includes(child.id))),
       events: eventList.filter((event) => event.trip_id === trip.id && (profile.role !== 'parent' || childIds.includes(event.child_id ?? ''))),
