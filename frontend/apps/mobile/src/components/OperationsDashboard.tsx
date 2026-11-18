@@ -41,8 +41,10 @@ if (!TaskManager.isTaskDefined(LOCATION_TASK)) {
     const locations = (data as { locations?: Location.LocationObject[] } | undefined)?.locations ?? [];
     const latest = locations[locations.length - 1];
     if (!latest) return;
+    const tripId = await getActiveTripId();
+    if (!tripId) return;
     await enqueueLocation({
-      trip_id: (await getActiveTripId()) ?? '',
+      trip_id: tripId,
       lat: latest.coords.latitude,
       lng: latest.coords.longitude,
       heading: latest.coords.heading,
@@ -59,12 +61,13 @@ async function getActiveTripId() {
 }
 
 async function registerPushToken(client: SupabaseClient) {
-  if (!client || !process.env.EXPO_PUBLIC_EAS_PROJECT_ID) return;
+  const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? Constants.expoConfig?.extra?.eas?.projectId;
+  if (!client || !projectId) return;
   const permissions = await Notifications.getPermissionsAsync();
   const granted = permissions.granted || (await Notifications.requestPermissionsAsync()).granted;
   if (!granted) return;
   const token = await Notifications.getExpoPushTokenAsync({
-    projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? Constants.expoConfig?.extra?.eas?.projectId,
+    projectId,
   });
   await asRpc(client).rpc('register_push_token', { p_token: token.data });
 }
