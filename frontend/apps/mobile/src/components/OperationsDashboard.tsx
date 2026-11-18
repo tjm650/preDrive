@@ -17,7 +17,7 @@ import * as TaskManager from 'expo-task-manager';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { UserRole } from '@predrive/shared';
 import { supabase } from '../lib/supabase';
-import { enqueueLocation, enqueueTripEvent, flushOfflineQueue, pendingEventCount } from '../lib/offline';
+import { enqueueLocation, enqueueTripEvent, flushOfflineQueue, getActiveTripId, pendingEventCount, setActiveTripId } from '../lib/offline';
 
 const LOCATION_TASK = 'PREDRIVE_BACKGROUND_TRIP_LOCATION';
 
@@ -42,7 +42,7 @@ if (!TaskManager.isTaskDefined(LOCATION_TASK)) {
     const latest = locations[locations.length - 1];
     if (!latest) return;
     await enqueueLocation({
-      trip_id: latest.coords ? (await getActiveTripId()) ?? '' : '',
+      trip_id: (await getActiveTripId()) ?? '',
       lat: latest.coords.latitude,
       lng: latest.coords.longitude,
       heading: latest.coords.heading,
@@ -78,7 +78,7 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
   const [notice, setNotice] = useState<string | null>(null);
   const [connected, setConnected] = useState(true);
   const [queued, setQueued] = useState(0);
-  const [pins, setPins] = useState<Record<string, string>>({});
+  const [pins, setPins] = useState<Record<string, string>>({});\n  const [selectedPickups, setSelectedPickups] = useState<Record<string, string>>({});
   const [absenceChild, setAbsenceChild] = useState<string | null>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
   const client = supabase;
@@ -173,11 +173,11 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
 
   useEffect(() => {
     if (profile.role !== 'supervisor' || !activeTrip || !client) {
-      activeTripForLocation = null;
+      void setActiveTripId(null);
       if (locationSubscription.current) { locationSubscription.current.remove(); locationSubscription.current = null; }
       return;
     }
-    activeTripForLocation = activeTrip.id;
+    void setActiveTripId(activeTrip.id);
     let cancelled = false;
     const start = async () => {
       const foreground = await Location.requestForegroundPermissionsAsync();
@@ -254,9 +254,9 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
   }
 
   async function verifyHandover(tripId: string, childId: string) {
-    const pickup = pickups.find((item) => item.child_id === childId);
+    const pickup = pickups.find((item) => item.id === selectedPickups[childId] && item.child_id === childId);
     const pin = pins[childId] ?? '';
-    if (!pickup || pin.length < 4) { setError('Choose a child with an authorised pickup and enter the PIN.'); return; }
+    if (!pickup || pin.length < 4) { setError('Select the exact authorised pickup person and enter the PIN.'); return; }
     if (!connected) { setError('Pickup PIN verification requires a live connection. Do not release the child while verification is unavailable.'); return; }
     setBusy(`handover-${childId}`); setError(null);
     try {
@@ -285,7 +285,7 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
     if (!client) return;
     setBusy(childId); setError(null);
     const { error: insertError } = await client.from('absences').insert({
-      child_id: childId, date: new Date().toISOString().slice(0, 10), reported_by: profile.id,
+      child_id: childId, date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Harare' }).format(new Date()), reported_by: profile.id,
     });
     if (insertError) setError(insertError.code === '23505' ? 'An absence is already recorded for today.' : insertError.message);
     else setNotice('Absence reported to the school.');
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   actionButton: { backgroundColor: '#EDF5F1', borderRadius: 9, paddingHorizontal: 10, paddingVertical: 9 },
   actionText: { color: '#28624F', fontSize: 10, fontWeight: '800' },
   finalLabel: { color: '#16815F', fontSize: 10, fontWeight: '800', marginTop: 9 },
-  handover: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  handover: { gap: 8, marginTop: 10 },\n  pickupChoice: { borderWidth: 1, borderColor: '#D6E3DD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6 },\n  pickupSelected: { backgroundColor: '#0B6B58', borderColor: '#0B6B58' },\n  pickupChoiceText: { color: '#315E50', fontSize: 10, fontWeight: '700' },\n  pickupSelectedText: { color: '#FFFFFF' },
   pinInput: { flex: 1, height: 38, borderRadius: 9, borderWidth: 1, borderColor: '#DCE7E2', paddingHorizontal: 10, color: '#17382F', fontSize: 12 },
   tripActions: { flexDirection: 'row', gap: 9, marginTop: 18 },
   sosButton: { flex: 1, backgroundColor: '#B42318', borderRadius: 10, padding: 12, alignItems: 'center' },
