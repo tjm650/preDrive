@@ -9,6 +9,9 @@ on:
       - 'frontend/**/package.json'
       - 'frontend/packages/shared/src/types.ts'
       - 'frontend/apps/web/src/app/dashboard/page.tsx'
+      - 'frontend/apps/mobile/src/components/OperationsDashboard.tsx'
+      - 'frontend/apps/web/src/app/dashboard/operations/page.tsx'
+      - 'supabase/functions/**/index.ts'
       - '.github/workflows/sync-lockfile.yml'
 permissions:
   contents: write
