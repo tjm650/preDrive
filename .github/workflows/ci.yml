@@ -23,7 +23,7 @@ jobs:
       - name: Generate database types
         run: |
           supabase gen types typescript --local > frontend/packages/shared/src/database.types.ts
-          pnpm dlx prettier --write frontend/packages/shared/src/database.types.ts
+          npx --yes prettier --write frontend/packages/shared/src/database.types.ts
       - name: Run pgTAP isolation suite
         run: supabase test db
       - uses: actions/upload-artifact@v4
@@ -57,9 +57,5 @@ jobs:
         run: pnpm typecheck
       - name: Build web application
         run: pnpm --filter @predrive/web build
-      - name: Inspect Expo agent CLI commands
-        working-directory: frontend/apps/mobile
-        run: npx --yes @expo/agent-cli@latest --help
       - name: Bundle Android application
-        working-directory: frontend/apps/mobile
-        run: npx --yes @expo/agent-cli@latest export --platform android
+        run: pnpm --filter @predrive/mobile exec expo export --platform android
