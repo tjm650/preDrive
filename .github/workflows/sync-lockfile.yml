@@ -32,14 +32,14 @@ jobs:
         run: pnpm install --no-frozen-lockfile
       - name: Format authored source and generated configuration
         run: |
-          pnpm exec prettier --write \\
-            frontend/apps/mobile/src/components/OperationsDashboard.tsx \\
-            frontend/apps/mobile/src/lib/offline.ts \\
-            frontend/apps/mobile/app/index.tsx \\
-            frontend/apps/mobile/package.json frontend/apps/mobile/app.json frontend/apps/mobile/eas.json \\
-            frontend/apps/web/src/app/dashboard/operations/page.tsx \\
-            frontend/packages/shared/src/types.ts \\
-            supabase/functions/invite-staff/index.ts supabase/functions/build-route-geometry/index.ts \\
+          pnpm exec prettier --write \
+            frontend/apps/mobile/src/components/OperationsDashboard.tsx \
+            frontend/apps/mobile/src/lib/offline.ts \
+            frontend/apps/mobile/app/index.tsx \
+            frontend/apps/mobile/package.json frontend/apps/mobile/app.json frontend/apps/mobile/eas.json \
+            frontend/apps/web/src/app/dashboard/operations/page.tsx \
+            frontend/packages/shared/src/types.ts \
+            supabase/functions/invite-staff/index.ts supabase/functions/build-route-geometry/index.ts \
             README.md .github/workflows/ci.yml .github/workflows/sync-lockfile.yml
       - name: Commit lockfile and formatting changes
         run: |
