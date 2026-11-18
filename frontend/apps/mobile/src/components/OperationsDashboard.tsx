@@ -133,6 +133,11 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
       allChildIds.length ? client.from('authorized_pickups').select('id,child_id,name,relationship').in('child_id', allChildIds) : Promise.resolve({ data: [], error: null }),
     ]);
     const childList = (childRows.data ?? []) as Child[];
+    setFamilyChildren(childList.filter((child) => childIds.includes(child.id)));
+    const { data: notificationRows } = await client.from('notifications')
+      .select('id,type,priority,created_at,read_at').eq('user_id', profile.id)
+      .order('created_at', { ascending: false }).limit(5);
+    setNotifications((notificationRows ?? []) as FamilyNotification[]);
     const eventList = (eventRows.data ?? []) as EventRow[];
     setPickups((pickupRows.data ?? []) as Pickup[]);
     setCards(tripRows.map((trip) => ({
@@ -329,6 +334,12 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
       {!loading && profile.role === 'parent' ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your children's journeys</Text>
+          {familyChildren.map((child) => (
+            <View key={child.id} style={styles.childLine}>
+              <View style={{ flex: 1 }}><Text style={styles.childName}>{child.first_name}</Text><Text style={styles.muted}>{child.class_name ?? 'Class not assigned'}</Text></View>
+              <Pressable onPress={() => void reportAbsence(child.id)} style={styles.smallButton}><Text style={styles.smallButtonText}>Report absent</Text></Pressable>
+            </View>
+          ))}
           {cards.length === 0 ? <Text style={styles.muted}>No active journey is currently available for your children.</Text> : cards.map((trip) => (
             <View key={trip.id} style={styles.card}>
               <Text style={styles.cardTitle}>{trip.routeName}</Text><Text style={styles.muted}>{trip.busName} · Live trip</Text>
