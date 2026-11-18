@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 type Tab = 'children' | 'fleet' | 'routes' | 'trips' | 'billing' | 'staff';
@@ -232,7 +233,7 @@ export default function OperationsPage() {
   async function attestRouteFieldCheck(routeId: string) {
     const client = createClient(); if (!client) return;
     if (!window.confirm('Confirm that a school representative has physically checked every stop, safe boarding point and the provider-calculated road route?')) return;
-    const { data, error: rpcError } = await client.rpc('verify_route_field_check', { p_route_id: routeId });
+    const { error: rpcError } = await client.rpc('verify_route_field_check', { p_route_id: routeId });
     if (rpcError) { setError(rpcError.message); return; }
     setNotice('Route field check recorded. Supervisors can now start trips on this route.');
     await load();
