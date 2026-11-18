@@ -3,21 +3,11 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "noEmit": true,
-    "types": [
-      "react",
-      "react-native"
-    ],
+    "types": ["react", "react-native"],
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }

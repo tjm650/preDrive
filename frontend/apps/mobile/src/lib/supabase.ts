@@ -11,8 +11,14 @@ const secureStorage = {
   removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
-export const supabase = url && publishableKey
-  ? createClient(url, publishableKey, {
-      auth: { storage: secureStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
-    })
-  : null;
+export const supabase =
+  url && publishableKey
+    ? createClient(url, publishableKey, {
+        auth: {
+          storage: secureStorage,
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false,
+        },
+      })
+    : null;

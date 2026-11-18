@@ -8,10 +8,16 @@ export async function createClient() {
   if (!url || !key) return null;
   return createServerClient(url, key, {
     cookies: {
-      getAll() { return cookieStore.getAll(); },
+      getAll() {
+        return cookieStore.getAll();
+      },
       setAll(cookiesToSet) {
-        try { for (const { name, value, options } of cookiesToSet) cookieStore.set(name, value, options); }
-        catch { /* Server Components cannot mutate cookies; refresh in a Route Handler or Proxy. */ }
+        try {
+          for (const { name, value, options } of cookiesToSet)
+            cookieStore.set(name, value, options);
+        } catch {
+          /* Server Components cannot mutate cookies; refresh in a Route Handler or Proxy. */
+        }
       },
     },
   });

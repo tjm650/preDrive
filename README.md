@@ -77,13 +77,13 @@ A school-transport safety platform for creches and pre-schools in Zimbabwe. This
 
 The local seed creates these Auth users and matching profiles:
 
-| Role | Email |
-|---|---|
-| Supervisor | `supervisor@predrive.test` |
-| Driver profile | `driver@predrive.test` |
-| Parent | `parent@predrive.test` |
-| School admin | `admin@predrive.test` |
-| Platform owner | `owner@predrive.test` |
+| Role           | Email                      |
+| -------------- | -------------------------- |
+| Supervisor     | `supervisor@predrive.test` |
+| Driver profile | `driver@predrive.test`     |
+| Parent         | `parent@predrive.test`     |
+| School admin   | `admin@predrive.test`      |
+| Platform owner | `owner@predrive.test`      |
 
 Shared local-only password: `PreDrive-Demo-2026!`. These credentials are deliberately public demo credentials. Never use them in staging or production. Reset them before sharing a demo environment.
 
