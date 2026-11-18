@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(39);
+select plan(43);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -105,6 +105,21 @@ select is((select count(*)::int from public.trip_events),2,'supervisor sees even
 select is((select count(*)::int from public.bus_live),1,'supervisor sees live location for their assigned trip');
 select is((select count(id)::int from public.authorized_pickups),1,'supervisor sees pickup authorizations only for assigned active trip children');
 select is((select count(*)::int from public.routes),1,'supervisor sees only their assigned route');
+select throws_ok(
+  $select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','handover_verified',null,null,'{}'::jsonb,'forged-handover-01',now())$,
+  '22023','generic trip event RPC cannot forge a verified handover'
+);
+select throws_ok(
+  $select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','dropped_home',null,null,'{}'::jsonb,'wrong-route-event-01',now())$,
+  '22023','pickup routes cannot record a home drop-off'
+);
+select throws_ok(
+  $select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','absent',null,null,'{}'::jsonb,'false-absence-event-01',now())$,
+  '22023','a boarded child cannot be marked absent'
+);
+select is((public.complete_trip('96000000-0000-4000-8000-000000000001')->>'completed')::boolean,false,
+  'trip completion is blocked while manifest children are unaccounted for');
+
 
 -- School admin: full read access inside their own school, never across tenants.
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000006',true);
