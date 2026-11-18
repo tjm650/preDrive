@@ -48,7 +48,7 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.45.5
-      - run: supabase start -x studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,inbucket
+      - run: supabase start -x studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,inbucket --ignore-health-check
       - run: supabase db reset
       - run: supabase gen types typescript --local > frontend/packages/shared/src/database.types.ts
       - run: supabase test db
