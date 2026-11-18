@@ -305,7 +305,7 @@ export default function OperationsPage() {
               <h2 className="text-lg font-extrabold">{tab === 'children' ? 'Registered children' : tab === 'fleet' ? 'School fleet' : tab === 'routes' ? 'Transport routes' : tab === 'trips' ? 'Trip schedule' : tab === 'billing' ? 'Invoices' : 'School staff'}</h2>
               {tab === 'children' ? <div className="mt-5 divide-y divide-[#edf2ef]">{children.map((child) => <ChildRow key={child.id} child={child} onSave={renameChild} onArchive={archiveChild} />)}{children.length === 0 ? <Empty>No children registered yet.</Empty> : null}</div> : null}
               {tab === 'fleet' ? <div className="mt-5 divide-y divide-[#edf2ef]">{buses.map((bus) => <div key={bus.id} className="flex items-center justify-between gap-4 py-4"><div><p className="font-bold">{bus.registration}</p><p className="mt-1 text-xs text-[#71827c]">{[bus.make,bus.model].filter(Boolean).join(' ') || 'Vehicle'} · Capacity {bus.capacity}</p><p className="mt-1 text-xs">{bus.active ? 'Active' : 'Inactive'}</p></div><div className="flex gap-2"><button onClick={() => void toggleBus(bus)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">{bus.active ? 'Deactivate' : 'Activate'}</button><button onClick={() => void archiveBus(bus.id)} className="rounded-lg border border-[#f1d2ce] px-3 py-2 text-xs font-bold text-red-700">Archive</button></div></div>)}{buses.length === 0 ? <Empty>No vehicles registered yet.</Empty> : null}</div> : null}
-              {tab === 'routes' ? <div className="mt-5 divide-y divide-[#edf2ef]">{routes.map((route) => <RouteRow key={route.id} route={route} stops={stops.filter((stop) => stop.route_id === route.id)} children={children} assignedChildIds={routeAssignments.filter((assignment) => assignment.route_id === route.id).map((assignment) => assignment.child_id)} onSave={renameRoute} onArchive={archiveRoute} onAddStop={addStop} onBuildGeometry={buildRouteGeometry} onFieldCheck={attestRouteFieldCheck} onAssignChild={assignChild} onRemoveChild={removeRouteChild} />)}{routes.length === 0 ? <Empty>No routes configured yet.</Empty> : null}</div> : null}
+              {tab === 'routes' ? <div className="mt-5 divide-y divide-[#edf2ef]">{routes.map((route) => <RouteRow key={route.id} route={route} stops={stops.filter((stop) => stop.route_id === route.id)} childOptions={children} assignments={routeAssignments.filter((assignment) => assignment.route_id === route.id)} onSave={renameRoute} onArchive={archiveRoute} onAddStop={addStop} onBuildGeometry={buildRouteGeometry} onFieldCheck={attestRouteFieldCheck} onAssignChild={assignChild} onRemoveChild={removeRouteChild} />)}{routes.length === 0 ? <Empty>No routes configured yet.</Empty> : null}</div> : null}
               {tab === 'trips' ? <div className="mt-5 divide-y divide-[#edf2ef]">{trips.map((trip) => <div key={trip.id} className="py-4"><p className="font-bold">{routes.find((route) => route.id === trip.route_id)?.name ?? 'Route'} · {buses.find((bus) => bus.id === trip.bus_id)?.registration ?? 'Vehicle'}</p><p className="mt-1 text-xs capitalize text-[#71827c]">{trip.status} · {staff.find((member) => member.id === trip.supervisor_id)?.full_name ?? 'Supervisor'}</p>{trip.started_at ? <p className="mt-1 text-xs text-[#71827c]">Started {new Date(trip.started_at).toLocaleString()}</p> : null}</div>)}{trips.length === 0 ? <Empty>No trips scheduled yet.</Empty> : null}</div> : null}
               {tab === 'staff' ? <div className="mt-5 divide-y divide-[#edf2ef]">{staff.map((member) => <div key={member.id} className="py-4"><p className="font-bold">{member.full_name}</p><p className="mt-1 text-xs capitalize text-[#71827c]">{member.role.replace('_',' ')}</p></div>)}{staff.length === 0 ? <Empty>No staff accounts found.</Empty> : null}</div> : null}
               {tab === 'billing' ? <div className="mt-5 divide-y divide-[#edf2ef]">{invoices.map((invoice) => <div key={invoice.id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div><p className="font-bold">{invoice.currency} {Number(invoice.amount_usd).toFixed(2)}</p><p className="mt-1 text-xs text-[#71827c]">Due {invoice.due_date} · {invoice.status}</p></div>{invoice.status === 'pending' ? <button onClick={() => void voidInvoice(invoice.id)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">Void invoice</button> : null}</div>)}{invoices.length === 0 ? <Empty>No invoices issued yet.</Empty> : null}<p className="mt-5 text-xs leading-5 text-[#8a9a93]">Payments are not marked as received here. Payment confirmation must come from a verified payment-provider callback.</p></div> : null}
@@ -335,24 +335,34 @@ function ChildRow({ child, onSave, onArchive }: { child: Child; onSave: (id: str
 function RouteRow({
   route,
   stops,
+  childOptions,
+  assignments,
   onSave,
   onArchive,
   onAddStop,
   onBuildGeometry,
   onFieldCheck,
+  onAssignChild,
+  onRemoveChild,
 }: {
   route: Route;
   stops: Stop[];
+  childOptions: Child[];
+  assignments: RouteAssignment[];
   onSave: (id: string, name: string) => Promise<void>;
   onArchive: (id: string) => Promise<void>;
   onAddStop: (routeId: string, name: string, lat: number, lng: number) => Promise<void>;
   onBuildGeometry: (routeId: string) => Promise<void>;
   onFieldCheck: (routeId: string) => Promise<void>;
+  onAssignChild: (routeId: string, childId: string) => Promise<void>;
+  onRemoveChild: (assignmentId: string) => Promise<void>;
 }) {
   const [name, setName] = useState(route.name);
   const [stopName, setStopName] = useState('');
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
+  const [selectedChildId, setSelectedChildId] = useState('');
+  const availableChildren = childOptions.filter((child) => !assignments.some((assignment) => assignment.child_id === child.id));
   return (
     <div className="py-5">
       <div className="flex flex-wrap items-center gap-3">
@@ -360,6 +370,22 @@ function RouteRow({
         <span className="rounded-full bg-[#edf5f1] px-3 py-1 text-xs font-bold capitalize">{route.type}</span>
         <button onClick={() => void onSave(route.id, name)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">Save</button>
         <button onClick={() => void onArchive(route.id)} className="rounded-lg border border-[#f1d2ce] px-3 py-2 text-xs font-bold text-red-700">Archive</button>
+      </div>
+      <div className="mt-4 rounded-xl bg-[#f7faf8] p-3">
+        <p className="text-xs font-extrabold text-[#49665b]">Child manifest · {assignments.length}</p>
+        {assignments.map((assignment) => (
+          <div key={assignment.id} className="mt-2 flex items-center justify-between gap-2">
+            <span className="text-xs text-[#58746A]">{childOptions.find((child) => child.id === assignment.child_id)?.first_name ?? 'Archived child'}</span>
+            <button onClick={() => void onRemoveChild(assignment.id)} className="text-xs font-bold text-red-700">Remove</button>
+          </div>
+        ))}
+        <form onSubmit={(event) => { event.preventDefault(); if (selectedChildId) { void onAssignChild(route.id, selectedChildId); setSelectedChildId(''); } }} className="mt-3 flex gap-2">
+          <select value={selectedChildId} onChange={(event) => setSelectedChildId(event.target.value)} className="control min-w-0 flex-1">
+            <option value="">Assign a child</option>
+            {availableChildren.map((child) => <option key={child.id} value={child.id}>{child.first_name} · {child.class_name ?? 'No class'}</option>)}
+          </select>
+          <button disabled={!selectedChildId} className="rounded-lg bg-[#edf5f1] px-3 py-2 text-xs font-bold text-[#28624F] disabled:opacity-40">Assign</button>
+        </form>
       </div>
       <p className="mt-3 text-xs text-[#71827c]">
         {stops.length} ordered stops · Geometry: {route.geometry_status === 'manually_verified' ? 'field checked' : route.geometry_status ?? 'unverified'}
