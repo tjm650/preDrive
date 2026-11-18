@@ -61,7 +61,7 @@ begin
   if not found then raise exception 'Trip not found' using errcode='P0002'; end if;
   if trip_row.supervisor_id <> auth.uid() then raise exception 'Only the assigned supervisor can start this trip' using errcode='42501'; end if;
   if trip_row.status <> 'scheduled' then raise exception 'Only scheduled trips can be started' using errcode='22023'; end if;
-  select (r.geometry_status='manually_verified' and r.geometry_verified_at is not null)
+  select (r.geometry_status='manually_verified' and r.geometry_verified_at is not null and r.archived_at is null)
     into route_verified from public.routes r where r.id=trip_row.route_id;
   if not coalesce(route_verified,false) then
     raise exception 'Route road geometry must be provider-calculated and field-checked before the trip starts' using errcode='22023';
@@ -72,6 +72,10 @@ begin
   if not exists(select 1 from public.route_children rc where rc.route_id=trip_row.route_id) then
     raise exception 'The route has no children assigned' using errcode='22023';
   end if;
+  if exists(
+    select 1 from public.route_children rc join public.children c on c.id=rc.child_id
+    where rc.route_id=trip_row.route_id and c.archived_at is not null
+  ) then raise exception 'Remove archived children from the route manifest before starting the trip' using errcode='22023'; end if;
   update public.trips set status='active',started_at=now() where id=p_trip_id;
   return p_trip_id;
 end
