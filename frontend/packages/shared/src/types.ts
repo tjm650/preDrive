@@ -2,7 +2,8 @@ export type UserRole = 'parent' | 'supervisor' | 'school_admin' | 'platform_owne
 export type RouteType = 'pickup' | 'dropoff';
 export type TripStatus = 'scheduled' | 'active' | 'completed' | 'cancelled';
 export type TripEventType =
-  | 'boarded' | 'arrived_school' | 'dropped_home' | 'absent' | 'sos' | 'delay'\n  | 'handover_rejected' | 'handover_verified' | 'child_missing';
+  | 'boarded' | 'arrived_school' | 'dropped_home' | 'absent' | 'sos' | 'delay'
+  | 'handover_rejected' | 'handover_verified' | 'child_missing';
 export type NotificationPriority = 'low' | 'normal' | 'high' | 'critical';
 import type { Coordinates } from './geo';
 export interface TripManifestChild {
