@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(43);
+select plan(49);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -148,6 +148,12 @@ select ok(exists(select 1 from information_schema.columns where table_schema='pu
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='routes' and column_name='geometry_status'),'route provenance is recorded');
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='trip_events' and column_name='idempotency_key'),'trip events support offline idempotency');
 select ok(exists(select 1 from pg_indexes where schemaname='public' and indexname='trip_events_idempotency_idx'),'trip event idempotency index is installed');
+select ok(exists(select 1 from pg_trigger where tgname='guard_route_manifest_change' and not tgisinternal),'scheduled and active manifests are locked');
+select ok(exists(select 1 from pg_trigger where tgname='guard_route_stop_change' and not tgisinternal),'scheduled and active route stops are locked');
+select ok(exists(select 1 from pg_trigger where tgname='guard_route_type_or_archive_change' and not tgisinternal),'route type and archival changes are guarded');
+select ok(exists(select 1 from pg_trigger where tgname='guard_bus_archive_change' and not tgisinternal),'assigned vehicle availability is guarded');
+select ok(exists(select 1 from pg_trigger where tgname='guard_child_archive_change' and not tgisinternal),'assigned child archival is guarded');
+select ok(exists(select 1 from pg_trigger where tgname='invalidate_route_geometry_after_stop_change' and not tgisinternal),'stop changes invalidate route geometry');
 
 select * from finish();
 rollback;
