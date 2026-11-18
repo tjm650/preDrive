@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../src/lib/supabase';
+import { OperationsDashboard } from '../src/components/OperationsDashboard';
 
 type Profile = {
+  id: string;
   full_name: string;
   role: 'parent' | 'supervisor' | 'school_admin' | 'platform_owner';
   language: 'en' | 'sn' | 'nd';
@@ -32,7 +34,7 @@ export default function HomeScreen() {
       if (!data.session || !mounted) return;
       const { data: row } = await client
         .from('profiles')
-        .select('full_name,role,language')
+        .select('id,full_name,role,language')
         .eq('id', data.session.user.id)
         .single();
       if (mounted && row) setProfile(row as Profile);
@@ -63,7 +65,7 @@ export default function HomeScreen() {
       if (!data.user) throw new Error('Sign-in did not return a user.');
       const { data: row, error: profileError } = await client
         .from('profiles')
-        .select('full_name,role,language')
+        .select('id,full_name,role,language')
         .eq('id', data.user.id)
         .single();
       if (profileError)
@@ -94,38 +96,7 @@ export default function HomeScreen() {
           <Text style={styles.region}>ZIMBABWE</Text>
         </View>
         {profile ? (
-          <>
-            <Text style={styles.eyebrow}>SAFE JOURNEYS, CLEAR UPDATES</Text>
-            <Text style={styles.heading}>Good day, {profile.full_name.split(' ')[0]}.</Text>
-            <Text style={styles.subheading}>
-              {profile.role === 'parent'
-                ? 'Your family transport overview'
-                : 'Your transport operations overview'}
-            </Text>
-            <View style={styles.statusCard}>
-              <View style={styles.statusDot} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>No active trip</Text>
-                <Text style={styles.cardBody}>
-                  Live journey updates will appear here when your school starts a trip.
-                </Text>
-              </View>
-            </View>
-            <View style={styles.panel}>
-              <Text style={styles.panelTitle}>Your safety centre</Text>
-              <Text style={styles.panelBody}>
-                Trip activity, verified handovers and school alerts will be available in one place.
-              </Text>
-              <View style={styles.chips}>
-                <Text style={styles.chip}>Live tracking</Text>
-                <Text style={styles.chip}>Safe handover</Text>
-                <Text style={styles.chip}>Alerts</Text>
-              </View>
-            </View>
-            <Pressable style={styles.secondaryButton} onPress={() => void signOut()}>
-              <Text style={styles.secondaryButtonText}>Sign out</Text>
-            </Pressable>
-          </>
+          <OperationsDashboard profile={profile} onSignOut={() => void signOut()} />
         ) : (
           <>
             <View style={styles.hero}>
