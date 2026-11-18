@@ -21,7 +21,9 @@ jobs:
       - run: supabase start -x studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,inbucket --ignore-health-check
       - run: supabase db reset
       - name: Generate database types
-        run: supabase gen types typescript --local > frontend/packages/shared/src/database.types.ts
+        run: |
+          supabase gen types typescript --local > frontend/packages/shared/src/database.types.ts
+          pnpm dlx prettier --write frontend/packages/shared/src/database.types.ts
       - name: Run pgTAP isolation suite
         run: supabase test db
       - uses: actions/upload-artifact@v4
