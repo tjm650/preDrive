@@ -17,7 +17,7 @@ export default function HomeScreen() {
     let mounted = true;
     void supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session || !mounted) return;
-      const { data: row } = await supabase.from('profiles').select('full_name,role,language').eq('id', data.session.user.id).single();
+      const { data: row } = await client.from('profiles').select('full_name,role,language').eq('id', data.session.user.id).single();
       if (mounted && row) setProfile(row as Profile);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -27,10 +27,11 @@ export default function HomeScreen() {
   }, []);
 
   async function signIn() {
-    if (!supabase) { setError('Connect the Supabase environment before signing in.'); return; }
+    const client = supabase;
+    if (!client) { setError('Connect the Supabase environment before signing in.'); return; }
     setBusy(true); setError(null);
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      const { data, error: authError } = await client.auth.signInWithPassword({ email: email.trim(), password });
       if (authError) throw authError;
       if (!data.user) throw new Error('Sign-in did not return a user.');
       const { data: row, error: profileError } = await supabase.from('profiles').select('full_name,role,language').eq('id', data.user.id).single();
