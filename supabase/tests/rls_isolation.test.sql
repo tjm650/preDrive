@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(38);
+select plan(39);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -127,6 +127,7 @@ select ok(to_regprocedure('public.record_trip_event(uuid,uuid,public.trip_event_
 select ok(to_regprocedure('public.complete_trip(uuid)') is not null,'guarded trip completion RPC is installed');
 select ok(to_regprocedure('public.verify_pickup_handover(uuid,uuid,uuid,text,double precision,double precision,text)') is not null,'atomic pickup handover RPC is installed');
 select ok(to_regprocedure('public.register_push_token(text)') is not null,'push token registration RPC is installed');
+select ok(to_regprocedure('public.verify_route_field_check(uuid)') is not null,'route field-check gate is installed');
 select ok(to_regclass('public.staff_invitations') is not null,'staff invitation audit table is installed');
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='children' and column_name='archived_at'),'child soft archival is supported');
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='routes' and column_name='geometry_status'),'route provenance is recorded');
