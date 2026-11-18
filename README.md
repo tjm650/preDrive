@@ -100,7 +100,7 @@ Shared local-only password: `PreDrive-Demo-2026!`. These are public demo credent
 - Android location tracking requests foreground and background permissions and uses an Android foreground location service. If background permission is denied, the supervisor must keep the app open. Force-stopping the app, revoked permissions, device power settings and network loss can still interrupt location delivery.
 - SOS and pickup PIN verification require a live connection. If SOS cannot be sent, the app instructs the supervisor to contact the school's emergency contact immediately. A queued event is not an emergency notification.
 
-For Expo push registration, initialise/link the Expo project and set `EXPO_PUBLIC_EAS_PROJECT_ID` in the mobile environment. The same UUID must be present at `expo.extra.eas.projectId` in `app.json`. Rebuild the Android development client after adding native Expo modules or changing app plugins/permissions.
+For Expo push registration and native modules, initialise/link the Expo project from `frontend/apps/mobile` with `eas init`. Copy the generated project UUID to `EXPO_PUBLIC_EAS_PROJECT_ID` in the mobile environment; EAS also writes the same UUID to `expo.extra.eas.projectId` in `app.json`. Build the Android development client with `eas build --profile development --platform android`. Rebuild after adding native Expo modules or changing app plugins/permissions. The `development` and `preview` profiles are internal Android APK builds; no production build is triggered by CI.
 
 ## School operations workspace
 
