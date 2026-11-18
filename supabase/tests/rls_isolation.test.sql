@@ -114,11 +114,11 @@ select is((select count(*)::int from public.invoices),2,'school admin sees invoi
 
 -- Platform owner: cross-tenant read access for oversight.
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000007',true);
-select is((select count(*)::int from public.children),3,'platform owner can read children across schools');
-select is((select count(*)::int from public.schools),2,'platform owner can read all schools');
+select is((select count(*)::int from public.children where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),3,'platform owner can read fixture children across schools');
+select is((select count(*)::int from public.schools where id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),2,'platform owner can read fixture schools');
 select is((select count(*)::int from public.authorized_pickups),2,'platform owner can read pickup authorizations across schools');
-select is((select count(*)::int from public.subscriptions),2,'platform owner can read subscriptions across schools');
-select is((select count(*)::int from public.invoices),3,'platform owner can read invoices across schools');
+select is((select count(*)::int from public.subscriptions where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),2,'platform owner can read fixture subscriptions across schools');
+select is((select count(*)::int from public.invoices where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),3,'platform owner can read fixture invoices across schools');
 
 select * from finish();
 rollback;
