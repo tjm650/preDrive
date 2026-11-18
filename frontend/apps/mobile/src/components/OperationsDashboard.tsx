@@ -134,7 +134,8 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
     setPickups((pickupRows.data ?? []) as Pickup[]);
     setCards(tripRows.map((trip) => ({
       ...trip,
-      routeName: routeRows.data?.find((row) => row.id === trip.route_id)?.name ?? 'School route',\n      routeType: (routeRows.data?.find((row) => row.id === trip.route_id)?.type ?? 'pickup') as 'pickup' | 'dropoff',
+      routeName: routeRows.data?.find((row) => row.id === trip.route_id)?.name ?? 'School route',
+      routeType: (routeRows.data?.find((row) => row.id === trip.route_id)?.type ?? 'pickup') as 'pickup' | 'dropoff',
       busName: busRows.data?.find((row) => row.id === trip.bus_id)?.registration ?? 'Assigned vehicle',
       children: childList.filter((child) => (relationRows.data ?? []).some((relation) => relation.route_id === trip.route_id && relation.child_id === child.id) && (profile.role !== 'parent' || childIds.includes(child.id))),
       events: eventList.filter((event) => event.trip_id === trip.id && (profile.role !== 'parent' || childIds.includes(event.child_id ?? ''))),
