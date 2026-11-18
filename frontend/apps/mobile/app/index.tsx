@@ -21,7 +21,7 @@ export default function HomeScreen() {
       const { data: row } = await client.from('profiles').select('full_name,role,language').eq('id', data.session.user.id).single();
       if (mounted && row) setProfile(row as Profile);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
       if (!session) setProfile(null);
     });
     return () => { mounted = false; listener.subscription.unsubscribe(); };
