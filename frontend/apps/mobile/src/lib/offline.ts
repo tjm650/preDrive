@@ -49,7 +49,8 @@ async function database() {
       idempotency_key TEXT NOT NULL UNIQUE,
       client_recorded_at TEXT NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);\n    CREATE TABLE IF NOT EXISTS pending_locations (
+    CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS pending_locations (
       trip_id TEXT PRIMARY KEY,
       lat REAL NOT NULL,
       lng REAL NOT NULL,
