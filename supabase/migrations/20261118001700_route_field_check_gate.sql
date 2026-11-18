@@ -1,6 +1,6 @@
 -- Road geometry must be provider-calculated and field-checked before a trip can start.
 revoke update on public.routes from authenticated;
-grant update(name,type) on public.routes to authenticated;
+grant update(name,type,archived_at) on public.routes to authenticated;
 
 create or replace function public.verify_route_field_check(p_route_id uuid)
 returns jsonb
@@ -16,11 +16,14 @@ begin
   if private.current_role() <> 'school_admin' or private.current_school_id() <> route_row.school_id then
     raise exception 'Only this school administrator can attest route field checks' using errcode='42501';
   end if;
-  if route_row.geometry_status <> 'provider_verified'
-    or route_row.geometry_verified_at is null
-    or jsonb_typeof(route_row.polyline) <> 'array'
-    or jsonb_array_length(route_row.polyline) < 2 then
+  if route_row.geometry_status <> 'provider_verified' or route_row.geometry_verified_at is null then
     raise exception 'A provider-calculated road route is required before field verification' using errcode='22023';
+  end if;
+  if jsonb_typeof(route_row.polyline) <> 'array' then
+    raise exception 'Road geometry is not a coordinate array' using errcode='22023';
+  end if;
+  if jsonb_array_length(route_row.polyline) < 2 then
+    raise exception 'Road geometry must contain at least two coordinates' using errcode='22023';
   end if;
   update public.routes
     set geometry_status='manually_verified',
