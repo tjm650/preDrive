@@ -2,13 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type TripEventKind =
-  | 'boarded'
-  | 'arrived_school'
-  | 'dropped_home'
-  | 'absent'
-  | 'sos'
-  | 'delay'
-  | 'child_missing';
+  'boarded' | 'arrived_school' | 'dropped_home' | 'absent' | 'sos' | 'delay' | 'child_missing';
 
 export type QueuedTripEvent = {
   id: number;
@@ -144,9 +138,12 @@ export async function flushOfflineQueue(client: SupabaseClient) {
 
   const locations = await db.getAllAsync<QueuedLocation>('SELECT * FROM pending_locations');
   let syncedLocations = 0;
-  const upsert = client.from as unknown as (
-    table: string,
-  ) => { upsert: (values: QueuedLocation, options: { onConflict: string }) => Promise<{ error: { message: string } | null }> };
+  const upsert = client.from as unknown as (table: string) => {
+    upsert: (
+      values: QueuedLocation,
+      options: { onConflict: string },
+    ) => Promise<{ error: { message: string } | null }>;
+  };
   for (const location of locations) {
     const { error } = await upsert('bus_live').upsert(location, { onConflict: 'trip_id' });
     if (error) continue;
@@ -158,7 +155,12 @@ export async function flushOfflineQueue(client: SupabaseClient) {
 
 export async function setActiveTripId(tripId: string | null) {
   const db = await database();
-  if (tripId) await db.runAsync('INSERT OR REPLACE INTO app_state (key,value) VALUES (?,?)', 'active_trip_id', tripId);
+  if (tripId)
+    await db.runAsync(
+      'INSERT OR REPLACE INTO app_state (key,value) VALUES (?,?)',
+      'active_trip_id',
+      tripId,
+    );
   else await db.runAsync("DELETE FROM app_state WHERE key = 'active_trip_id'");
 }
 

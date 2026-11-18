@@ -33,19 +33,28 @@ Deno.serve(async (request: Request) => {
   const { data: authData, error: authError } = await authClient.auth.getUser(token);
   if (authError || !authData.user) return textResponse('Unauthorized', 401);
 
-  const body = await request.json().catch(() => null) as {
-    email?: string; full_name?: string; role?: string;
+  const body = (await request.json().catch(() => null)) as {
+    email?: string;
+    full_name?: string;
+    role?: string;
   } | null;
   const email = body?.email?.trim().toLowerCase() ?? '';
   const fullName = body?.full_name?.trim() ?? '';
   const role = body?.role;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || fullName.length < 2 || fullName.length > 120 ||
-      (role !== 'supervisor' && role !== 'school_admin')) {
+  if (
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+    fullName.length < 2 ||
+    fullName.length > 120 ||
+    (role !== 'supervisor' && role !== 'school_admin')
+  ) {
     return jsonResponse({ error: 'Provide a valid email, full name and staff role.' }, 400);
   }
 
   const { data: inviter, error: inviterError } = await admin
-    .from('profiles').select('id,school_id,role').eq('id', authData.user.id).maybeSingle();
+    .from('profiles')
+    .select('id,school_id,role')
+    .eq('id', authData.user.id)
+    .maybeSingle();
   if (inviterError || !inviter || inviter.role !== 'school_admin' || !inviter.school_id) {
     return textResponse('Forbidden', 403);
   }
@@ -57,7 +66,11 @@ Deno.serve(async (request: Request) => {
     .eq('email', email)
     .maybeSingle();
   if (invitationError) return jsonResponse({ error: 'Unable to check existing invitations.' }, 500);
-  if (invitation && invitation.status === 'invited' && new Date(invitation.expires_at) > new Date()) {
+  if (
+    invitation &&
+    invitation.status === 'invited' &&
+    new Date(invitation.expires_at) > new Date()
+  ) {
     return jsonResponse({ error: 'An active invitation already exists for this email.' }, 409);
   }
 
@@ -69,27 +82,45 @@ Deno.serve(async (request: Request) => {
     return jsonResponse({ error: inviteError?.message ?? 'Unable to create invitation.' }, 400);
   }
 
-  const { error: profileError } = await admin.from('profiles').upsert({
-    id: invited.user.id, school_id: inviter.school_id, role, full_name: fullName,
-  }, { onConflict: 'id' });
+  const { error: profileError } = await admin.from('profiles').upsert(
+    {
+      id: invited.user.id,
+      school_id: inviter.school_id,
+      role,
+      full_name: fullName,
+    },
+    { onConflict: 'id' },
+  );
   if (profileError) {
     await admin.auth.admin.deleteUser(invited.user.id);
     return jsonResponse({ error: 'Invitation could not be linked to a school profile.' }, 500);
   }
 
-  const { error: saveError } = await admin.from('staff_invitations').upsert({
-    school_id: inviter.school_id, email, full_name: fullName, role,
-    invited_by: authData.user.id, invited_user_id: invited.user.id, status: 'invited',
-    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  }, { onConflict: 'school_id,email' });
+  const { error: saveError } = await admin.from('staff_invitations').upsert(
+    {
+      school_id: inviter.school_id,
+      email,
+      full_name: fullName,
+      role,
+      invited_by: authData.user.id,
+      invited_user_id: invited.user.id,
+      status: 'invited',
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    { onConflict: 'school_id,email' },
+  );
   if (saveError) {
     await admin.auth.admin.deleteUser(invited.user.id);
     return jsonResponse({ error: 'Invitation record could not be saved.' }, 500);
   }
 
   await admin.from('audit_log').insert({
-    school_id: inviter.school_id, actor_id: authData.user.id, action: 'staff_invited',
-    entity_type: 'profile', entity_id: invited.user.id, metadata: { role, email },
+    school_id: inviter.school_id,
+    actor_id: authData.user.id,
+    action: 'staff_invited',
+    entity_type: 'profile',
+    entity_id: invited.user.id,
+    metadata: { role, email },
   });
   return jsonResponse({ invited: true, role, email });
 });
