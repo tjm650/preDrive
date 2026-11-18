@@ -6,7 +6,8 @@ create policy staff_invitations_admin_read on public.staff_invitations
   );
 
 -- Road geometry must be provider-calculated and field-checked before a trip can start.
-revoke update on public.routes from authenticated;
+revoke insert,update on public.routes from authenticated;
+grant insert(school_id,name,type) on public.routes to authenticated;
 grant update(name,type,archived_at) on public.routes to authenticated;
 
 create or replace function public.verify_route_field_check(p_route_id uuid)
