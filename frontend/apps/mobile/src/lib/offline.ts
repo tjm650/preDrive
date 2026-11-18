@@ -49,7 +49,7 @@ async function database() {
       idempotency_key TEXT NOT NULL UNIQUE,
       client_recorded_at TEXT NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS pending_locations (
+    CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);\n    CREATE TABLE IF NOT EXISTS pending_locations (
       trip_id TEXT PRIMARY KEY,
       lat REAL NOT NULL,
       lng REAL NOT NULL,
@@ -153,4 +153,18 @@ export async function flushOfflineQueue(client: SupabaseClient) {
     syncedLocations += 1;
   }
   return { syncedEvents, syncedLocations, pendingEvents: await pendingEventCount() };
+}
+
+export async function setActiveTripId(tripId: string | null) {
+  const db = await database();
+  if (tripId) await db.runAsync('INSERT OR REPLACE INTO app_state (key,value) VALUES (?,?)', 'active_trip_id', tripId);
+  else await db.runAsync("DELETE FROM app_state WHERE key = 'active_trip_id'");
+}
+
+export async function getActiveTripId() {
+  const db = await database();
+  const row = await db.getFirstAsync<{ value: string }>(
+    "SELECT value FROM app_state WHERE key = 'active_trip_id'",
+  );
+  return row?.value ?? null;
 }
