@@ -9,7 +9,7 @@ begin
   if auth.uid() is null then raise exception 'Authentication required' using errcode='28000'; end if;
   if p_token is not null and (
     length(p_token) > 512
-    or p_token !~ '^(Expo|Exponent)PushToken\\[[A-Za-z0-9_-]+\\]$'
+    or p_token !~ '^(Expo|Exponent)PushToken\[[A-Za-z0-9_-]+\]$'
   ) then raise exception 'Invalid Expo push token' using errcode='22023'; end if;
   update public.profiles set expo_push_token=p_token where id=auth.uid();
   if not found then raise exception 'Profile not found' using errcode='P0002'; end if;
