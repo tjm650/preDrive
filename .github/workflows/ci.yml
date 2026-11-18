@@ -1,0 +1,61 @@
+name: CI
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: write
+concurrency:
+  group: preDrive-v3-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  quality:
+    needs: database
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: schema-types
+          path: frontend/packages/shared/src
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --no-frozen-lockfile
+      - name: Apply Prettier formatting
+        run: pnpm format
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - name: Commit generated lockfile and formatting
+        if: success() && github.event_name == 'push'
+        run: |
+          git add -A
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: format workspace and commit pnpm lockfile"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+  database:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.45.5
+      - run: supabase start -x studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,inbucket --ignore-health-check
+      - run: supabase db reset
+      - run: supabase gen types typescript --local > frontend/packages/shared/src/database.types.ts
+      - run: supabase test db
+      - uses: actions/upload-artifact@v4
+        with:
+          name: schema-types
+          path: frontend/packages/shared/src/database.types.ts
+      - if: always()
+        run: supabase stop
