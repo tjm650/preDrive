@@ -66,7 +66,7 @@ create policy thread_members_admin_manage on public.thread_members for all to au
 
 drop policy if exists threads_access on public.threads;
 create policy threads_read on public.threads for select to authenticated using (
- private.is_school_admin(school_id) or exists(select 1 from public.thread_members tm where tm.thread_id=id and tm.user_id=(select auth.uid()))
+ private.is_school_admin(school_id) or exists(select 1 from public.thread_members tm where tm.thread_id=threads.id and tm.user_id=(select auth.uid()))
 );
 create policy threads_admin_insert on public.threads for insert to authenticated with check (private.is_school_admin(school_id));
 create policy threads_admin_update on public.threads for update to authenticated using (private.is_school_admin(school_id)) with check (private.is_school_admin(school_id));
@@ -75,7 +75,7 @@ create policy threads_admin_delete on public.threads for delete to authenticated
 drop policy if exists messages_read on public.messages;
 drop policy if exists messages_insert on public.messages;
 create policy messages_read on public.messages for select to authenticated using (
- sender_id=(select auth.uid()) or exists(select 1 from public.thread_members tm where tm.thread_id=thread_id and tm.user_id=(select auth.uid()))
+ sender_id=(select auth.uid()) or exists(select 1 from public.thread_members tm where tm.thread_id=messages.thread_id and tm.user_id=(select auth.uid()))
  or exists(select 1 from public.threads th where th.id=thread_id and private.is_school_admin(th.school_id))
 );
 create policy messages_insert on public.messages for insert to authenticated with check (
