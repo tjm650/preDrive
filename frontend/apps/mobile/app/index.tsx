@@ -13,9 +13,10 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!supabase) return;
+    const client = supabase;
+    if (!client) return;
     let mounted = true;
-    void supabase.auth.getSession().then(async ({ data }) => {
+    void client.auth.getSession().then(async ({ data }) => {
       if (!data.session || !mounted) return;
       const { data: row } = await client.from('profiles').select('full_name,role,language').eq('id', data.session.user.id).single();
       if (mounted && row) setProfile(row as Profile);
@@ -34,7 +35,7 @@ export default function HomeScreen() {
       const { data, error: authError } = await client.auth.signInWithPassword({ email: email.trim(), password });
       if (authError) throw authError;
       if (!data.user) throw new Error('Sign-in did not return a user.');
-      const { data: row, error: profileError } = await supabase.from('profiles').select('full_name,role,language').eq('id', data.user.id).single();
+      const { data: row, error: profileError } = await client.from('profiles').select('full_name,role,language').eq('id', data.user.id).single();
       if (profileError) throw new Error('Your account profile is not configured. Contact your school administrator.');
       setProfile(row as Profile);
     } catch (cause) {
