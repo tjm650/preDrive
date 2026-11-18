@@ -11,9 +11,14 @@ concurrency:
   cancel-in-progress: true
 jobs:
   quality:
+    needs: database
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: schema-types
+          path: frontend/packages/shared/src
       - uses: pnpm/action-setup@v4
         with:
           version: 10.22.0
@@ -45,6 +50,11 @@ jobs:
           version: 2.45.5
       - run: supabase start -x studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,inbucket
       - run: supabase db reset
+      - run: supabase gen types typescript --local > frontend/packages/shared/src/database.types.ts
       - run: supabase test db
+      - uses: actions/upload-artifact@v4
+        with:
+          name: schema-types
+          path: frontend/packages/shared/src/database.types.ts
       - if: always()
         run: supabase stop
