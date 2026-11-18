@@ -7,17 +7,31 @@ const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
 const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:3000';
 if (!url || !serviceKey || !anonKey) throw new Error('Missing Supabase function secrets');
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+const textResponse = (body: string, status: number) =>
+  new Response(body, { status, headers: corsHeaders });
+
 const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
 const authClient = createClient(url, anonKey, { auth: { persistSession: false } });
 
 Deno.serve(async (request: Request) => {
-  if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (request.method !== 'POST') return textResponse('Method not allowed', 405);
   const authorization = request.headers.get('authorization');
   const token = authorization?.replace(/^Bearer\s+/i, '');
-  if (!token) return new Response('Unauthorized', { status: 401 });
+  if (!token) return textResponse('Unauthorized', 401);
 
   const { data: authData, error: authError } = await authClient.auth.getUser(token);
-  if (authError || !authData.user) return new Response('Unauthorized', { status: 401 });
+  if (authError || !authData.user) return textResponse('Unauthorized', 401);
 
   const body = await request.json().catch(() => null) as {
     email?: string; full_name?: string; role?: string;
@@ -27,17 +41,14 @@ Deno.serve(async (request: Request) => {
   const role = body?.role;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || fullName.length < 2 || fullName.length > 120 ||
       (role !== 'supervisor' && role !== 'school_admin')) {
-    return Response.json({ error: 'Provide a valid email, full name and staff role.' }, { status: 400 });
+    return jsonResponse({ error: 'Provide a valid email, full name and staff role.' }, 400);
   }
 
   const { data: inviter, error: inviterError } = await admin
     .from('profiles').select('id,school_id,role').eq('id', authData.user.id).maybeSingle();
   if (inviterError || !inviter || inviter.role !== 'school_admin' || !inviter.school_id) {
-    return new Response('Forbidden', { status: 403 });
+    return textResponse('Forbidden', 403);
   }
-
-  const { data: existing } = await admin.from('profiles').select('id').eq('id', authData.user.id).maybeSingle();
-  if (!existing) return new Response('Forbidden', { status: 403 });
 
   const { data: invitation, error: invitationError } = await admin
     .from('staff_invitations')
@@ -45,17 +56,17 @@ Deno.serve(async (request: Request) => {
     .eq('school_id', inviter.school_id)
     .eq('email', email)
     .maybeSingle();
+  if (invitationError) return jsonResponse({ error: 'Unable to check existing invitations.' }, 500);
   if (invitation && invitation.status === 'invited' && new Date(invitation.expires_at) > new Date()) {
-    return Response.json({ error: 'An active invitation already exists for this email.' }, { status: 409 });
+    return jsonResponse({ error: 'An active invitation already exists for this email.' }, 409);
   }
-  if (invitationError) return Response.json({ error: 'Unable to check existing invitations.' }, { status: 500 });
 
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName, school_id: inviter.school_id, role },
     redirectTo: siteUrl + '/login',
   });
   if (inviteError || !invited.user) {
-    return Response.json({ error: inviteError?.message ?? 'Unable to create invitation.' }, { status: 400 });
+    return jsonResponse({ error: inviteError?.message ?? 'Unable to create invitation.' }, 400);
   }
 
   const { error: profileError } = await admin.from('profiles').upsert({
@@ -63,7 +74,7 @@ Deno.serve(async (request: Request) => {
   }, { onConflict: 'id' });
   if (profileError) {
     await admin.auth.admin.deleteUser(invited.user.id);
-    return Response.json({ error: 'Invitation could not be linked to a school profile.' }, { status: 500 });
+    return jsonResponse({ error: 'Invitation could not be linked to a school profile.' }, 500);
   }
 
   const { error: saveError } = await admin.from('staff_invitations').upsert({
@@ -73,12 +84,12 @@ Deno.serve(async (request: Request) => {
   }, { onConflict: 'school_id,email' });
   if (saveError) {
     await admin.auth.admin.deleteUser(invited.user.id);
-    return Response.json({ error: 'Invitation record could not be saved.' }, { status: 500 });
+    return jsonResponse({ error: 'Invitation record could not be saved.' }, 500);
   }
 
   await admin.from('audit_log').insert({
     school_id: inviter.school_id, actor_id: authData.user.id, action: 'staff_invited',
     entity_type: 'profile', entity_id: invited.user.id, metadata: { role, email },
   });
-  return Response.json({ invited: true, role, email });
+  return jsonResponse({ invited: true, role, email });
 });
