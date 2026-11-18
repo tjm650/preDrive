@@ -33,7 +33,7 @@ Deno.serve(async (request: Request) => {
   if (!token) return textResponse('Unauthorized', 401);
   const { data: auth, error: authError } = await authClient.auth.getUser(token);
   if (authError || !auth.user) return textResponse('Unauthorized', 401);
-  if (!routingKey) return Response.json({ error: 'Road routing is not configured. Add OPENROUTESERVICE_API_KEY to Supabase function secrets.' }, { status: 503 });
+  if (!routingKey) return jsonResponse({ error: 'Road routing is not configured. Add OPENROUTESERVICE_API_KEY to Supabase function secrets.' }, 503);
 
   const body = await request.json().catch(() => null) as { route_id?: string } | null;
   if (!body?.route_id) return jsonResponse({ error: 'route_id is required.' }, 400);
