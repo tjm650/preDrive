@@ -7,6 +7,8 @@ on:
       - 'pnpm-workspace.yaml'
       - 'pnpm-lock.yaml'
       - 'frontend/**/package.json'
+      - 'frontend/packages/shared/src/types.ts'
+      - 'frontend/apps/web/src/app/dashboard/page.tsx'
       - '.github/workflows/sync-lockfile.yml'
 permissions:
   contents: write
@@ -38,6 +40,7 @@ jobs:
             frontend/apps/mobile/app/index.tsx \
             frontend/apps/mobile/package.json frontend/apps/mobile/app.json frontend/apps/mobile/eas.json \
             frontend/apps/web/src/app/dashboard/operations/page.tsx \
+            frontend/apps/web/src/app/dashboard/page.tsx \
             frontend/packages/shared/src/types.ts \
             supabase/functions/invite-staff/index.ts supabase/functions/build-route-geometry/index.ts \
             README.md .github/workflows/ci.yml .github/workflows/sync-lockfile.yml
