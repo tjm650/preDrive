@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(26);
+select plan(36);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -91,6 +91,8 @@ select is((select count(*)::int from public.trip_events),1,'parent sees only the
 select is((select count(*)::int from public.invoices),1,'parent sees only their own invoice');
 select is((select count(*)::int from public.notifications where type='test'),1,'parent sees only their own notification');
 select is((select count(*)::int from public.bus_live),1,'parent sees location only for an active trip containing their child');
+select is((select count(*)::int from public.routes),1,'parent sees route metadata only for an active trip containing their child');
+select is((select count(*)::int from public.buses),1,'parent sees vehicle metadata only for an active trip containing their child');
 select ok(not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relname = any(array['schools','profiles','children','guardianships','authorized_pickups','buses','routes','stops','route_children','trips','trip_events','bus_live','location_history','absences','notifications','messages','threads','thread_members','incidents','subscriptions','invoices','payments','app_settings','audit_log','demo_requests','push_receipts']) and not c.relrowsecurity),'RLS is enabled on every preDrive public table');
 
 -- Supervisor: assigned trip manifest and its guardian contacts only.
@@ -119,6 +121,17 @@ select is((select count(*)::int from public.schools where id in ('92000000-0000-
 select is((select count(*)::int from public.authorized_pickups),2,'platform owner can read pickup authorizations across schools');
 select is((select count(*)::int from public.subscriptions where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),2,'platform owner can read fixture subscriptions across schools');
 select is((select count(*)::int from public.invoices where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),3,'platform owner can read fixture invoices across schools');
+
+select ok(to_regprocedure('public.start_trip(uuid)') is not null,'start trip RPC is installed');
+select ok(to_regprocedure('public.record_trip_event(uuid,uuid,public.trip_event_type,double precision,double precision,jsonb,text,timestamp with time zone)') is not null,'idempotent trip event RPC is installed');
+select ok(to_regprocedure('public.complete_trip(uuid)') is not null,'guarded trip completion RPC is installed');
+select ok(to_regprocedure('public.verify_pickup_handover(uuid,uuid,uuid,text,double precision,double precision,text)') is not null,'atomic pickup handover RPC is installed');
+select ok(to_regprocedure('public.register_push_token(text)') is not null,'push token registration RPC is installed');
+select ok(to_regclass('public.staff_invitations') is not null,'staff invitation audit table is installed');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='children' and column_name='archived_at'),'child soft archival is supported');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='routes' and column_name='geometry_status'),'route provenance is recorded');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='trip_events' and column_name='idempotency_key'),'trip events support offline idempotency');
+select ok(exists(select 1 from pg_indexes where schemaname='public' and indexname='trip_events_idempotency_idx'),'trip event idempotency index is installed');
 
 select * from finish();
 rollback;
