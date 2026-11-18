@@ -7,7 +7,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: preDrive-${{ github.ref }}
+  group: preDrive-v2-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   quality:
@@ -42,13 +42,14 @@ jobs:
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
   database:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with:
           version: 2.45.5
-      - run: supabase start -x studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,inbucket --ignore-health-check
+      - run: supabase start -x studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,inbucket,rest,meta,kong --ignore-health-check
       - run: supabase db reset
       - run: supabase gen types typescript --local > frontend/packages/shared/src/database.types.ts
       - run: supabase test db
