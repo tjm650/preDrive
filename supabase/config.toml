@@ -33,3 +33,6 @@ verify_jwt = false
 
 [functions.invite-staff]
 verify_jwt = false
+
+[functions.build-route-geometry]
+verify_jwt = false
