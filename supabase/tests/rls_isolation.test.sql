@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(49);
+select plan(50);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -119,6 +119,10 @@ select throws_ok(
 );
 select is((public.complete_trip('96000000-0000-4000-8000-000000000001')->>'completed')::boolean,false,
   'trip completion is blocked while manifest children are unaccounted for');
+select throws_ok(
+  $select public.record_trip_event('96000000-0000-4000-8000-000000000001',null,'child_missing',null,null,'{}'::jsonb,'missing-no-child-01',now())$,
+  '22023','child-specific safety events must identify a manifest child'
+);
 
 
 -- School admin: full read access inside their own school, never across tenants.
