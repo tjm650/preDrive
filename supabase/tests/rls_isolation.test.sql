@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(50);
+select plan(55);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -48,6 +48,10 @@ insert into public.buses(id,school_id,registration,capacity) values
 insert into public.routes(id,school_id,name,type) values
 ('95000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','Route A','pickup'),
 ('95000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000002','Route B','pickup');
+
+insert into public.stops(id,route_id,name,lat,lng,position) values
+('95500000-0000-4000-8000-000000000001','95000000-0000-4000-8000-000000000001','Stop A1',-17.8,31.0,0),
+('95500000-0000-4000-8000-000000000002','95000000-0000-4000-8000-000000000001','Stop A2',-17.81,31.01,1);
 
 insert into public.route_children(route_id,child_id) values
 ('95000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001'),
@@ -132,6 +136,27 @@ select is((select count(*)::int from public.schools),1,'school admin sees only t
 select is((select count(*)::int from public.authorized_pickups),1,'school admin sees pickup authorizations only in their school');
 select is((select count(*)::int from public.subscriptions),1,'school admin sees only their school subscription');
 select is((select count(*)::int from public.invoices),2,'school admin sees invoices only in their school');
+select throws_ok(
+  $delete from public.route_children where route_id='95000000-0000-4000-8000-000000000001' and child_id='93000000-0000-4000-8000-000000000001'$,
+  '55000','active trips lock route manifest membership'
+);
+select throws_ok(
+  $insert into public.stops(route_id,name,lat,lng,position) values ('95000000-0000-4000-8000-000000000001','Late stop',-17.82,31.02,2)$,
+  '55000','active trips lock route stop changes'
+);
+select throws_ok(
+  $update public.routes set type='dropoff' where id='95000000-0000-4000-8000-000000000001'$,
+  '55000','active trips lock route type changes'
+);
+select throws_ok(
+  $update public.buses set active=false where id='94000000-0000-4000-8000-000000000001'$,
+  '55000','active trips lock assigned vehicle changes'
+);
+select throws_ok(
+  $update public.children set archived_at=now() where id='93000000-0000-4000-8000-000000000001'$,
+  '55000','children cannot be archived while on a route manifest'
+);
+
 
 -- Platform owner: cross-tenant read access for oversight.
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000007',true);
