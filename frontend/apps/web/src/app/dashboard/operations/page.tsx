@@ -291,9 +291,73 @@ function ChildRow({ child, onSave, onArchive }: { child: Child; onSave: (id: str
   const [name, setName] = useState(child.first_name);
   return <div className="flex flex-wrap items-center gap-3 py-4"><div className="min-w-0 flex-1"><input aria-label="Child first name" value={name} onChange={(e) => setName(e.target.value)} className="control max-w-sm" /><p className="mt-1 text-xs text-[#71827c]">{child.class_name || 'Class not assigned'}</p></div><button onClick={() => void onSave(child.id, name)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">Save</button><button onClick={() => void onArchive(child.id)} className="rounded-lg border border-[#f1d2ce] px-3 py-2 text-xs font-bold text-red-700">Archive</button></div>;
 }
-function RouteRow({ route, stops, onSave, onArchive, onAddStop, onBuildGeometry, onFieldCheck }: { route: Route; stops: Stop[]; onSave: (id: string, name: string) => Promise<void>; onArchive: (id: string) => Promise<void>; onAddStop: (routeId: string, name: string, lat: number, lng: number) => Promise<void>; onBuildGeometry: (routeId: string) => Promise<void>; onFieldCheck: (routeId: string) => Promise<void> }) {
+function RouteRow({
+  route,
+  stops,
+  onSave,
+  onArchive,
+  onAddStop,
+  onBuildGeometry,
+  onFieldCheck,
+}: {
+  route: Route;
+  stops: Stop[];
+  onSave: (id: string, name: string) => Promise<void>;
+  onArchive: (id: string) => Promise<void>;
+  onAddStop: (routeId: string, name: string, lat: number, lng: number) => Promise<void>;
+  onBuildGeometry: (routeId: string) => Promise<void>;
+  onFieldCheck: (routeId: string) => Promise<void>;
+}) {
   const [name, setName] = useState(route.name);
-  return <div className="flex flex-wrap items-center gap-3 py-4"><input aria-label="Route name" value={name} onChange={(e) => setName(e.target.value)} className="control max-w-sm flex-1" /><span className="rounded-full bg-[#edf5f1] px-3 py-1 text-xs font-bold capitalize">{route.type}</span><button onClick={() => void onSave(route.id, name)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">Save</button><button onClick={() => void onArchive(route.id)} className="rounded-lg border border-[#f1d2ce] px-3 py-2 text-xs font-bold text-red-700">Archive</button></div>;
+  const [stopName, setStopName] = useState('');
+  const [lat, setLat] = useState('');
+  const [lng, setLng] = useState('');
+  return (
+    <div className="py-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <input aria-label="Route name" value={name} onChange={(e) => setName(e.target.value)} className="control max-w-sm flex-1" />
+        <span className="rounded-full bg-[#edf5f1] px-3 py-1 text-xs font-bold capitalize">{route.type}</span>
+        <button onClick={() => void onSave(route.id, name)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">Save</button>
+        <button onClick={() => void onArchive(route.id)} className="rounded-lg border border-[#f1d2ce] px-3 py-2 text-xs font-bold text-red-700">Archive</button>
+      </div>
+      <p className="mt-3 text-xs text-[#71827c]">
+        {stops.length} ordered stops · Geometry: {route.geometry_status === 'manually_verified' ? 'field checked' : route.geometry_status ?? 'unverified'}
+        {route.distance_m ? ` · ${(route.distance_m / 1000).toFixed(1)} km` : ''}
+      </p>
+      <div className="mt-2 space-y-1">
+        {stops.map((stop) => (
+          <p key={stop.id} className="text-xs text-[#58746A]">
+            {stop.position + 1}. {stop.name} ({stop.lat.toFixed(4)}, {stop.lng.toFixed(4)})
+          </p>
+        ))}
+      </div>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          const latitude = Number(lat);
+          const longitude = Number(lng);
+          if (!stopName.trim() || !Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+              latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return;
+          void onAddStop(route.id, stopName, latitude, longitude);
+          setStopName('');
+          setLat('');
+          setLng('');
+        }}
+        className="mt-3 grid gap-2 sm:grid-cols-2"
+      >
+        <input required aria-label="Stop name" placeholder="Stop name" value={stopName} onChange={(e) => setStopName(e.target.value)} className="control" />
+        <input required aria-label="Latitude" type="number" step="any" placeholder="Latitude" value={lat} onChange={(e) => setLat(e.target.value)} className="control" />
+        <input required aria-label="Longitude" type="number" step="any" placeholder="Longitude" value={lng} onChange={(e) => setLng(e.target.value)} className="control" />
+        <button className="rounded-lg bg-[#edf5f1] px-3 py-2 text-xs font-bold text-[#28624F]">Add stop</button>
+      </form>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button onClick={() => void onBuildGeometry(route.id)} disabled={stops.length < 2} className="rounded-lg bg-[#0b6b58] px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Calculate road route</button>
+        {route.geometry_status === 'provider_verified' ? (
+          <button onClick={() => void onFieldCheck(route.id)} className="rounded-lg border border-[#0b6b58] px-3 py-2 text-xs font-bold text-[#0b6b58]">Confirm field check</button>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block text-xs font-bold text-[#49665b]">{label}<span className="mt-2 block">{children}</span></label>; }
 function Submit({ children, disabled }: { children: React.ReactNode; disabled: boolean }) { return <button disabled={disabled} className="w-full rounded-xl bg-[#0b6b58] px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50">{children}</button>; }
