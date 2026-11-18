@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 type Tab = 'children' | 'fleet' | 'routes' | 'billing' | 'staff';
 type Child = { id: string; first_name: string; class_name: string | null; archived_at: string | null };
 type Bus = { id: string; registration: string; make: string | null; model: string | null; capacity: number; active: boolean; archived_at: string | null };
-type Route = { id: string; name: string; type: 'pickup' | 'dropoff'; archived_at: string | null };
+type Route = { id: string; name: string; type: 'pickup' | 'dropoff'; archived_at: string | null; geometry_status?: string; distance_m?: number | null; duration_s?: number | null };\ntype Stop = { id: string; route_id: string; name: string; lat: number; lng: number; position: number };
 type Invoice = { id: string; amount_usd: number; currency: string; status: string; due_date: string; guardian_id: string | null };
 type Guardian = { id: string; full_name: string; role: string };\ntype Staff = { id: string; full_name: string; role: string };
 
@@ -22,7 +22,7 @@ export default function OperationsPage() {
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [children, setChildren] = useState<Child[]>([]);
   const [buses, setBuses] = useState<Bus[]>([]);
-  const [routes, setRoutes] = useState<Route[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);\n  const [stops, setStops] = useState<Stop[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [guardians, setGuardians] = useState<Guardian[]>([]);\n  const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,19 +66,19 @@ export default function OperationsPage() {
       return;
     }
     setSchoolId(profile.school_id);
-    const [childRows, busRows, routeRows, invoiceRows, guardianRows, staffRows] = await Promise.all([
+    const [childRows, busRows, routeRows, invoiceRows, guardianRows, staffRows, stopRows] = await Promise.all([
       client.from('children').select('*').eq('school_id', profile.school_id).order('first_name'),
       client.from('buses').select('*').eq('school_id', profile.school_id).order('registration'),
       client.from('routes').select('*').eq('school_id', profile.school_id).order('name'),
       client.from('invoices').select('*').eq('school_id', profile.school_id).order('due_date', { ascending: false }),
-      client.from('profiles').select('id,full_name,role').eq('school_id', profile.school_id).eq('role', 'parent').order('full_name'),\n      client.from('profiles').select('id,full_name,role').eq('school_id', profile.school_id).in('role', ['supervisor','school_admin']).order('full_name'),
+      client.from('profiles').select('id,full_name,role').eq('school_id', profile.school_id).eq('role', 'parent').order('full_name'),\n      client.from('profiles').select('id,full_name,role').eq('school_id', profile.school_id).in('role', ['supervisor','school_admin']).order('full_name'),\n      client.from('stops').select('*').order('position'),
     ]);
-    if (childRows.error || busRows.error || routeRows.error || invoiceRows.error || guardianRows.error || staffRows.error) {
+    if (childRows.error || busRows.error || routeRows.error || invoiceRows.error || guardianRows.error || staffRows.error || stopRows.error) {
       setError('Some records could not be loaded. Check the school permissions and retry.');
     }
     setChildren(((childRows.data ?? []) as unknown as Child[]).filter((row) => !row.archived_at));
     setBuses(((busRows.data ?? []) as unknown as Bus[]).filter((row) => !row.archived_at));
-    setRoutes(((routeRows.data ?? []) as unknown as Route[]).filter((row) => !row.archived_at));
+    setRoutes(((routeRows.data ?? []) as unknown as Route[]).filter((row) => !row.archived_at));\n    setStops((stopRows.data ?? []) as Stop[]);
     setInvoices((invoiceRows.data ?? []) as unknown as Invoice[]);
     setGuardians((guardianRows.data ?? []) as Guardian[]);\n    setStaff((staffRows.data ?? []) as Staff[]);
     setLoading(false);
@@ -159,7 +159,7 @@ export default function OperationsPage() {
     });
   }
 
-  async function archiveChild(id: string) {\n    const client = createClient(); if (!client) return;\n    const { error: updateError } = await client.from('children').update({ archived_at: new Date().toISOString() } as never).eq('id', id);\n    if (updateError) setError(updateError.message); else await load();\n  }\n  async function archiveBus(id: string) {\n    const client = createClient(); if (!client) return;\n    const { error: updateError } = await client.from('buses').update({ archived_at: new Date().toISOString(), active: false } as never).eq('id', id);\n    if (updateError) setError(updateError.message); else await load();\n  }\n  async function archiveRoute(id: string) {\n    const client = createClient(); if (!client) return;\n    const { error: updateError } = await client.from('routes').update({ archived_at: new Date().toISOString() } as never).eq('id', id);\n    if (updateError) setError(updateError.message); else await load();\n  }\n\n  async function renameChild(id: string, name: string) {
+  async function archiveChild(id: string) {\n    const client = createClient(); if (!client) return;\n    const { error: updateError } = await client.from('children').update({ archived_at: new Date().toISOString() } as never).eq('id', id);\n    if (updateError) setError(updateError.message); else await load();\n  }\n  async function archiveBus(id: string) {\n    const client = createClient(); if (!client) return;\n    const { error: updateError } = await client.from('buses').update({ archived_at: new Date().toISOString(), active: false } as never).eq('id', id);\n    if (updateError) setError(updateError.message); else await load();\n  }\n  async function addStop(routeId: string, name: string, lat: number, lng: number) {\n    const client = createClient(); if (!client) return;\n    const position = stops.filter((stop) => stop.route_id === routeId).reduce((max, stop) => Math.max(max, stop.position), -1) + 1;\n    const { error: insertError } = await client.from('stops').insert({ route_id: routeId, name: name.trim(), lat, lng, position });\n    if (insertError) setError(insertError.message); else await load();\n  }\n  async function buildRouteGeometry(routeId: string) {\n    const client = createClient(); if (!client) return;\n    setError(null); setNotice(null);\n    const { data, error: functionError } = await client.functions.invoke('build-route-geometry', { body: { route_id: routeId } });\n    if (functionError) { setError(functionError.message); return; }\n    const result = data as { verified?: boolean; distance_m?: number; duration_s?: number; note?: string; error?: string };\n    if (!result.verified) { setError(result.error ?? 'Road routing was not verified.'); return; }\n    setNotice(`Road geometry provider-verified: ${(result.distance_m ?? 0).toLocaleString()} m, ${Math.round((result.duration_s ?? 0) / 60)} min. ${result.note ?? ''}`);\n    await load();\n  }\n  async function archiveRoute(id: string) {\n    const client = createClient(); if (!client) return;\n    const { error: updateError } = await client.from('routes').update({ archived_at: new Date().toISOString() } as never).eq('id', id);\n    if (updateError) setError(updateError.message); else await load();\n  }\n\n  async function renameChild(id: string, name: string) {
     const client = createClient();
     if (!client || !name.trim()) return;
     const { error: updateError } = await client.from('children').update({ first_name: name.trim() }).eq('id', id);
@@ -202,7 +202,7 @@ export default function OperationsPage() {
               <h2 className="text-lg font-extrabold">{tab === 'children' ? 'Registered children' : tab === 'fleet' ? 'School fleet' : tab === 'routes' ? 'Transport routes' : tab === 'billing' ? 'Invoices' : 'School staff'}</h2>
               {tab === 'children' ? <div className="mt-5 divide-y divide-[#edf2ef]">{children.map((child) => <ChildRow key={child.id} child={child} onSave={renameChild} onArchive={archiveChild} />)}{children.length === 0 ? <Empty>No children registered yet.</Empty> : null}</div> : null}
               {tab === 'fleet' ? <div className="mt-5 divide-y divide-[#edf2ef]">{buses.map((bus) => <div key={bus.id} className="flex items-center justify-between gap-4 py-4"><div><p className="font-bold">{bus.registration}</p><p className="mt-1 text-xs text-[#71827c]">{[bus.make,bus.model].filter(Boolean).join(' ') || 'Vehicle'} · Capacity {bus.capacity}</p><p className="mt-1 text-xs">{bus.active ? 'Active' : 'Inactive'}</p></div><div className="flex gap-2"><button onClick={() => void toggleBus(bus)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">{bus.active ? 'Deactivate' : 'Activate'}</button><button onClick={() => void archiveBus(bus.id)} className="rounded-lg border border-[#f1d2ce] px-3 py-2 text-xs font-bold text-red-700">Archive</button></div></div>)}{buses.length === 0 ? <Empty>No vehicles registered yet.</Empty> : null}</div> : null}
-              {tab === 'routes' ? <div className="mt-5 divide-y divide-[#edf2ef]">{routes.map((route) => <RouteRow key={route.id} route={route} onSave={renameRoute} onArchive={archiveRoute} />)}{routes.length === 0 ? <Empty>No routes configured yet.</Empty> : null}</div> : null}
+              {tab === 'routes' ? <div className="mt-5 divide-y divide-[#edf2ef]">{routes.map((route) => <RouteRow key={route.id} route={route} stops={stops.filter((stop) => stop.route_id === route.id)} onSave={renameRoute} onArchive={archiveRoute} onAddStop={addStop} onBuildGeometry={buildRouteGeometry} />)}{routes.length === 0 ? <Empty>No routes configured yet.</Empty> : null}</div> : null}
               {tab === 'staff' ? <div className="mt-5 divide-y divide-[#edf2ef]">{staff.map((member) => <div key={member.id} className="py-4"><p className="font-bold">{member.full_name}</p><p className="mt-1 text-xs capitalize text-[#71827c]">{member.role.replace('_',' ')}</p></div>)}{staff.length === 0 ? <Empty>No staff accounts found.</Empty> : null}</div> : null}\n              {tab === 'billing' ? <div className="mt-5 divide-y divide-[#edf2ef]">{invoices.map((invoice) => <div key={invoice.id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div><p className="font-bold">{invoice.currency} {Number(invoice.amount_usd).toFixed(2)}</p><p className="mt-1 text-xs text-[#71827c]">Due {invoice.due_date} · {invoice.status}</p></div>{invoice.status === 'pending' ? <button onClick={() => void voidInvoice(invoice.id)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">Void invoice</button> : null}</div>)}{invoices.length === 0 ? <Empty>No invoices issued yet.</Empty> : null}<p className="mt-5 text-xs leading-5 text-[#8a9a93]">Payments are not marked as received here. Payment confirmation must come from a verified payment-provider callback.</p></div> : null}
             </section>
             <aside className="h-fit rounded-2xl border border-[#e3ece7] bg-white p-5 sm:p-6">
@@ -225,7 +225,7 @@ function ChildRow({ child, onSave, onArchive }: { child: Child; onSave: (id: str
   const [name, setName] = useState(child.first_name);
   return <div className="flex flex-wrap items-center gap-3 py-4"><div className="min-w-0 flex-1"><input aria-label="Child first name" value={name} onChange={(e) => setName(e.target.value)} className="control max-w-sm" /><p className="mt-1 text-xs text-[#71827c]">{child.class_name || 'Class not assigned'}</p></div><button onClick={() => void onSave(child.id, name)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">Save</button><button onClick={() => void onArchive(child.id)} className="rounded-lg border border-[#f1d2ce] px-3 py-2 text-xs font-bold text-red-700">Archive</button></div>;
 }
-function RouteRow({ route, onSave, onArchive }: { route: Route; onSave: (id: string, name: string) => Promise<void>; onArchive: (id: string) => Promise<void> }) {
+function RouteRow({ route, stops, onSave, onArchive, onAddStop, onBuildGeometry }: { route: Route; stops: Stop[]; onSave: (id: string, name: string) => Promise<void>; onArchive: (id: string) => Promise<void>; onAddStop: (routeId: string, name: string, lat: number, lng: number) => Promise<void>; onBuildGeometry: (routeId: string) => Promise<void> }) {
   const [name, setName] = useState(route.name);
   return <div className="flex flex-wrap items-center gap-3 py-4"><input aria-label="Route name" value={name} onChange={(e) => setName(e.target.value)} className="control max-w-sm flex-1" /><span className="rounded-full bg-[#edf5f1] px-3 py-1 text-xs font-bold capitalize">{route.type}</span><button onClick={() => void onSave(route.id, name)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">Save</button><button onClick={() => void onArchive(route.id)} className="rounded-lg border border-[#f1d2ce] px-3 py-2 text-xs font-bold text-red-700">Archive</button></div>;
 }
