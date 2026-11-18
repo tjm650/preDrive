@@ -22,7 +22,7 @@ jobs:
         run: pnpm format
       - run: pnpm lint
       - run: pnpm format:check
-      - run: pnpm --filter @predrive/shared typecheck
+      - run: pnpm typecheck
       - name: Commit generated lockfile and formatting
         if: success() && github.event_name == 'push'
         run: |
