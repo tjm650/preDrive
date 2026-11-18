@@ -3,11 +3,13 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-type Tab = 'children' | 'fleet' | 'routes' | 'billing' | 'staff';
+type Tab = 'children' | 'fleet' | 'routes' | 'trips' | 'billing' | 'staff';
 type Child = { id: string; first_name: string; class_name: string | null; archived_at: string | null };
 type Bus = { id: string; registration: string; make: string | null; model: string | null; capacity: number; active: boolean; archived_at: string | null };
 type Route = { id: string; name: string; type: 'pickup' | 'dropoff'; archived_at: string | null; geometry_status?: string; distance_m?: number | null; duration_s?: number | null };
 type Stop = { id: string; route_id: string; name: string; lat: number; lng: number; position: number };
+type RouteAssignment = { id: string; route_id: string; child_id: string };
+type TripRecord = { id: string; status: string; route_id: string; bus_id: string; supervisor_id: string; started_at: string | null };
 type Invoice = { id: string; amount_usd: number; currency: string; status: string; due_date: string; guardian_id: string | null };
 type Guardian = { id: string; full_name: string; role: string };
 type Staff = { id: string; full_name: string; role: string };
@@ -27,6 +29,8 @@ export default function OperationsPage() {
   const [buses, setBuses] = useState<Bus[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [stops, setStops] = useState<Stop[]>([]);
+  const [routeAssignments, setRouteAssignments] = useState<RouteAssignment[]>([]);
+  const [trips, setTrips] = useState<TripRecord[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [guardians, setGuardians] = useState<Guardian[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -42,6 +46,9 @@ export default function OperationsPage() {
   const [busCapacity, setBusCapacity] = useState('16');
   const [routeName, setRouteName] = useState('');
   const [routeType, setRouteType] = useState<'pickup' | 'dropoff'>('pickup');
+  const [tripRoute, setTripRoute] = useState('');
+  const [tripBus, setTripBus] = useState('');
+  const [tripSupervisor, setTripSupervisor] = useState('');
   const [invoiceGuardian, setInvoiceGuardian] = useState('');
   const [invoiceAmount, setInvoiceAmount] = useState('');
   const [invoiceDue, setInvoiceDue] = useState('');
@@ -90,6 +97,14 @@ export default function OperationsPage() {
     setBuses(((busRows.data ?? []) as unknown as Bus[]).filter((row) => !row.archived_at));
     setRoutes(((routeRows.data ?? []) as unknown as Route[]).filter((row) => !row.archived_at));
     setStops((stopRows.data ?? []) as Stop[]);
+    const routeIds = (routeRows.data ?? []).map((row) => row.id);
+    const [assignmentRows, tripRows] = await Promise.all([
+      routeIds.length ? client.from('route_children').select('id,route_id,child_id').in('route_id', routeIds) : Promise.resolve({ data: [], error: null }),
+      routeIds.length ? client.from('trips').select('id,status,route_id,bus_id,supervisor_id,started_at').in('route_id', routeIds).order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null }),
+    ]);
+    if (assignmentRows.error || tripRows.error) setError('Route assignments or trip schedules could not be loaded.');
+    setRouteAssignments((assignmentRows.data ?? []) as RouteAssignment[]);
+    setTrips((tripRows.data ?? []) as TripRecord[]);
     setInvoices((invoiceRows.data ?? []) as unknown as Invoice[]);
     setGuardians((guardianRows.data ?? []) as Guardian[]);
     setStaff((staffRows.data ?? []) as Staff[]);
@@ -154,6 +169,20 @@ export default function OperationsPage() {
     });
   }
 
+  async function createTrip(event: FormEvent<HTMLFormElement>) {
+    await submit(event, async () => {
+      const client = createClient();
+      if (!client || !tripRoute || !tripBus || !tripSupervisor) throw new Error('Select a field-checked route, active vehicle and supervisor.');
+      const route = routes.find((item) => item.id === tripRoute);
+      const bus = buses.find((item) => item.id === tripBus);
+      if (route?.geometry_status !== 'manually_verified') throw new Error('Trips can only be scheduled on field-checked road routes.');
+      if (!bus?.active || bus.archived_at) throw new Error('Select an active vehicle.');
+      if (!routeAssignments.some((assignment) => assignment.route_id === tripRoute)) throw new Error('Assign at least one child to the route before scheduling a trip.');
+      const { error: insertError } = await client.from('trips').insert({ route_id: tripRoute, bus_id: tripBus, supervisor_id: tripSupervisor, status: 'scheduled' });
+      if (insertError) throw insertError;
+    });
+  }
+
   async function inviteStaff(event: FormEvent<HTMLFormElement>) {
     await submit(event, async () => {
       const client = createClient();
@@ -206,6 +235,16 @@ export default function OperationsPage() {
     if (rpcError) { setError(rpcError.message); return; }
     setNotice('Route field check recorded. Supervisors can now start trips on this route.');
     await load();
+  }
+  async function assignChild(routeId: string, childId: string) {
+    const client = createClient(); if (!client) return;
+    const { error: insertError } = await client.from('route_children').insert({ route_id: routeId, child_id: childId });
+    if (insertError) setError(insertError.message); else await load();
+  }
+  async function removeRouteChild(assignmentId: string) {
+    const client = createClient(); if (!client) return;
+    const { error: deleteError } = await client.from('route_children').delete().eq('id', assignmentId);
+    if (deleteError) setError(deleteError.message); else await load();
   }
   async function buildRouteGeometry(routeId: string) {
     const client = createClient(); if (!client) return;
@@ -263,18 +302,20 @@ export default function OperationsPage() {
         {loading ? <p className="mt-8 text-sm text-[#71827c]">Loading school records…</p> : (
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
             <section className="rounded-2xl border border-[#e3ece7] bg-white p-5 sm:p-7">
-              <h2 className="text-lg font-extrabold">{tab === 'children' ? 'Registered children' : tab === 'fleet' ? 'School fleet' : tab === 'routes' ? 'Transport routes' : tab === 'billing' ? 'Invoices' : 'School staff'}</h2>
+              <h2 className="text-lg font-extrabold">{tab === 'children' ? 'Registered children' : tab === 'fleet' ? 'School fleet' : tab === 'routes' ? 'Transport routes' : tab === 'trips' ? 'Trip schedule' : tab === 'billing' ? 'Invoices' : 'School staff'}</h2>
               {tab === 'children' ? <div className="mt-5 divide-y divide-[#edf2ef]">{children.map((child) => <ChildRow key={child.id} child={child} onSave={renameChild} onArchive={archiveChild} />)}{children.length === 0 ? <Empty>No children registered yet.</Empty> : null}</div> : null}
               {tab === 'fleet' ? <div className="mt-5 divide-y divide-[#edf2ef]">{buses.map((bus) => <div key={bus.id} className="flex items-center justify-between gap-4 py-4"><div><p className="font-bold">{bus.registration}</p><p className="mt-1 text-xs text-[#71827c]">{[bus.make,bus.model].filter(Boolean).join(' ') || 'Vehicle'} · Capacity {bus.capacity}</p><p className="mt-1 text-xs">{bus.active ? 'Active' : 'Inactive'}</p></div><div className="flex gap-2"><button onClick={() => void toggleBus(bus)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">{bus.active ? 'Deactivate' : 'Activate'}</button><button onClick={() => void archiveBus(bus.id)} className="rounded-lg border border-[#f1d2ce] px-3 py-2 text-xs font-bold text-red-700">Archive</button></div></div>)}{buses.length === 0 ? <Empty>No vehicles registered yet.</Empty> : null}</div> : null}
-              {tab === 'routes' ? <div className="mt-5 divide-y divide-[#edf2ef]">{routes.map((route) => <RouteRow key={route.id} route={route} stops={stops.filter((stop) => stop.route_id === route.id)} onSave={renameRoute} onArchive={archiveRoute} onAddStop={addStop} onBuildGeometry={buildRouteGeometry} onFieldCheck={attestRouteFieldCheck} />)}{routes.length === 0 ? <Empty>No routes configured yet.</Empty> : null}</div> : null}
+              {tab === 'routes' ? <div className="mt-5 divide-y divide-[#edf2ef]">{routes.map((route) => <RouteRow key={route.id} route={route} stops={stops.filter((stop) => stop.route_id === route.id)} children={children} assignedChildIds={routeAssignments.filter((assignment) => assignment.route_id === route.id).map((assignment) => assignment.child_id)} onSave={renameRoute} onArchive={archiveRoute} onAddStop={addStop} onBuildGeometry={buildRouteGeometry} onFieldCheck={attestRouteFieldCheck} onAssignChild={assignChild} onRemoveChild={removeRouteChild} />)}{routes.length === 0 ? <Empty>No routes configured yet.</Empty> : null}</div> : null}
+              {tab === 'trips' ? <div className="mt-5 divide-y divide-[#edf2ef]">{trips.map((trip) => <div key={trip.id} className="py-4"><p className="font-bold">{routes.find((route) => route.id === trip.route_id)?.name ?? 'Route'} · {buses.find((bus) => bus.id === trip.bus_id)?.registration ?? 'Vehicle'}</p><p className="mt-1 text-xs capitalize text-[#71827c]">{trip.status} · {staff.find((member) => member.id === trip.supervisor_id)?.full_name ?? 'Supervisor'}</p>{trip.started_at ? <p className="mt-1 text-xs text-[#71827c]">Started {new Date(trip.started_at).toLocaleString()}</p> : null}</div>)}{trips.length === 0 ? <Empty>No trips scheduled yet.</Empty> : null}</div> : null}
               {tab === 'staff' ? <div className="mt-5 divide-y divide-[#edf2ef]">{staff.map((member) => <div key={member.id} className="py-4"><p className="font-bold">{member.full_name}</p><p className="mt-1 text-xs capitalize text-[#71827c]">{member.role.replace('_',' ')}</p></div>)}{staff.length === 0 ? <Empty>No staff accounts found.</Empty> : null}</div> : null}
               {tab === 'billing' ? <div className="mt-5 divide-y divide-[#edf2ef]">{invoices.map((invoice) => <div key={invoice.id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div><p className="font-bold">{invoice.currency} {Number(invoice.amount_usd).toFixed(2)}</p><p className="mt-1 text-xs text-[#71827c]">Due {invoice.due_date} · {invoice.status}</p></div>{invoice.status === 'pending' ? <button onClick={() => void voidInvoice(invoice.id)} className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold">Void invoice</button> : null}</div>)}{invoices.length === 0 ? <Empty>No invoices issued yet.</Empty> : null}<p className="mt-5 text-xs leading-5 text-[#8a9a93]">Payments are not marked as received here. Payment confirmation must come from a verified payment-provider callback.</p></div> : null}
             </section>
             <aside className="h-fit rounded-2xl border border-[#e3ece7] bg-white p-5 sm:p-6">
-              <h2 className="text-lg font-extrabold">{tab === 'children' ? 'Add a child' : tab === 'fleet' ? 'Register a vehicle' : tab === 'routes' ? 'Create a route' : tab === 'billing' ? 'Issue an invoice' : 'Invite a staff member'}</h2>
+              <h2 className="text-lg font-extrabold">{tab === 'children' ? 'Add a child' : tab === 'fleet' ? 'Register a vehicle' : tab === 'routes' ? 'Create a route' : tab === 'trips' ? 'Schedule a trip' : tab === 'billing' ? 'Issue an invoice' : 'Invite a staff member'}</h2>
               {tab === 'children' ? <form onSubmit={(e) => void createChild(e)} className="mt-4 space-y-3"><Field label="Child's first name"><input required value={childName} onChange={(e) => setChildName(e.target.value)} className="control" /></Field><Field label="Class / group"><input value={childClass} onChange={(e) => setChildClass(e.target.value)} className="control" /></Field><Submit disabled={saving}>Add child</Submit></form> : null}
               {tab === 'fleet' ? <form onSubmit={(e) => void createBus(e)} className="mt-4 space-y-3"><Field label="Registration"><input required value={busRegistration} onChange={(e) => setBusRegistration(e.target.value)} className="control" /></Field><Field label="Make"><input value={busMake} onChange={(e) => setBusMake(e.target.value)} className="control" /></Field><Field label="Model"><input value={busModel} onChange={(e) => setBusModel(e.target.value)} className="control" /></Field><Field label="Passenger capacity"><input required type="number" min="1" max="100" value={busCapacity} onChange={(e) => setBusCapacity(e.target.value)} className="control" /></Field><Submit disabled={saving}>Register vehicle</Submit></form> : null}
               {tab === 'routes' ? <form onSubmit={(e) => void createRoute(e)} className="mt-4 space-y-3"><Field label="Route name"><input required value={routeName} onChange={(e) => setRouteName(e.target.value)} className="control" /></Field><Field label="Route type"><select value={routeType} onChange={(e) => setRouteType(e.target.value as 'pickup' | 'dropoff')} className="control"><option value="pickup">Morning pickup</option><option value="dropoff">Afternoon drop-off</option></select></Field><Submit disabled={saving}>Create route</Submit></form> : null}
+              {tab === 'trips' ? <form onSubmit={(e) => void createTrip(e)} className="mt-4 space-y-3"><Field label="Field-checked route"><select required value={tripRoute} onChange={(e) => setTripRoute(e.target.value)} className="control"><option value="">Select a route</option>{routes.filter((route) => route.geometry_status === 'manually_verified' && routeAssignments.some((assignment) => assignment.route_id === route.id)).map((route) => <option key={route.id} value={route.id}>{route.name} · {route.type}</option>)}</select></Field><Field label="Active vehicle"><select required value={tripBus} onChange={(e) => setTripBus(e.target.value)} className="control"><option value="">Select a vehicle</option>{buses.filter((bus) => bus.active).map((bus) => <option key={bus.id} value={bus.id}>{bus.registration}</option>)}</select></Field><Field label="Supervisor"><select required value={tripSupervisor} onChange={(e) => setTripSupervisor(e.target.value)} className="control"><option value="">Select a supervisor</option>{staff.filter((member) => member.role === 'supervisor').map((member) => <option key={member.id} value={member.id}>{member.full_name}</option>)}</select></Field><Submit disabled={saving}>Schedule trip</Submit></form> : null}
               {tab === 'staff' ? <form onSubmit={(e) => void inviteStaff(e)} className="mt-4 space-y-3"><Field label="Full name"><input required minLength={2} value={staffName} onChange={(e) => setStaffName(e.target.value)} className="control" /></Field><Field label="Email address"><input required type="email" value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)} className="control" /></Field><Field label="Role"><select value={staffRole} onChange={(e) => setStaffRole(e.target.value as 'supervisor' | 'school_admin')} className="control"><option value="supervisor">Transport supervisor</option><option value="school_admin">School administrator</option></select></Field><Submit disabled={saving}>Send invitation</Submit></form> : null}
               {tab === 'billing' ? <form onSubmit={(e) => void createInvoice(e)} className="mt-4 space-y-3"><Field label="Parent / guardian"><select required value={invoiceGuardian} onChange={(e) => setInvoiceGuardian(e.target.value)} className="control"><option value="">Select a parent</option>{guardians.map((guardian) => <option key={guardian.id} value={guardian.id}>{guardian.full_name}</option>)}</select></Field><Field label="Amount (USD)"><input required type="number" min="0.01" step="0.01" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} className="control" /></Field><Field label="Due date"><input required type="date" value={invoiceDue} onChange={(e) => setInvoiceDue(e.target.value)} className="control" /></Field><Submit disabled={saving}>Issue invoice</Submit></form> : null}
               <p className="mt-5 text-xs leading-5 text-[#8a9a93]">All operations are checked by the signed-in account and enforced by database row-level security.</p>
