@@ -1,15 +1,35 @@
 name: CI
 on:
   push:
-    branches: [main, 'feat/**']
+    branches: [main]
   pull_request:
     branches: [main]
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: preDrive-v3-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  database:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.1
+      - run: supabase start -x studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,inbucket --ignore-health-check
+      - run: supabase db reset
+      - name: Generate database types
+        run: supabase gen types typescript --local > frontend/packages/shared/src/database.types.ts
+      - name: Run pgTAP isolation suite
+        run: supabase test db
+      - uses: actions/upload-artifact@v4
+        with:
+          name: schema-types
+          path: frontend/packages/shared/src/database.types.ts
+      - if: always()
+        run: supabase stop
   quality:
     needs: database
     runs-on: ubuntu-latest
@@ -25,37 +45,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
       - run: pnpm install --no-frozen-lockfile
-      - name: Apply Prettier formatting
-        run: pnpm format
-      - run: pnpm lint
-      - run: pnpm format:check
-      - run: pnpm typecheck
-      - name: Commit generated lockfile and formatting
-        if: success() && github.event_name == 'push'
-        run: |
-          git add -A
-          if ! git diff --cached --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "chore: format workspace and commit pnpm lockfile"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-          fi
-  database:
-    timeout-minutes: 15
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.45.5
-      - run: supabase start -x studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,inbucket --ignore-health-check
-      - run: supabase db reset
-      - run: supabase gen types typescript --local > frontend/packages/shared/src/database.types.ts
-      - run: supabase test db
-      - uses: actions/upload-artifact@v4
-        with:
-          name: schema-types
-          path: frontend/packages/shared/src/database.types.ts
-      - if: always()
-        run: supabase stop
+      - name: Verify formatting
+        run: pnpm format:check
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck all workspaces
+        run: pnpm typecheck
+      - name: Build web application
+        run: pnpm --filter @predrive/web build
+      - name: Bundle Android application
+        working-directory: frontend/apps/mobile
+        run: npx --yes @expo/agent-cli@latest export --platform android
