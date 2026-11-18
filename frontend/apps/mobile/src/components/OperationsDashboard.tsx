@@ -173,6 +173,9 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
     if (profile.role !== 'supervisor' || !activeTrip || !client) {
       void setActiveTripId(null);
       if (locationSubscription.current) { locationSubscription.current.remove(); locationSubscription.current = null; }
+      void Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)
+        .then((started) => started ? Location.stopLocationUpdatesAsync(LOCATION_TASK) : undefined)
+        .catch(() => undefined);
       return;
     }
     void setActiveTripId(activeTrip.id);
@@ -208,12 +211,20 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
           heading: position.coords.heading, speed: position.coords.speed === null ? null : position.coords.speed * 3.6,
           updated_at: new Date(position.timestamp).toISOString(),
         });
-        if (connected) await flushOfflineQueue(client);
+        await flushOfflineQueue(client).catch(() => undefined);
       });
     };
     void start();
-    return () => { cancelled = true; locationSubscription.current?.remove(); locationSubscription.current = null; };
-  }, [activeTrip?.id, client, connected, profile.role]);
+    return () => {
+      cancelled = true;
+      locationSubscription.current?.remove();
+      locationSubscription.current = null;
+      void setActiveTripId(null);
+      void Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)
+        .then((started) => started ? Location.stopLocationUpdatesAsync(LOCATION_TASK) : undefined)
+        .catch(() => undefined);
+    };
+  }, [activeTrip?.id, client, profile.role]);
 
   async function runRpc(name: string, args: Record<string, unknown>) {
     if (!client) throw new Error('Supabase is unavailable.');
