@@ -26,6 +26,7 @@ type Trip = { id: string; status: 'scheduled' | 'active' | 'completed' | 'cancel
 type Child = { id: string; first_name: string; class_name: string | null };
 type EventRow = { trip_id: string; child_id: string | null; type: string; created_at: string };
 type Pickup = { id: string; child_id: string; name: string; relationship: string };
+type FamilyNotification = { id: string; type: string; priority: string; created_at: string; read_at: string | null };
 type LivePoint = { trip_id: string; lat: number; lng: number; updated_at: string };
 type TripCard = Trip & { routeName: string; routeType: 'pickup' | 'dropoff'; busName: string; children: Child[]; events: EventRow[]; location: LivePoint | null };
 
@@ -70,6 +71,8 @@ async function registerPushToken(client: SupabaseClient) {
 export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; onSignOut: () => void }) {
   const [cards, setCards] = useState<TripCard[]>([]);
   const [pickups, setPickups] = useState<Pickup[]>([]);
+  const [familyChildren, setFamilyChildren] = useState<Child[]>([]);
+  const [notifications, setNotifications] = useState<FamilyNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -291,6 +294,12 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
     finally { setBusy(null); }
   }
 
+  async function markNotificationRead(notificationId: string) {
+    if (!client) return;
+    const { error: updateError } = await client.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', notificationId);
+    if (updateError) setError(updateError.message); else await load();
+  }
+
   async function reportAbsence(childId: string) {
     if (!client) return;
     setBusy(childId); setError(null);
@@ -315,6 +324,7 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
       </View>
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       {notice ? <Text accessibilityRole="status" style={styles.notice}>{notice}</Text> : null}
+      {notifications.length > 0 ? <View style={styles.section}><Text style={styles.sectionTitle}>Safety notifications</Text>{notifications.map((item) => <View key={item.id} style={styles.notificationRow}><View style={{ flex: 1 }}><Text style={styles.childName}>{item.type.replaceAll('_',' ')}</Text><Text style={styles.muted}>{item.priority.toUpperCase()} · {new Date(item.created_at).toLocaleString()}</Text></View>{!item.read_at ? <Pressable onPress={() => void markNotificationRead(item.id)} style={styles.smallButton}><Text style={styles.smallButtonText}>Mark read</Text></Pressable> : null}</View>)}</View> : null}
       {loading ? <ActivityIndicator color="#0B8067" style={{ marginTop: 32 }} /> : null}
       {!loading && profile.role === 'parent' ? (
         <View style={styles.section}>
@@ -386,6 +396,7 @@ const styles = StyleSheet.create({
   connection: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF', borderRadius: 13, padding: 13, borderWidth: 1, borderColor: '#E4ECE8' },
   dot: { width: 8, height: 8, borderRadius: 4 },
   connectionText: { color: '#58746A', fontSize: 11, flex: 1 },
+  notificationRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, backgroundColor: '#FFFFFF', borderRadius: 12, marginBottom: 7, borderWidth: 1, borderColor: '#E4ECE8' },
   queueText: { color: '#B45309', fontSize: 11, fontWeight: '800' },
   error: { color: '#B42318', backgroundColor: '#FEF3F2', padding: 13, borderRadius: 12, marginTop: 14, fontSize: 12 },
   notice: { color: '#17664F', backgroundColor: '#E8F4EE', padding: 13, borderRadius: 12, marginTop: 14, fontSize: 12 },
