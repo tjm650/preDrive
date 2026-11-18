@@ -55,11 +55,6 @@ if (!TaskManager.isTaskDefined(LOCATION_TASK)) {
   });
 }
 
-let activeTripForLocation: string | null = null;
-async function getActiveTripId() {
-  return activeTripForLocation;
-}
-
 async function registerPushToken(client: SupabaseClient) {
   const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? Constants.expoConfig?.extra?.eas?.projectId;
   if (!client || !projectId) return;
@@ -81,8 +76,8 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
   const [notice, setNotice] = useState<string | null>(null);
   const [connected, setConnected] = useState(true);
   const [queued, setQueued] = useState(0);
-  const [pins, setPins] = useState<Record<string, string>>({});\n  const [selectedPickups, setSelectedPickups] = useState<Record<string, string>>({});
-  const [absenceChild, setAbsenceChild] = useState<string | null>(null);
+  const [pins, setPins] = useState<Record<string, string>>({});
+  const [selectedPickups, setSelectedPickups] = useState<Record<string, string>>({});
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
   const client = supabase;
 
@@ -292,7 +287,7 @@ export function OperationsDashboard({ profile, onSignOut }: { profile: Profile; 
     });
     if (insertError) setError(insertError.code === '23505' ? 'An absence is already recorded for today.' : insertError.message);
     else setNotice('Absence reported to the school.');
-    setAbsenceChild(null); setBusy(null);
+    setBusy(null);
   }
 
   return (
@@ -400,7 +395,11 @@ const styles = StyleSheet.create({
   actionButton: { backgroundColor: '#EDF5F1', borderRadius: 9, paddingHorizontal: 10, paddingVertical: 9 },
   actionText: { color: '#28624F', fontSize: 10, fontWeight: '800' },
   finalLabel: { color: '#16815F', fontSize: 10, fontWeight: '800', marginTop: 9 },
-  handover: { gap: 8, marginTop: 10 },\n  pickupChoice: { borderWidth: 1, borderColor: '#D6E3DD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6 },\n  pickupSelected: { backgroundColor: '#0B6B58', borderColor: '#0B6B58' },\n  pickupChoiceText: { color: '#315E50', fontSize: 10, fontWeight: '700' },\n  pickupSelectedText: { color: '#FFFFFF' },
+  handover: { gap: 8, marginTop: 10 },
+  pickupChoice: { borderWidth: 1, borderColor: '#D6E3DD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6 },
+  pickupSelected: { backgroundColor: '#0B6B58', borderColor: '#0B6B58' },
+  pickupChoiceText: { color: '#315E50', fontSize: 10, fontWeight: '700' },
+  pickupSelectedText: { color: '#FFFFFF' },
   pinInput: { flex: 1, height: 38, borderRadius: 9, borderWidth: 1, borderColor: '#DCE7E2', paddingHorizontal: 10, color: '#17382F', fontSize: 12 },
   tripActions: { flexDirection: 'row', gap: 9, marginTop: 18 },
   sosButton: { flex: 1, backgroundColor: '#B42318', borderRadius: 10, padding: 12, alignItems: 'center' },
