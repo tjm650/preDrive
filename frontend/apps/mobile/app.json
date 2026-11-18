@@ -7,12 +7,24 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "plugins": ["expo-router", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-location",
+      "expo-notifications",
+      "expo-sqlite"
+    ],
     "experiments": {
       "typedRoutes": true
     },
     "android": {
-      "package": "zw.co.predrive.mobile"
+      "package": "zw.co.predrive.mobile",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "ios": {
       "bundleIdentifier": "zw.co.predrive.mobile"
