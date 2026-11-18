@@ -1,3 +1,10 @@
+drop policy if exists staff_invitations_admin_read on public.staff_invitations;
+create policy staff_invitations_admin_read on public.staff_invitations
+  for select to authenticated using (
+    private.current_role() = 'school_admin'
+    and private.current_school_id() = school_id
+  );
+
 -- Road geometry must be provider-calculated and field-checked before a trip can start.
 revoke update on public.routes from authenticated;
 grant update(name,type,archived_at) on public.routes to authenticated;
