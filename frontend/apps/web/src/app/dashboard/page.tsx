@@ -75,7 +75,7 @@ export default async function DashboardPage() {
             </section>
           ))}
         </div>
-        <section className="mt-6 rounded-2xl border border-[#e3ece7] bg-white p-7">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#cfe2d8] bg-[#edf6f1] p-6"><div><h2 className="font-extrabold">Manage school operations</h2><p className="mt-1 text-sm text-[#71827c]">Children, vehicles, routes and billing records.</p></div><a href="/dashboard/operations" className="rounded-full bg-[#0b6b58] px-5 py-3 text-xs font-extrabold text-white">Open operations</a></div>\n        <section className="mt-6 rounded-2xl border border-[#e3ece7] bg-white p-7">
           <h2 className="text-lg font-extrabold">Operational overview</h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[#71827c]">
             These counts are queried through your authenticated session and enforced by Supabase
