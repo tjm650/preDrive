@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(131);
+select plan(135);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -351,6 +351,15 @@ select ok(exists(select 1 from pg_constraint where conname='audit_log_actor_id_f
 select ok(exists(select 1 from pg_constraint where conname='messages_sender_id_fkey' and confdeltype='n'),
   'message sender references do not block account deletion');
 select ok(to_regprocedure('public.record_manual_payment(uuid,numeric,text,text)') is not null,'manual payment reconciliation RPC is installed');
+select ok(to_regprocedure('public.apply_paynow_callback(text,text,numeric,text)') is not null,
+  'atomic Paynow callback reconciliation RPC is installed');
+select ok(not has_function_privilege('authenticated','public.apply_paynow_callback(text,text,numeric,text)','EXECUTE'),
+  'authenticated clients cannot invoke the privileged Paynow callback RPC');
+select ok(has_function_privilege('service_role','public.apply_paynow_callback(text,text,numeric,text)','EXECUTE'),
+  'only the server service role can invoke Paynow callback reconciliation');
+select ok(not has_table_privilege('authenticated','public.paynow_transactions','SELECT')
+  and has_table_privilege('service_role','public.paynow_transactions','SELECT'),
+  'Paynow poll and checkout URLs are private to the server service role');
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='authorized_pickups' and column_name='active'),
   'pickup authorizations support revocation');
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='payments' and column_name='method'),
