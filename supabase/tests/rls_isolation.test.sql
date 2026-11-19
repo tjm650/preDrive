@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(62);
+select plan(74);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -159,6 +159,40 @@ select is((select count(*)::int from public.schools),1,'school admin sees only t
 select is((select count(*)::int from public.authorized_pickups),1,'school admin sees pickup authorizations only in their school');
 select is((select count(*)::int from public.subscriptions),1,'school admin sees only their school subscription');
 select is((select count(*)::int from public.invoices),2,'school admin sees invoices only in their school');
+select lives_ok(
+  $select public.create_child_with_guardian('Child A3','91000000-0000-4000-8000-000000000001',null,'Parent')$,
+  'school admin can atomically enrol a child with an existing parent'
+);
+select is((select count(*)::int from public.children where first_name='Child A3'),1,
+  'new child record is created');
+select is((select count(*)::int from public.guardianships g join public.children c on c.id=g.child_id where c.first_name='Child A3' and g.guardian_id='91000000-0000-4000-8000-000000000001'),1,
+  'new child is linked to the selected parent');
+select throws_ok(
+  $select public.create_child_with_guardian('Child A4','91000000-0000-4000-8000-000000000002',null,'Parent')$,
+  '22023',null,'school admin cannot link a child to a parent in another school'
+);
+select lives_ok(
+  $select public.record_manual_payment((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),10,'USD','TEST-PAY-01')$,
+  'school admin can record a verified partial payment'
+);
+select is((select coalesce(sum(amount),0)::numeric from public.payments where provider_reference='TEST-PAY-01'),10::numeric,
+  'partial payment is stored with its receipt reference');
+select throws_ok(
+  $select public.record_manual_payment((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),1,'USD','TEST-PAY-01')$,
+  '23505',null,'duplicate manual payment references are rejected'
+);
+select throws_ok(
+  $insert into public.payments(invoice_id,amount,currency,provider,provider_reference,status,paid_at)
+    values ((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),1,'USD','manual','TEST-DIRECT','succeeded',now())$,
+  '42501',null,'authenticated clients cannot bypass payment reconciliation'
+);
+select lives_ok(
+  $select public.record_manual_payment((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),15,'USD','TEST-PAY-02')$,
+  'final verified payment closes the invoice balance'
+);
+select is((select status::text from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),'paid',
+  'invoice is marked paid only when the full balance is reconciled');
+
 select throws_ok(
   $$delete from public.route_children where route_id='95000000-0000-4000-8000-000000000001' and child_id='93000000-0000-4000-8000-000000000001'$$,
   '55000',null,'active trips lock route manifest membership'
@@ -183,7 +217,7 @@ select throws_ok(
 
 -- Platform owner: cross-tenant read access for oversight.
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000007',true);
-select is((select count(*)::int from public.children where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),3,'platform owner can read fixture children across schools');
+select is((select count(*)::int from public.children where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),4,'platform owner can read fixture children across schools');
 select is((select count(*)::int from public.schools where id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),2,'platform owner can read fixture schools');
 select is((select count(*)::int from public.authorized_pickups),2,'platform owner can read pickup authorizations across schools');
 select is((select count(*)::int from public.subscriptions where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),2,'platform owner can read fixture subscriptions across schools');
@@ -194,6 +228,8 @@ select ok(to_regprocedure('public.record_trip_event(uuid,uuid,public.trip_event_
 select ok(to_regprocedure('public.complete_trip(uuid)') is not null,'guarded trip completion RPC is installed');
 select ok(to_regprocedure('public.verify_pickup_handover(uuid,uuid,uuid,text,double precision,double precision,text)') is not null,'atomic pickup handover RPC is installed');
 select ok(to_regprocedure('public.register_push_token(text)') is not null,'push token registration RPC is installed');
+select ok(to_regprocedure('public.create_child_with_guardian(text,uuid,text,text)') is not null,'atomic child enrolment RPC is installed');
+select ok(to_regprocedure('public.record_manual_payment(uuid,numeric,text,text)') is not null,'manual payment reconciliation RPC is installed');
 select ok(to_regprocedure('public.verify_route_field_check(uuid)') is not null,'route field-check gate is installed');
 select ok(to_regclass('public.staff_invitations') is not null,'staff invitation audit table is installed');
 select ok(to_regclass('public.parent_invitations') is not null,'parent invitation audit table is installed');
