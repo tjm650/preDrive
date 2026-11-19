@@ -165,3 +165,8 @@ Required server secrets before deployment: `PAYNOW_INTEGRATION_ID`, `PAYNOW_INTE
 Official protocol references: [Paynow initiate transaction](https://developers.paynow.co.zw/docs/paynow/initiate_transaction/), [mobile money](https://developers.paynow.co.zw/docs/paynow/initiate_mobile_transaction/), [hash generation](https://developers.paynow.co.zw/docs/paynow/generating_hash/), and [callback hash validation](https://developers.paynow.co.zw/docs/paynow/validating_hash/).
 
 The RLS suite now has 135 assertions, including server-only access to Paynow callback reconciliation and transaction metadata.
+
+
+## Unified administrator invitations
+
+A new `admin-invite-user` Edge Function provides one entry point for school administrators to invite `parent`, `supervisor`, or `school_admin` accounts. It forwards the caller's bearer token to the existing role-specific `invite-parent` or `invite-staff` handler, so the existing tenant/role checks remain authoritative and the service-role key is never exposed.
