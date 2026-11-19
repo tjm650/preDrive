@@ -21,12 +21,14 @@ import {
   enqueueLocation,
   enqueueTripEvent,
   failedEventCount,
+  listFailedEvents,
   flushOfflineQueue,
   getActiveTripId,
   pendingEventCount,
   retryFailedEvents,
   setActiveTripId,
   tripEventQueueStatus,
+  type FailedTripEvent,
 } from '../lib/offline';
 
 const LOCATION_TASK = 'PREDRIVE_BACKGROUND_TRIP_LOCATION';
@@ -128,15 +130,21 @@ export function OperationsDashboard({
   const [connected, setConnected] = useState(true);
   const [queued, setQueued] = useState(0);
   const [failedQueued, setFailedQueued] = useState(0);
+  const [failedEvents, setFailedEvents] = useState<FailedTripEvent[]>([]);
   const [pins, setPins] = useState<Record<string, string>>({});
   const [selectedPickups, setSelectedPickups] = useState<Record<string, string>>({});
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
   const client = supabase;
 
   const refreshQueue = useCallback(async () => {
-    const [pending, failed] = await Promise.all([pendingEventCount(), failedEventCount()]);
+    const [pending, failed, rejected] = await Promise.all([
+      pendingEventCount(),
+      failedEventCount(),
+      listFailedEvents(5),
+    ]);
     setQueued(pending);
     setFailedQueued(failed);
+    setFailedEvents(rejected);
   }, []);
 
   const load = useCallback(async () => {
@@ -646,6 +654,17 @@ export function OperationsDashboard({
             {failedQueued} offline event(s) were rejected by the server and need review. They have
             been preserved on this device.
           </Text>
+          {failedEvents.map((event) => (
+            <View key={event.id} style={styles.notificationRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.childName}>{event.event_type.replaceAll('_', ' ')}</Text>
+                <Text style={styles.muted}>
+                  {new Date(event.client_recorded_at).toLocaleString()}
+                </Text>
+                <Text style={styles.errorText}>{event.failure_reason}</Text>
+              </View>
+            </View>
+          ))}
           <Pressable onPress={() => void retryFailedQueue()} style={styles.smallButton}>
             <Text style={styles.smallButtonText}>Retry rejected events</Text>
           </Pressable>
