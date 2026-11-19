@@ -47,6 +47,26 @@ The inspected mobile and web package manifests and Supabase client entry points 
 11. Regenerate `frontend/packages/shared/src/database.types.ts` from the actual local database after migrations are reconciled; do not hand-edit generated types.
 12. Run Supabase CLI, Docker, pgTAP, TypeScript checks and Android/web builds in a local runtime before claiming tests pass.
 
+## Confirmed defects and corrective work on `backend/audit-and-hardening`
+
+1. **Parent historical-location exposure:** migrations `20261118000100`, `20261118000600` and `20261118001100` all allowed a guardian to read `location_history` while a trip carrying their child was active. Added `20261119000100_child_location_and_identity_hardening.sql`, which replaces that policy so only the assigned supervisor and authorized school/platform administrators can read historical traces. Parents retain access to `bus_live` only under the active-trip/guardian policy.
+2. **Profile privilege escalation:** the existing school-admin profile write policy did not independently prevent changing `profiles.role` or `profiles.school_id`. The same corrective migration adds a database trigger that rejects those changes from authenticated sessions; trusted service-role provisioning remains supported.
+3. Added stable private helper aliases `current_user_role()`, `is_guardian_of(uuid)` and `is_on_active_trip_for(uuid)` with an empty search path and restricted execution grants.
+4. Added missing foreign-key and hot-query indexes using `IF NOT EXISTS`.
+5. Extended `supabase/tests/rls_isolation.test.sql` with regression assertions for parent historical-location denial, supervisor historical-location access, and school-admin self-promotion / cross-tenant profile mutation denial. The pgTAP plan was increased from 77 to 81.
+
+## Remaining confirmed gaps / risks
+
+- The requested `schools.code`, `schools.status`, `authorized_pickups.active`, `payments.method`, `payments.idempotency_key`, and the requested invoice/payment enums/columns do not match the current baseline schema and still need additive compatibility migrations.
+- Current `children.home_radius_m` accepts 100–10,000m rather than only 500/1,000/2,000m.
+- Current proximity notification uses type `arrived`, not the requested `bus_arrived` key.
+- Current trip safety notification trigger runs when a trip transitions to completed; the required explicit end-trip RPC behavior must be checked against the active workflow migrations and tests.
+- The initial schema contains no visible `auth.users` profile-creation trigger or `join_school_with_code` RPC in the inspected baseline migrations. This must be implemented with care for invitation provisioning and the existing seed.
+- `demo_requests` currently has an unrestricted `WITH CHECK (true)` insert policy and lacks the requested status / children-count fields and database-side abuse controls.
+- `location_history` retention and stale-location notification scheduling were not found in the inspected migration set.
+- The `bus_near` dedupe index exists, but proximity logic and `bus_arrived` naming need alignment and regression tests.
+- The current seed contains one demo tenant; the RLS test fixture separately creates two tenants. A second seeded demo school remains outstanding.
+
 ## Execution status
 
-No migration, schema, policy or application source files were changed during this audit. The audit report is committed separately so the next implementation phase can be reviewed. A local Supabase database, Docker engine and Supabase CLI were not available through the connected GitHub repository interface; therefore no local migration or test result is claimed.
+The audit report and corrective migration/test changes are committed on `backend/audit-and-hardening`. No UI files were changed. A local Supabase database, Docker engine and Supabase CLI were not available through the connected GitHub repository interface; therefore the migration and pgTAP tests have **not** been executed. The branch is not production-ready until the local migration reset, pgTAP suite, TypeScript checks and app builds pass.
