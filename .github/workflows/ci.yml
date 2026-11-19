@@ -57,11 +57,11 @@ jobs:
           deno-version: v2.x
       - name: Typecheck Supabase Edge Functions
         run: |
-          deno check supabase/functions/send-push/index.ts
-          deno check supabase/functions/check-push-receipts/index.ts
-          deno check supabase/functions/invite-staff/index.ts
-          deno check supabase/functions/invite-parent/index.ts
-          deno check supabase/functions/build-route-geometry/index.ts
+          deno check --node-modules-dir=auto supabase/functions/send-push/index.ts
+          deno check --node-modules-dir=auto supabase/functions/check-push-receipts/index.ts
+          deno check --node-modules-dir=auto supabase/functions/invite-staff/index.ts
+          deno check --node-modules-dir=auto supabase/functions/invite-parent/index.ts
+          deno check --node-modules-dir=auto supabase/functions/build-route-geometry/index.ts
       - name: Lint
         run: pnpm lint
       - name: Typecheck all workspaces
