@@ -84,6 +84,7 @@ export default function OperationsPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [childName, setChildName] = useState('');
   const [childClass, setChildClass] = useState('');
+  const [childGuardian, setChildGuardian] = useState('');
   const [busRegistration, setBusRegistration] = useState('');
   const [busMake, setBusMake] = useState('');
   const [busModel, setBusModel] = useState('');
@@ -96,6 +97,9 @@ export default function OperationsPage() {
   const [invoiceGuardian, setInvoiceGuardian] = useState('');
   const [invoiceAmount, setInvoiceAmount] = useState('');
   const [invoiceDue, setInvoiceDue] = useState('');
+  const [paymentInvoiceId, setPaymentInvoiceId] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
   const [staffEmail, setStaffEmail] = useState('');
   const [staffName, setStaffName] = useState('');
   const [staffRole, setStaffRole] = useState<'supervisor' | 'school_admin'>('supervisor');
@@ -212,14 +216,21 @@ export default function OperationsPage() {
     await submit(event, async () => {
       const client = createClient();
       if (!client || !schoolId) throw new Error('School session is unavailable.');
-      const { error: insertError } = await client.from('children').insert({
-        school_id: schoolId,
-        first_name: childName.trim(),
-        class_name: childClass.trim() || null,
+      if (!childGuardian) throw new Error('Choose the parent account responsible for this child.');
+      const rpc = client.rpc as unknown as (
+        name: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ error: { message: string } | null }>;
+      const { error: enrolmentError } = await rpc('create_child_with_guardian', {
+        p_first_name: childName.trim(),
+        p_class_name: childClass.trim() || null,
+        p_guardian_id: childGuardian,
+        p_relationship: 'Parent',
       });
-      if (insertError) throw insertError;
+      if (enrolmentError) throw enrolmentError;
       setChildName('');
       setChildClass('');
+      setChildGuardian('');
     });
   }
 
@@ -314,6 +325,30 @@ export default function OperationsPage() {
       if (insertError) throw insertError;
       setInvoiceAmount('');
       setInvoiceDue('');
+    });
+  }
+
+  async function recordManualPayment(event: FormEvent<HTMLFormElement>) {
+    await submit(event, async () => {
+      const client = createClient();
+      const amount = Number(paymentAmount);
+      if (!client || !paymentInvoiceId || !Number.isFinite(amount) || amount <= 0 || !paymentReference.trim()) {
+        throw new Error('Choose an invoice and enter a positive amount and receipt reference.');
+      }
+      const rpc = client.rpc as unknown as (
+        name: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ error: { message: string } | null }>;
+      const { error: paymentError } = await rpc('record_manual_payment', {
+        p_invoice_id: paymentInvoiceId,
+        p_amount: amount,
+        p_currency: invoices.find((invoice) => invoice.id === paymentInvoiceId)?.currency ?? 'USD',
+        p_reference: paymentReference.trim(),
+      });
+      if (paymentError) throw paymentError;
+      setPaymentInvoiceId('');
+      setPaymentAmount('');
+      setPaymentReference('');
     });
   }
 
@@ -645,20 +680,34 @@ export default function OperationsPage() {
                           Due {invoice.due_date} · {invoice.status}
                         </p>
                       </div>
-                      {invoice.status === 'pending' ? (
-                        <button
-                          onClick={() => void voidInvoice(invoice.id)}
-                          className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold"
-                        >
-                          Void invoice
-                        </button>
-                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        {invoice.status !== 'paid' && invoice.status !== 'void' ? (
+                          <button
+                            onClick={() => {
+                              setPaymentInvoiceId(invoice.id);
+                              setPaymentAmount(String(invoice.amount_usd));
+                              setPaymentReference('');
+                            }}
+                            className="rounded-lg border border-[#0b8067] px-3 py-2 text-xs font-bold text-[#0b8067]"
+                          >
+                            Record verified payment
+                          </button>
+                        ) : null}
+                        {invoice.status === 'pending' ? (
+                          <button
+                            onClick={() => void voidInvoice(invoice.id)}
+                            className="rounded-lg border border-[#d6e3dd] px-3 py-2 text-xs font-bold"
+                          >
+                            Void invoice
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                   {invoices.length === 0 ? <Empty>No invoices issued yet.</Empty> : null}
                   <p className="mt-5 text-xs leading-5 text-[#8a9a93]">
-                    Payments are not marked as received here. Payment confirmation must come from a
-                    verified payment-provider callback.
+                    Manual reconciliation records cash or bank transfers only after the school has
+                    independently checked the receipt. This does not process card or mobile-money payments.
                   </p>
                 </div>
               ) : null}
@@ -694,7 +743,25 @@ export default function OperationsPage() {
                       className="control"
                     />
                   </Field>
-                  <Submit disabled={saving}>Add child</Submit>
+                  <Field label="Parent / guardian account">
+                    <select
+                      required
+                      value={childGuardian}
+                      onChange={(e) => setChildGuardian(e.target.value)}
+                      className="control"
+                    >
+                      <option value="">Select a parent account</option>
+                      {guardians.map((guardian) => (
+                        <option key={guardian.id} value={guardian.id}>{guardian.full_name}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  {guardians.length === 0 ? (
+                    <p className="text-xs leading-5 text-amber-700">
+                      No parent accounts are registered for this school yet. Create the parent account before enrolling the child.
+                    </p>
+                  ) : null}
+                  <Submit disabled={saving || guardians.length === 0}>Add child and link parent</Submit>
                 </form>
               ) : null}
               {tab === 'fleet' ? (
@@ -892,6 +959,22 @@ export default function OperationsPage() {
                   </Field>
                   <Submit disabled={saving}>Issue invoice</Submit>
                 </form>
+                {paymentInvoiceId ? (
+                  <form onSubmit={(e) => void recordManualPayment(e)} className="mt-6 space-y-3 border-t border-[#e7efeb] pt-5">
+                    <h3 className="text-sm font-extrabold">Record verified payment</h3>
+                    <p className="text-xs text-[#71827c]">
+                      Invoice {paymentInvoiceId.slice(0, 8)} · {invoices.find((invoice) => invoice.id === paymentInvoiceId)?.currency ?? 'USD'}
+                    </p>
+                    <Field label="Amount received">
+                      <input required type="number" min="0.01" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="control" />
+                    </Field>
+                    <Field label="Receipt / transaction reference">
+                      <input required maxLength={120} value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} className="control" />
+                    </Field>
+                    <Submit disabled={saving}>Save payment record</Submit>
+                    <button type="button" onClick={() => setPaymentInvoiceId('')} className="w-full py-2 text-xs font-bold text-[#71827c]">Cancel</button>
+                  </form>
+                ) : null}
               ) : null}
               <p className="mt-5 text-xs leading-5 text-[#8a9a93]">
                 All operations are checked by the signed-in account and enforced by database
