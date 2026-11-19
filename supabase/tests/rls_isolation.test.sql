@@ -414,8 +414,7 @@ reset role;
 
 -- Database-level guard prevents a race from deleting the final guardian.
 insert into public.children(school_id,first_name)
-values ('92000000-0000-4000-8000-000000000001','Guardian Protection Fixture')
-returning id;
+values ('92000000-0000-4000-8000-000000000001','Guardian Protection Fixture');
 insert into public.guardianships(guardian_id,child_id,relationship)
 select '91000000-0000-4000-8000-000000000008', id, 'Parent'
 from public.children where first_name='Guardian Protection Fixture';
