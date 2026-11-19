@@ -93,10 +93,11 @@ Deno.serve(async (request: Request) => {
     }
 
     if (payment.status === 'succeeded') return textResponse('OK');
+    if (payment.status === 'failed' && providerStatus !== 'paid') return textResponse('OK');
 
     let nextStatus: 'pending' | 'succeeded' | 'failed' = 'pending';
     if (providerStatus === 'paid') nextStatus = 'succeeded';
-    else if (['cancelled', 'failed', 'disputed', 'refunded'].includes(providerStatus)) nextStatus = 'failed';
+    else if (['cancelled', 'failed', 'disputed'].includes(providerStatus)) nextStatus = 'failed';
 
     const { data: invoice, error: invoiceError } = await admin
       .from('invoices')
