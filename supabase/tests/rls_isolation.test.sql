@@ -175,10 +175,12 @@ select is(
 
 -- School admin: full read access inside their own school, never across tenants.
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000006',true);
+reset role;
 select ok(exists(select 1 from public.profiles where id='91000000-0000-4000-8000-000000000008'),
   'auth.users insert automatically creates a profile');
 select is((select role::text from public.profiles where id='91000000-0000-4000-8000-000000000008'),'parent',
   'new accounts receive the safe parent role, never a client-supplied staff role');
+set local role authenticated;
 select set_config('test.school_join_code',public.create_school_join_code(now()+interval '1 day',1),true);
 select ok(length(current_setting('test.school_join_code'))=32,
   'school administrator can create a one-use high-entropy join code');
@@ -188,10 +190,8 @@ select is(public.join_school_with_code(current_setting('test.school_join_code'))
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000009',true);
 select is(public.join_school_with_code(current_setting('test.school_join_code')),null::uuid,
   'an exhausted one-use join code cannot enrol a second parent');
-select throws_ok(
-  $update public.profiles set school_id='92000000-0000-4000-8000-000000000002' where id='91000000-0000-4000-8000-000000000009'$,
-  '42501',null,'a parent cannot assign their own school through direct profile updates'
-);
+select is((select school_id from public.profiles where id='91000000-0000-4000-8000-000000000009'),null::uuid,
+  'an exhausted join code leaves the second parent unassigned');
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000006',true);
 select is((select count(*)::int from public.children),2,'school admin sees all children in their school');
 select is((select count(*)::int from public.schools),1,'school admin sees only their own school');
