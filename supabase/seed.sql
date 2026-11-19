@@ -19,7 +19,13 @@ insert into public.profiles(id,school_id,role,full_name,phone,language) values
 ('20000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000001','supervisor','Mr. Farai Ndlovu','+263 77 100 0002','en'),
 ('20000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000001','parent','Mrs. Rudo Mutasa','+263 77 100 0003','sn'),
 ('20000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000001','school_admin','Mr. Tawanda Banda','+263 77 100 0004','en'),
-('20000000-0000-4000-8000-000000000005',null,'platform_owner','preDrive Platform Owner',null,'en');
+('20000000-0000-4000-8000-000000000005',null,'platform_owner','preDrive Platform Owner',null,'en')
+on conflict (id) do update set
+  school_id = excluded.school_id,
+  role = excluded.role,
+  full_name = excluded.full_name,
+  phone = excluded.phone,
+  language = excluded.language;
 insert into public.buses(id,school_id,registration,make,model,capacity,driver_name) values
 ('30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001','AFD 4821','Toyota','HiAce',14,'Mr. Farai Ndlovu'),
 ('30000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000001','AFD 4822','Nissan','Civilian',18,'Mr. Simba Moyo'),
