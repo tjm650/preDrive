@@ -84,3 +84,17 @@ The main branch now includes `20261119000200_auth_profiles_and_school_join_codes
 - The local demo seed and RLS fixtures upsert profiles because the auth trigger now creates them before the seed/test profile rows are applied.
 
 **Verification status:** pgTAP coverage was extended from 81 to 87 assertions for automatic profile creation, safe default role, join-code issuance, successful parent enrolment, one-use exhaustion, and direct tenant-assignment denial. The test file has been updated but has not been executed. The connected Supabase project currently reports zero applied migrations, tables, and Edge Functions; do not treat the repository migration chain as deployed.
+
+
+## Trip operations and location lifecycle
+
+The main branch now also includes `20261119000300_stale_location_and_retention.sql`:
+
+- Adds the requested `end_trip(uuid)` RPC as a compatibility wrapper around the existing guarded `complete_trip(uuid)` workflow; the existing completion rules and unaccounted-child safety checks remain authoritative.
+- Enforces child home geofence radii of exactly 500, 1,000 or 2,000 metres. Existing out-of-policy values are normalized to the nearest supported radius during migration.
+- Adds a once-per-stale-episode monitor. An active trip with no bus point, or a point older than 60 seconds, generates a high-priority notification for that school's administrators. A fresh location marks the episode recovered so a later outage can alert again.
+- Schedules the stale-location monitor every minute when `pg_cron` is available.
+- Adds a bounded 10,000-row cleanup operation for GPS history older than 90 days, scheduled hourly to avoid long-running deletes.
+- Extends English, Shona and Ndebele push copy for stale GPS alerts.
+
+The RLS suite now declares 91 assertions, including checks for the end-trip alias, stale-location monitor, retention routine and geofence constraint. These are source-level additions only; pgTAP and cron execution have not yet been run.
