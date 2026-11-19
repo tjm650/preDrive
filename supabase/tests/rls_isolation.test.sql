@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(87);
+select plan(91);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -269,6 +269,13 @@ select is((select count(*)::int from public.invoices where school_id in ('920000
 select ok(to_regprocedure('public.start_trip(uuid)') is not null,'start trip RPC is installed');
 select ok(to_regprocedure('public.record_trip_event(uuid,uuid,public.trip_event_type,double precision,double precision,jsonb,text,timestamp with time zone)') is not null,'idempotent trip event RPC is installed');
 select ok(to_regprocedure('public.complete_trip(uuid)') is not null,'guarded trip completion RPC is installed');
+select ok(to_regprocedure('public.end_trip(uuid)') is not null,'end_trip compatibility RPC is installed');
+select ok(to_regprocedure('public.check_stale_bus_locations()') is not null,'stale bus location monitor is installed');
+select ok(to_regprocedure('public.purge_old_location_history()') is not null,'90-day location history retention job is installed');
+select ok(exists(select 1 from pg_constraint where conrelid='public.children'::regclass
+  and conname='children_home_radius_m_check'
+  and pg_get_constraintdef(oid) like '%500%1000%2000%'),
+  'child geofence radius is restricted to the supported 500, 1000 or 2000 metres');
 select ok(to_regprocedure('public.verify_pickup_handover(uuid,uuid,uuid,text,double precision,double precision,text)') is not null,'atomic pickup handover RPC is installed');
 select ok(to_regprocedure('public.register_push_token(text)') is not null,'push token registration RPC is installed');
 select ok(to_regprocedure('public.create_child_with_guardian(text,uuid,text,text)') is not null,'atomic child enrolment RPC is installed');
