@@ -130,7 +130,7 @@ This is a database-level per-email abuse control, not a substitute for edge/IP-b
 
 Migration `20261119000600_school_lifecycle_controls.sql` adds `schools.status` with `active`, `suspended`, and `archived` states. Only platform owners can change it. Suspending or archiving a school removes tenant-scoped access for its school administrators and users while preserving all records; reactivation restores access. Existing join codes cannot be used while a school is inactive, and new codes cannot be issued.
 
-A plaintext `schools.code` column was deliberately not added. School join codes are separate high-entropy credentials whose bcrypt hashes are stored in the private schema, avoiding exposure through ordinary school queries. The RLS suite now has 124 assertions, including suspend/reactivate behavior and verification that parents, supervisors and school administrators lose tenant-scoped data access while suspended.
+A plaintext `schools.code` column was deliberately not added. School join codes are separate high-entropy credentials whose bcrypt hashes are stored in the private schema, avoiding exposure through ordinary school queries. The RLS suite now has 131 assertions, including suspend/reactivate behavior and verification that parents, supervisors and school administrators lose tenant-scoped data access while suspended.
 
 
 ## Personal data export and parent account deletion
