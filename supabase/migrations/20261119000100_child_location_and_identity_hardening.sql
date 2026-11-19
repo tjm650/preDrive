@@ -52,7 +52,7 @@ as $$
     join public.route_children rc on rc.route_id = t.route_id
     where rc.child_id = target_child
       and t.status = 'active'
-      and t.supervisor_id = (select auth.uid())
+      and private.is_guardian(target_child)
   )
 $$;
 
