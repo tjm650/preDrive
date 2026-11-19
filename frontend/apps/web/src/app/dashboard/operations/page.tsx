@@ -281,14 +281,12 @@ export default function OperationsPage() {
       if (!bus?.active || bus.archived_at) throw new Error('Select an active vehicle.');
       if (!routeAssignments.some((assignment) => assignment.route_id === tripRoute))
         throw new Error('Assign at least one child to the route before scheduling a trip.');
-      const { error: insertError } = await client
-        .from('trips')
-        .insert({
-          route_id: tripRoute,
-          bus_id: tripBus,
-          supervisor_id: tripSupervisor,
-          status: 'scheduled',
-        });
+      const { error: insertError } = await client.from('trips').insert({
+        route_id: tripRoute,
+        bus_id: tripBus,
+        supervisor_id: tripSupervisor,
+        status: 'scheduled',
+      });
       if (insertError) throw insertError;
     });
   }
@@ -332,7 +330,13 @@ export default function OperationsPage() {
     await submit(event, async () => {
       const client = createClient();
       const amount = Number(paymentAmount);
-      if (!client || !paymentInvoiceId || !Number.isFinite(amount) || amount <= 0 || !paymentReference.trim()) {
+      if (
+        !client ||
+        !paymentInvoiceId ||
+        !Number.isFinite(amount) ||
+        amount <= 0 ||
+        !paymentReference.trim()
+      ) {
         throw new Error('Choose an invoice and enter a positive amount and receipt reference.');
       }
       const rpc = client.rpc as unknown as (
@@ -707,7 +711,8 @@ export default function OperationsPage() {
                   {invoices.length === 0 ? <Empty>No invoices issued yet.</Empty> : null}
                   <p className="mt-5 text-xs leading-5 text-[#8a9a93]">
                     Manual reconciliation records cash or bank transfers only after the school has
-                    independently checked the receipt. This does not process card or mobile-money payments.
+                    independently checked the receipt. This does not process card or mobile-money
+                    payments.
                   </p>
                 </div>
               ) : null}
@@ -752,16 +757,21 @@ export default function OperationsPage() {
                     >
                       <option value="">Select a parent account</option>
                       {guardians.map((guardian) => (
-                        <option key={guardian.id} value={guardian.id}>{guardian.full_name}</option>
+                        <option key={guardian.id} value={guardian.id}>
+                          {guardian.full_name}
+                        </option>
                       ))}
                     </select>
                   </Field>
                   {guardians.length === 0 ? (
                     <p className="text-xs leading-5 text-amber-700">
-                      No parent accounts are registered for this school yet. Create the parent account before enrolling the child.
+                      No parent accounts are registered for this school yet. Create the parent
+                      account before enrolling the child.
                     </p>
                   ) : null}
-                  <Submit disabled={saving || guardians.length === 0}>Add child and link parent</Submit>
+                  <Submit disabled={saving || guardians.length === 0}>
+                    Add child and link parent
+                  </Submit>
                 </form>
               ) : null}
               {tab === 'fleet' ? (
@@ -922,60 +932,85 @@ export default function OperationsPage() {
               ) : null}
               {tab === 'billing' ? (
                 <>
-                <form onSubmit={(e) => void createInvoice(e)} className="mt-4 space-y-3">
-                  <Field label="Parent / guardian">
-                    <select
-                      required
-                      value={invoiceGuardian}
-                      onChange={(e) => setInvoiceGuardian(e.target.value)}
-                      className="control"
-                    >
-                      <option value="">Select a parent</option>
-                      {guardians.map((guardian) => (
-                        <option key={guardian.id} value={guardian.id}>
-                          {guardian.full_name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Amount (USD)">
-                    <input
-                      required
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={invoiceAmount}
-                      onChange={(e) => setInvoiceAmount(e.target.value)}
-                      className="control"
-                    />
-                  </Field>
-                  <Field label="Due date">
-                    <input
-                      required
-                      type="date"
-                      value={invoiceDue}
-                      onChange={(e) => setInvoiceDue(e.target.value)}
-                      className="control"
-                    />
-                  </Field>
-                  <Submit disabled={saving}>Issue invoice</Submit>
-                </form>
-                {paymentInvoiceId ? (
-                  <form onSubmit={(e) => void recordManualPayment(e)} className="mt-6 space-y-3 border-t border-[#e7efeb] pt-5">
-                    <h3 className="text-sm font-extrabold">Record verified payment</h3>
-                    <p className="text-xs text-[#71827c]">
-                      Invoice {paymentInvoiceId.slice(0, 8)} · {invoices.find((invoice) => invoice.id === paymentInvoiceId)?.currency ?? 'USD'}
-                    </p>
-                    <Field label="Amount received">
-                      <input required type="number" min="0.01" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="control" />
+                  <form onSubmit={(e) => void createInvoice(e)} className="mt-4 space-y-3">
+                    <Field label="Parent / guardian">
+                      <select
+                        required
+                        value={invoiceGuardian}
+                        onChange={(e) => setInvoiceGuardian(e.target.value)}
+                        className="control"
+                      >
+                        <option value="">Select a parent</option>
+                        {guardians.map((guardian) => (
+                          <option key={guardian.id} value={guardian.id}>
+                            {guardian.full_name}
+                          </option>
+                        ))}
+                      </select>
                     </Field>
-                    <Field label="Receipt / transaction reference">
-                      <input required maxLength={120} value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} className="control" />
+                    <Field label="Amount (USD)">
+                      <input
+                        required
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={invoiceAmount}
+                        onChange={(e) => setInvoiceAmount(e.target.value)}
+                        className="control"
+                      />
                     </Field>
-                    <Submit disabled={saving}>Save payment record</Submit>
-                    <button type="button" onClick={() => setPaymentInvoiceId('')} className="w-full py-2 text-xs font-bold text-[#71827c]">Cancel</button>
+                    <Field label="Due date">
+                      <input
+                        required
+                        type="date"
+                        value={invoiceDue}
+                        onChange={(e) => setInvoiceDue(e.target.value)}
+                        className="control"
+                      />
+                    </Field>
+                    <Submit disabled={saving}>Issue invoice</Submit>
                   </form>
-                ) : null}
+                  {paymentInvoiceId ? (
+                    <form
+                      onSubmit={(e) => void recordManualPayment(e)}
+                      className="mt-6 space-y-3 border-t border-[#e7efeb] pt-5"
+                    >
+                      <h3 className="text-sm font-extrabold">Record verified payment</h3>
+                      <p className="text-xs text-[#71827c]">
+                        Invoice {paymentInvoiceId.slice(0, 8)} ·{' '}
+                        {invoices.find((invoice) => invoice.id === paymentInvoiceId)?.currency ??
+                          'USD'}
+                      </p>
+                      <Field label="Amount received">
+                        <input
+                          required
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={paymentAmount}
+                          onChange={(e) => setPaymentAmount(e.target.value)}
+                          className="control"
+                        />
+                      </Field>
+                      <Field label="Receipt / transaction reference">
+                        <input
+                          required
+                          maxLength={120}
+                          value={paymentReference}
+                          onChange={(e) => setPaymentReference(e.target.value)}
+                          className="control"
+                        />
+                      </Field>
+                      <Submit disabled={saving}>Save payment record</Submit>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentInvoiceId('')}
+                        className="w-full py-2 text-xs font-bold text-[#71827c]"
+                      >
+                        Cancel
+                      </button>
+                    </form>
+                  ) : null}
                 </>
               ) : null}
               <p className="mt-5 text-xs leading-5 text-[#8a9a93]">
