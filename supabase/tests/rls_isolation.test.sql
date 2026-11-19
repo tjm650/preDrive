@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(81);
+select plan(87);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -12,7 +12,9 @@ values
 ('91000000-0000-4000-8000-000000000004','authenticated','authenticated','supervisor-b@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{}',now(),now()),
 ('91000000-0000-4000-8000-000000000005','authenticated','authenticated','parent-a2@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{}',now(),now()),
 ('91000000-0000-4000-8000-000000000006','authenticated','authenticated','admin-a@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{}',now(),now()),
-('91000000-0000-4000-8000-000000000007','authenticated','authenticated','owner@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{}',now(),now());
+('91000000-0000-4000-8000-000000000007','authenticated','authenticated','owner@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{}',now(),now()),
+('91000000-0000-4000-8000-000000000008','authenticated','authenticated','new-parent@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{"full_name":"New Parent"}',now(),now()),
+('91000000-0000-4000-8000-000000000009','authenticated','authenticated','second-new-parent@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{}',now(),now());
 
 insert into public.schools(id,name,slug) values
 ('92000000-0000-4000-8000-000000000001','School A','rls-school-a'),
@@ -25,7 +27,9 @@ insert into public.profiles(id,school_id,role,full_name) values
 ('91000000-0000-4000-8000-000000000004','92000000-0000-4000-8000-000000000002','supervisor','Supervisor B'),
 ('91000000-0000-4000-8000-000000000005','92000000-0000-4000-8000-000000000001','parent','Parent A2'),
 ('91000000-0000-4000-8000-000000000006','92000000-0000-4000-8000-000000000001','school_admin','Admin A'),
-('91000000-0000-4000-8000-000000000007',null,'platform_owner','Platform Owner');
+('91000000-0000-4000-8000-000000000007',null,'platform_owner','Platform Owner')
+on conflict (id) do update set
+ school_id=excluded.school_id, role=excluded.role, full_name=excluded.full_name;
 
 insert into public.children(id,school_id,first_name) values
 ('93000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','Child A1'),
@@ -170,6 +174,24 @@ select is(
 
 
 -- School admin: full read access inside their own school, never across tenants.
+select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000006',true);
+select ok(exists(select 1 from public.profiles where id='91000000-0000-4000-8000-000000000008'),
+  'auth.users insert automatically creates a profile');
+select is((select role::text from public.profiles where id='91000000-0000-4000-8000-000000000008'),'parent',
+  'new accounts receive the safe parent role, never a client-supplied staff role');
+select set_config('test.school_join_code',public.create_school_join_code(now()+interval '1 day',1),true);
+select ok(length(current_setting('test.school_join_code'))=32,
+  'school administrator can create a one-use high-entropy join code');
+select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000008',true);
+select is(public.join_school_with_code(current_setting('test.school_join_code')),
+  '92000000-0000-4000-8000-000000000001'::uuid,'parent can join the school using its valid code');
+select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000009',true);
+select is(public.join_school_with_code(current_setting('test.school_join_code')),null::uuid,
+  'an exhausted one-use join code cannot enrol a second parent');
+select throws_ok(
+  $update public.profiles set school_id='92000000-0000-4000-8000-000000000002' where id='91000000-0000-4000-8000-000000000009'$,
+  '42501',null,'a parent cannot assign their own school through direct profile updates'
+);
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000006',true);
 select is((select count(*)::int from public.children),2,'school admin sees all children in their school');
 select is((select count(*)::int from public.schools),1,'school admin sees only their own school');
