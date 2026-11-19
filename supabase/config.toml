@@ -45,3 +45,9 @@ verify_jwt = true
 
 [functions.delete-my-account]
 verify_jwt = true
+
+[functions.paynow-initiate]
+verify_jwt = true
+
+[functions.paynow-callback]
+verify_jwt = false
