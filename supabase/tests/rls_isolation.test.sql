@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(74);
+select plan(77);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -64,7 +64,6 @@ insert into public.trips(id,route_id,bus_id,supervisor_id,status,started_at,ende
 
 insert into public.trip_events(trip_id,child_id,type,recorded_by) values
 ('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','boarded','91000000-0000-4000-8000-000000000003'),
-('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000002','boarded','91000000-0000-4000-8000-000000000003'),
 ('96000000-0000-4000-8000-000000000002','93000000-0000-4000-8000-000000000003','boarded','91000000-0000-4000-8000-000000000004');
 
 insert into public.bus_live(trip_id,lat,lng) values
@@ -128,7 +127,7 @@ select throws_ok(
 select is((select count(*)::int from public.route_children),2,'supervisor sees the assigned route manifest only');
 select is((select count(*)::int from public.children),2,'supervisor sees children on their assigned manifest only');
 select is((select count(id)::int from public.profiles),3,'supervisor sees self and guardians linked to assigned children only');
-select is((select count(*)::int from public.trip_events),2,'supervisor sees events for their assigned trip');
+select is((select count(*)::int from public.trip_events),1,'supervisor sees events for their assigned trip');
 select is((select count(*)::int from public.bus_live),1,'supervisor sees live location for their assigned trip');
 select is((select count(id)::int from public.authorized_pickups),1,'supervisor sees pickup authorizations only for assigned active trip children');
 select is((select count(*)::int from public.routes),1,'supervisor sees only their assigned route');
@@ -147,8 +146,21 @@ select throws_ok(
 select is((public.complete_trip('96000000-0000-4000-8000-000000000001')->>'completed')::boolean,false,
   'trip completion is blocked while manifest children are unaccounted for');
 select throws_ok(
-  $$select public.record_trip_event('96000000-0000-4000-8000-000000000001',null,'child_missing',null,null,'{}'::jsonb,'missing-no-child-01',now())$$,
+  $select public.record_trip_event('96000000-0000-4000-8000-000000000001',null,'child_missing',null,null,'{}'::jsonb,'missing-no-child-01',now())$,
   '22023',null,'child-specific safety events must identify a manifest child'
+);
+select lives_ok(
+  $select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000002','child_missing',null,null,'{}'::jsonb,'missing-child-a2-01',now())$,
+  'supervisor can alert for a manifest child missing before boarding'
+);
+select is(
+  public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000002','child_missing',null,null,'{}'::jsonb,'missing-child-a2-01',now()),
+  (select id from public.trip_events where trip_id='96000000-0000-4000-8000-000000000001' and child_id='93000000-0000-4000-8000-000000000002' and type='child_missing' and idempotency_key='missing-child-a2-01'),
+  'retrying a missing-child alert returns the original event'
+);
+select is(
+  (select count(*)::int from public.trip_events where trip_id='96000000-0000-4000-8000-000000000001' and child_id='93000000-0000-4000-8000-000000000002' and type='child_missing'),
+  1,'missing-child alert retries do not create duplicate events'
 );
 
 
