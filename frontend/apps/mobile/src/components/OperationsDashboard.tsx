@@ -630,7 +630,7 @@ export function OperationsDashboard({
         {queued > 0 ? <Text style={styles.queueText}>{queued} queued</Text> : null}
       </View>
       {failedQueued > 0 ? (
-        <View style={styles.error}>
+        <View style={styles.errorPanel}>
           <Text style={styles.errorText}>
             {failedQueued} offline event(s) were rejected by the server and need review. They have
             been preserved on this device.
@@ -1005,6 +1005,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
     fontSize: 12,
   },
+  errorPanel: { backgroundColor: '#FEF3F2', padding: 13, borderRadius: 12, marginTop: 14, gap: 8 },
+  errorText: { color: '#B42318', fontSize: 12 },
   notice: {
     color: '#17664F',
     backgroundColor: '#E8F4EE',
