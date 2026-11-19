@@ -82,6 +82,7 @@ Deno.serve(async (request: Request) => {
     return jsonResponse({ error: 'Enter a valid mobile money phone number.' }, 400);
   }
 
+  let activePaymentId: string | null = null;
   try {
     const { data: profile, error: profileError } = await admin
       .from('profiles').select('id,school_id,role').eq('id', user.id).maybeSingle();
@@ -148,6 +149,7 @@ Deno.serve(async (request: Request) => {
     if (outstanding <= 0) return jsonResponse({ error: 'This invoice is already fully paid.' }, 409);
     const amount = outstanding.toFixed(2);
     const paymentId = crypto.randomUUID();
+    activePaymentId = paymentId;
     const merchantReference = `PREDRIVE-${paymentId.toUpperCase()}`;
 
     const { error: paymentInsertError } = await admin.from('payments').insert({
@@ -243,12 +245,19 @@ Deno.serve(async (request: Request) => {
       status: 'pending',
     });
   } catch (error) {
+    if (activePaymentId) {
+      await Promise.all([
+        admin.from('payments').update({ status: 'failed' }).eq('id', activePaymentId).eq('status', 'pending'),
+        admin.from('paynow_transactions').update({ status: 'failed' }).eq('payment_id', activePaymentId),
+      ]);
+    }
     console.error(JSON.stringify({
       event: 'paynow_initiate_failed',
       user_id: user.id,
       invoice_id: invoiceId,
+      payment_id: activePaymentId,
       message: error instanceof Error ? error.message : 'Unknown error',
     }));
-    return jsonResponse({ error: 'Unable to initiate payment. Please try again later.' }, 500);
+    return jsonResponse({ error: 'Unable to initiate payment. If the request was already submitted, start a new attempt with a new idempotency key.' }, 502);
   }
 });
