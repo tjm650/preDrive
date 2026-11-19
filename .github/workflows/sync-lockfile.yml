@@ -12,6 +12,7 @@ on:
       - 'frontend/apps/mobile/src/components/OperationsDashboard.tsx'
       - 'frontend/apps/web/src/app/dashboard/operations/page.tsx'
       - 'supabase/functions/**/index.ts'
+      - 'supabase/functions/deno.json'
       - 'docs/**.md'
       - '.github/workflows/sync-lockfile.yml'
 permissions:
@@ -48,6 +49,7 @@ jobs:
             frontend/packages/shared/src/types.ts \
             supabase/functions/invite-staff/index.ts supabase/functions/invite-parent/index.ts \
             supabase/functions/build-route-geometry/index.ts supabase/functions/send-push/index.ts \
+            supabase/functions/check-push-receipts/index.ts supabase/functions/deno.json \
             docs/PUSH_NOTIFICATIONS_SETUP.md docs/OPERATIONS_RUNBOOK.md docs/CHILD_SAFETY_CHECKLIST.md \
             README.md .github/workflows/ci.yml .github/workflows/sync-lockfile.yml
       - name: Commit lockfile and formatting changes
