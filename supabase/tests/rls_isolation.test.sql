@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(129);
+select plan(131);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -411,6 +411,18 @@ select lives_ok($update public.schools set status='active' where id='92000000-00
 select is((select status from public.schools where id='92000000-0000-4000-8000-000000000001'),'active',
   'school reactivation restores the active lifecycle status');
 reset role;
+
+-- Database-level guard prevents a race from deleting the final guardian.
+insert into public.children(school_id,first_name)
+values ('92000000-0000-4000-8000-000000000001','Guardian Protection Fixture')
+returning id;
+insert into public.guardianships(guardian_id,child_id,relationship)
+select '91000000-0000-4000-8000-000000000008', id, 'Parent'
+from public.children where first_name='Guardian Protection Fixture';
+select throws_ok($delete from public.profiles where id='91000000-0000-4000-8000-000000000008'$,
+  '23514',null,'the final guardian cannot be deleted from the database');
+select ok(exists(select 1 from public.profiles where id='91000000-0000-4000-8000-000000000008'),
+  'blocked final-guardian deletion leaves the parent profile intact');
 
 select * from finish();
 rollback;
