@@ -73,7 +73,7 @@ grant execute on function private.is_thread_member(uuid) to authenticated;
 
 create or replace function private.can_read_route(target_route uuid)
 returns boolean language sql stable security definer set search_path = ''
-as $
+as $predrive$
   select exists (
     select 1 from public.routes r
     where r.id = target_route
@@ -87,11 +87,11 @@ as $
         )
       )
   )
-$;
+$predrive$;
 
 create or replace function private.can_read_bus(target_bus uuid)
 returns boolean language sql stable security definer set search_path = ''
-as $
+as $predrive$
   select exists (
     select 1 from public.buses b
     where b.id = target_bus
@@ -105,7 +105,7 @@ as $
         )
       )
   )
-$;
+$predrive$;
 revoke all on function private.can_read_route(uuid) from public, anon;
 revoke all on function private.can_read_bus(uuid) from public, anon;
 grant execute on function private.can_read_route(uuid) to authenticated;
