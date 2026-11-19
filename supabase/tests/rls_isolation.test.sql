@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(110);
+select plan(116);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -364,6 +364,25 @@ select ok(exists(select 1 from pg_trigger where tgname='guard_route_type_or_arch
 select ok(exists(select 1 from pg_trigger where tgname='guard_bus_archive_change' and not tgisinternal),'assigned vehicle availability is guarded');
 select ok(exists(select 1 from pg_trigger where tgname='guard_child_archive_change' and not tgisinternal),'assigned child archival is guarded');
 select ok(exists(select 1 from pg_trigger where tgname='invalidate_route_geometry_after_stop_change' and not tgisinternal),'stop changes invalidate route geometry');
+
+-- Platform-owner school lifecycle controls suspend tenant access without deleting data.
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='schools' and column_name='status'),
+  'schools have an explicit lifecycle status');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000007',true);
+select lives_ok($update public.schools set status='suspended' where id='92000000-0000-4000-8000-000000000001'$,
+  'platform owner can suspend a school');
+select is((select status from public.schools where id='92000000-0000-4000-8000-000000000001'),'suspended',
+  'school suspension status is persisted');
+select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000006',true);
+select is(private.current_school_id(),null::uuid,
+  'suspended school administrators lose tenant-scoped access');
+select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000007',true);
+select lives_ok($update public.schools set status='active' where id='92000000-0000-4000-8000-000000000001'$,
+  'platform owner can reactivate a school');
+select is((select status from public.schools where id='92000000-0000-4000-8000-000000000001'),'active',
+  'school reactivation restores the active lifecycle status');
+reset role;
 
 select * from finish();
 rollback;
