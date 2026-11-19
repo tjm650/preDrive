@@ -349,3 +349,16 @@ A queued request only means pg_net accepted the request. Confirm Edge Function l
 ## Architecture
 
 The requested `apps/mobile`, `apps/web` and `packages/shared` workspaces are nested under the top-level `frontend/` directory, alongside top-level `supabase/`.
+
+
+## Backend documentation
+
+The Supabase backend targets project `rjsdhgbjvghjnuiilizm`.
+
+- [Architecture](docs/architecture.md)
+- [Database schema](docs/schema.md)
+- [Security model and child-location threat controls](docs/security.md)
+- [Operations runbook and required secrets](docs/runbook.md)
+- [Backend audit and live deployment status](docs/backend-audit.md)
+
+For local development, use `supabase start`, `supabase db reset`, `pnpm db:types` and `pnpm test:db`. Do not load the local demo seed into the live Supabase project.
