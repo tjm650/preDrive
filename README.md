@@ -95,7 +95,7 @@ Shared local-only password: `PreDrive-Demo-2026!`. These are public demo credent
 - Parents can see active trips carrying their own children, last available vehicle coordinates and child-specific trip events. Parents can report an absence.
 - Supervisors can start assigned scheduled trips, record boarding/absence/arrival/drop-off, verify the selected authorised pickup person with a PIN, send an SOS event and complete trips.
 - The database rejects trip completion until every child on the manifest has a final status. On drop-off routes, the authorised pickup PIN must be verified before a child can be marked as released.
-- Trip events are queued in local SQLite while offline and replayed in order using idempotency keys. The latest vehicle location is retained for retry.
+- Trip events are queued in local SQLite while offline and replayed in order using idempotency keys. Permanent server rejections are retained in a local review queue instead of being silently discarded; unresolved events block trip completion. The latest vehicle location is retained for retry.
 - Realtime subscriptions refresh trip events, trip state, vehicle location and notifications.
 - Android location tracking requests foreground and background permissions and uses an Android foreground location service. If background permission is denied, the supervisor must keep the app open. Force-stopping the app, revoked permissions, device power settings and network loss can still interrupt location delivery.
 - SOS and pickup PIN verification require a live connection. If SOS cannot be sent, the app instructs the supervisor to contact the school's emergency contact immediately. A queued event is not an emergency notification.
@@ -104,9 +104,9 @@ For Expo push registration and native modules, initialise/link the Expo project 
 
 ## School operations workspace
 
-Open `/dashboard/operations` as a school administrator to manage children, vehicles, routes and ordered stops, issue/void invoices, and invite supervisors or additional school administrators. Child, vehicle and route archival is soft archival; records are not physically deleted from the operational history.
+Open `/dashboard/operations` as a school administrator to manage children, vehicles, routes and ordered stops, assign children to routes, schedule trips, issue/void invoices, reconcile externally verified manual payments, and invite parents, supervisors or additional school administrators. Child, vehicle and route archival is soft archival; records are not physically deleted from the operational history.
 
-Payment confirmation is intentionally not available as a manual UI action. A payment must only be marked as received after a verified callback from a configured payment provider. No payment provider is integrated yet.
+Manual payment reconciliation records a receipt/reference supplied by the school administrator and must only be used after independently verifying the payment through the bank, mobile-money operator or other payment channel. Automated provider callbacks, refunds and payment-provider integration are not implemented yet.
 
 ## Supabase Edge Functions
 
@@ -116,6 +116,7 @@ Deploy the functions after reviewing the target project and setting secrets:
 supabase functions deploy send-push
 supabase functions deploy check-push-receipts
 supabase functions deploy invite-staff
+supabase functions deploy invite-parent
 supabase functions deploy build-route-geometry
 
 supabase secrets set \
@@ -150,7 +151,7 @@ A `provider_verified` status means the routing provider returned a road route fo
 
 ## Outstanding launch gates
 
-1. Pass the expanded pgTAP suite against a clean local database and verify all generated types and web/mobile builds.
+1. Keep the expanded pgTAP suite, generated database types, lint/type checks, web build and Android bundle export passing on every main-branch change. Latest verified run: GitHub Actions CI run 44477235544; rerun after the newest offline/push/invitation changes is in progress.
 2. Deploy migrations to the intended hosted Supabase project only after schema tests pass; verify hosted RLS, pg_cron, Realtime and function secrets without using a remote database reset.
 3. Complete school admin management for route-child assignments, trip scheduling, incident handling, full staff lifecycle and platform-owner school operations.
 4. Integrate and test a supported payment provider with verified callbacks, reconciliation and refunds.
