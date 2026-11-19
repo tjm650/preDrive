@@ -97,7 +97,7 @@ The main branch now also includes `20261119000300_stale_location_and_retention.s
 - Adds a bounded 10,000-row cleanup operation for GPS history older than 90 days, scheduled hourly to avoid long-running deletes.
 - Extends English, Shona and Ndebele push copy for stale GPS alerts.
 
-The RLS suite now declares 124 assertions, including checks for the end-trip alias, stale-location monitor, retention routine and geofence constraint. These are source-level additions only; pgTAP and cron execution have not yet been run.
+The RLS suite now declares 131 assertions, including checks for the end-trip alias, stale-location monitor, retention routine and geofence constraint. These are source-level additions only; pgTAP and cron execution have not yet been run.
 
 
 ## Pickup authorization and payment integrity
@@ -110,7 +110,7 @@ The main branch now includes `20261119000400_pickup_and_payment_hardening.sql`:
 - Payments now include a `method` and optional `idempotency_key`. Unique partial indexes prevent duplicate provider references and repeated idempotency keys for the same invoice/provider, closing the concurrency gap in manual reconciliation.
 - pgTAP now covers revoked pickup PIN rejection, the new payment fields, and both uniqueness indexes.
 
-The RLS test plan is now 124 assertions. Runtime execution is still pending.
+The RLS test plan is now 131 assertions. Runtime execution is still pending.
 
 
 ## Public demo-request abuse controls
@@ -144,4 +144,7 @@ Two authenticated Edge Functions have been added and configured in `supabase/con
 
 Access JWTs already issued by Supabase may remain cryptographically valid until expiry after session revocation. The deleted profile and membership links make normal RLS checks deny access during that period. Staff and platform-owner self-deletion remain intentionally disabled and require an administrator-led offboarding workflow.
 
-The RLS suite now has 129 assertions, including the account-deletion foreign-key behavior. The new Edge Functions are committed but have not been deployed or exercised against the connected project.
+The RLS suite now has 131 assertions, including the account-deletion foreign-key behavior and a database-level guard that prevents deleting a child's final registered guardian. The new Edge Functions are committed but have not been deployed or exercised against the connected project.
+
+
+A further database trigger in `20261119000900_prevent_guardian_orphaning.sql` serializes guardian deletions per child and rejects deletion if it would remove the final parent guardian. This closes the race where two guardian accounts could otherwise pass simultaneous application-level preflight checks.
