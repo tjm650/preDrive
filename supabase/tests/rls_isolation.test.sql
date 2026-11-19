@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(55);
+select plan(56);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -102,6 +102,11 @@ select ok(not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.rel
 -- Supervisor: assigned trip manifest and its guardian contacts only.
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000003',true);
 select is((select count(*)::int from public.trips),1,'supervisor sees only their assigned trip');
+select throws_ok(
+  $insert into public.trip_events(trip_id,child_id,type,recorded_by)
+   values ('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','handover_verified','91000000-0000-4000-8000-000000000003')$,
+  '42501','supervisor cannot forge a verified handover with a direct table insert'
+);
 select is((select count(*)::int from public.route_children),2,'supervisor sees the assigned route manifest only');
 select is((select count(*)::int from public.children),2,'supervisor sees children on their assigned manifest only');
 select is((select count(id)::int from public.profiles),3,'supervisor sees self and guardians linked to assigned children only');
