@@ -98,3 +98,16 @@ The main branch now also includes `20261119000300_stale_location_and_retention.s
 - Extends English, Shona and Ndebele push copy for stale GPS alerts.
 
 The RLS suite now declares 91 assertions, including checks for the end-trip alias, stale-location monitor, retention routine and geofence constraint. These are source-level additions only; pgTAP and cron execution have not yet been run.
+
+
+## Pickup authorization and payment integrity
+
+The main branch now includes `20261119000400_pickup_and_payment_hardening.sql`:
+
+- Pickup authorizations now have an `active` flag. Revoked entries remain auditable but are hidden from supervisors' active-trip pickup list and cannot pass PIN verification.
+- PIN verification continues to use bcrypt, a per-actor/child advisory lock, a five-failure/15-minute limit, and audit logging; it now also requires the selected authorization to be active.
+- Authenticated users can read the new `active` field without receiving the protected PIN hash.
+- Payments now include a `method` and optional `idempotency_key`. Unique partial indexes prevent duplicate provider references and repeated idempotency keys for the same invoice/provider, closing the concurrency gap in manual reconciliation.
+- pgTAP now covers revoked pickup PIN rejection, the new payment fields, and both uniqueness indexes.
+
+The RLS test plan is now 97 assertions. Runtime execution is still pending.
