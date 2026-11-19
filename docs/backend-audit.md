@@ -148,3 +148,20 @@ The RLS suite now has 131 assertions, including the account-deletion foreign-key
 
 
 A further database trigger in `20261119000900_prevent_guardian_orphaning.sql` serializes guardian deletions per child and rejects deletion if it would remove the final parent guardian. This closes the race where two guardian accounts could otherwise pass simultaneous application-level preflight checks.
+
+
+## Paynow payment integration
+
+The Paynow source implementation is now in place:
+
+- `paynow-initiate` supports Paynow web checkout plus EcoCash and OneMoney mobile-money requests. It verifies the parent owns the invoice, checks school/invoice status and outstanding balance, enforces idempotency and per-invoice attempt limits, and stores checkout/poll URLs in a server-only table.
+- Outbound Paynow requests are URL-encoded and SHA-512 signed. The returned hash is verified before a redirect URL is accepted, and checkout/poll URLs must be HTTPS on a Paynow domain.
+- `paynow-callback` is the only endpoint configured without JWT verification; it authenticates callbacks using Paynow's SHA-512 integration-key hash.
+- `apply_paynow_callback` performs payment, transaction, invoice and audit updates atomically in Postgres. Only the service role can execute it.
+- The `paynow_transactions` table has RLS enabled and is inaccessible to anon/authenticated clients. It stores sensitive poll URLs and checkout metadata.
+
+Required server secrets before deployment: `PAYNOW_INTEGRATION_ID`, `PAYNOW_INTEGRATION_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `SUPABASE_URL`, and `SITE_URL`. Optional settings: `PAYNOW_API_BASE` and `PAYNOW_RETURN_URL`. No Paynow credentials have been supplied or stored in the repository, so the integration is implemented but cannot initiate real payments until these secrets are configured.
+
+Official protocol references: [Paynow initiate transaction](https://developers.paynow.co.zw/docs/paynow/initiate_transaction/), [mobile money](https://developers.paynow.co.zw/docs/paynow/initiate_mobile_transaction/), [hash generation](https://developers.paynow.co.zw/docs/paynow/generating_hash/), and [callback hash validation](https://developers.paynow.co.zw/docs/paynow/validating_hash/).
+
+The RLS suite now has 135 assertions, including server-only access to Paynow callback reconciliation and transaction metadata.
