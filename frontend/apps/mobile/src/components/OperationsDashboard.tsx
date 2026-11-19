@@ -26,6 +26,7 @@ import {
   pendingEventCount,
   retryFailedEvents,
   setActiveTripId,
+  tripEventQueueStatus,
 } from '../lib/offline';
 
 const LOCATION_TASK = 'PREDRIVE_BACKGROUND_TRIP_LOCATION';
@@ -531,6 +532,11 @@ export function OperationsDashboard({
   }
 
   async function completeTrip(tripId: string) {
+    const queueStatus = await tripEventQueueStatus(tripId);
+    if (queueStatus.pending || queueStatus.failed) {
+      setError(`This trip has ${queueStatus.pending} unsynchronised and ${queueStatus.failed} rejected event(s). Synchronise or review them before completing the trip.`);
+      return;
+    }
     setBusy(tripId);
     setError(null);
     try {
