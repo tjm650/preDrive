@@ -206,7 +206,7 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = ''
-as $
+as $predrive$
 declare
   request_role text;
   allowed_enrolment boolean;
@@ -225,6 +225,6 @@ begin
 
   return new;
 end
-$$;
+$predrive$;
 
 revoke all on function private.protect_profile_tenant_identity() from public, anon, authenticated;
