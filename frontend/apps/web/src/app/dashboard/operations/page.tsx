@@ -921,6 +921,7 @@ export default function OperationsPage() {
                 </form>
               ) : null}
               {tab === 'billing' ? (
+                <>
                 <form onSubmit={(e) => void createInvoice(e)} className="mt-4 space-y-3">
                   <Field label="Parent / guardian">
                     <select
