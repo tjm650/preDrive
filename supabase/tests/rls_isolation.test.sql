@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(135);
+select plan(138);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -198,6 +198,15 @@ select is(public.join_school_with_code(current_setting('test.school_join_code'))
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000009',true);
 select is(public.join_school_with_code(current_setting('test.school_join_code')),null::uuid,
   'an exhausted one-use join code cannot enrol a second parent');
+select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000006',true);
+select set_config('test.revoked_join_code',public.create_school_join_code(now()+interval '1 day',3),true);
+select is(public.revoke_school_join_code(current_setting('test.revoked_join_code')),true,
+  'school administrator can immediately revoke a join code');
+select is(public.revoke_school_join_code(current_setting('test.revoked_join_code')),true,
+  'join-code revocation is idempotent');
+select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000009',true);
+select is(public.join_school_with_code(current_setting('test.revoked_join_code')),null::uuid,
+  'a revoked join code cannot enrol a parent');
 select is((select school_id from public.profiles where id='91000000-0000-4000-8000-000000000009'),null::uuid,
   'an exhausted join code leaves the second parent unassigned');
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000006',true);
