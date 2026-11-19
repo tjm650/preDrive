@@ -465,7 +465,10 @@ export function OperationsDashboard({
           p_child_id: childId,
           p_type: type,
           p_metadata: { source: 'mobile' },
-          p_idempotency_key: `${type}-${Date.now()}`,
+          p_idempotency_key:
+            type === 'child_missing' && childId
+              ? `missing-${tripId}-${childId}`
+              : `${type}-${Date.now()}`,
         });
         setNotice(
           type === 'sos'
@@ -817,13 +820,17 @@ export function OperationsDashboard({
                                       }
                                     />
                                   ) : null}
-                                  <Action
-                                    label="Missing child"
-                                    onPress={() =>
-                                      void recordEvent(trip.id, child.id, 'child_missing')
-                                    }
-                                  />
                                 </>
+                              )}
+                              {events.some((event) => event.type === 'child_missing') ? (
+                                <Text style={styles.finalLabel}>Missing-child alert sent</Text>
+                              ) : (
+                                <Action
+                                  label="Missing child"
+                                  onPress={() =>
+                                    void recordEvent(trip.id, child.id, 'child_missing')
+                                  }
+                                />
                               )}
                             </View>
                           ) : (
