@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(77);
+select plan(81);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -70,6 +70,9 @@ insert into public.bus_live(trip_id,lat,lng) values
 ('96000000-0000-4000-8000-000000000001',-17.8,31.0),
 ('96000000-0000-4000-8000-000000000002',-17.8,31.0);
 
+insert into public.location_history(trip_id,lat,lng,speed,recorded_at)
+values ('96000000-0000-4000-8000-000000000001',-17.8,31.0,25,now());
+
 insert into public.invoices(school_id,guardian_id,amount_usd,currency,status,due_date) values
 ('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000001',25,'USD','pending',current_date),
 ('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000005',25,'USD','pending',current_date),
@@ -112,6 +115,7 @@ select is((select count(*)::int from public.trip_events),1,'parent sees only the
 select is((select count(*)::int from public.invoices),1,'parent sees only their own invoice');
 select is((select count(*)::int from public.notifications where type='test'),1,'parent sees only their own notification');
 select is((select count(*)::int from public.bus_live),1,'parent sees location only for an active trip containing their child');
+select is((select count(*)::int from public.location_history),0,'parent cannot read historical bus location under any trip state');
 select is((select count(*)::int from public.routes),1,'parent sees route metadata only for an active trip containing their child');
 select is((select count(*)::int from public.buses),1,'parent sees vehicle metadata only for an active trip containing their child');
 select ok(not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relname = any(array['schools','profiles','children','guardianships','authorized_pickups','buses','routes','stops','route_children','trips','trip_events','bus_live','location_history','absences','notifications','messages','threads','thread_members','incidents','subscriptions','invoices','payments','app_settings','audit_log','demo_requests','push_receipts','staff_invitations','parent_invitations']) and not c.relrowsecurity),'RLS is enabled on every preDrive public table');
@@ -129,6 +133,7 @@ select is((select count(*)::int from public.children),2,'supervisor sees childre
 select is((select count(id)::int from public.profiles),3,'supervisor sees self and guardians linked to assigned children only');
 select is((select count(*)::int from public.trip_events),1,'supervisor sees events for their assigned trip');
 select is((select count(*)::int from public.bus_live),1,'supervisor sees live location for their assigned trip');
+select is((select count(*)::int from public.location_history),1,'assigned supervisor can read location history for their trip');
 select is((select count(id)::int from public.authorized_pickups),1,'supervisor sees pickup authorizations only for assigned active trip children');
 select is((select count(*)::int from public.routes),1,'supervisor sees only their assigned route');
 select throws_ok(
@@ -168,6 +173,10 @@ select is(
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000006',true);
 select is((select count(*)::int from public.children),2,'school admin sees all children in their school');
 select is((select count(*)::int from public.schools),1,'school admin sees only their own school');
+select throws_ok($update public.profiles set role='platform_owner' where id='91000000-0000-4000-8000-000000000006'$,
+  '42501',null,'school administrator cannot promote their own profile');
+select throws_ok($update public.profiles set school_id='92000000-0000-4000-8000-000000000002' where id='91000000-0000-4000-8000-000000000006'$,
+  '42501',null,'school administrator cannot move their own profile to another tenant');
 select is((select count(*)::int from public.authorized_pickups),1,'school admin sees pickup authorizations only in their school');
 select is((select count(*)::int from public.subscriptions),1,'school admin sees only their school subscription');
 select is((select count(*)::int from public.invoices),2,'school admin sees invoices only in their school');
