@@ -71,11 +71,17 @@ begin
   end if;
  when 'absences' then
   select c.school_id into a_school from public.children c where c.id=new.child_id;
-  select school_id into b_school from public.profiles where id=new.reported_by;
-  if a_school is null or a_school<>b_school then raise exception 'Absence reporter and child must belong to the same school' using errcode='23514'; end if;
+  if new.reported_by is not null then
+   select school_id into b_school from public.profiles where id=new.reported_by;
+   if a_school is null or a_school<>b_school then raise exception 'Absence reporter and child must belong to the same school' using errcode='23514'; end if;
+  elsif a_school is null then
+   raise exception 'Absence child must belong to a school' using errcode='23514';
+  end if;
  when 'incidents' then
-  select school_id into a_school from public.profiles where id=new.reported_by;
-  if a_school is distinct from new.school_id then raise exception 'Incident reporter must belong to the incident school' using errcode='23514'; end if;
+  if new.reported_by is not null then
+   select school_id into a_school from public.profiles where id=new.reported_by;
+   if a_school is distinct from new.school_id then raise exception 'Incident reporter must belong to the incident school' using errcode='23514'; end if;
+  end if;
   if new.child_id is not null then
    select school_id into b_school from public.children where id=new.child_id;
    if b_school is distinct from new.school_id then raise exception 'Incident child must belong to the incident school' using errcode='23514'; end if;
