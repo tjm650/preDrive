@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "327055061580",
+    "project_id": "predrive-60619",
+    "storage_bucket": "predrive-60619.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:327055061580:android:458b506d8c7af16ac83ae9",
+        "android_client_info": {
+          "package_name": "zw.co.predrive.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKovLwf4AIQsiLyeIS0ObE3cUSqAnzwHc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
