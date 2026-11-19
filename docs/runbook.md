@@ -76,7 +76,7 @@ The database trigger reads these Vault names:
 - `project_url`: `https://rjsdhgbjvghjnuiilizm.supabase.co`
 - `notification_webhook_secret`: exactly the same value as the Edge Function secret `NOTIFICATION_WEBHOOK_SECRET`
 
-The Vault is currently empty. Until these two values are set, the notification dispatcher records `missing_secrets` and does not call `send-push`.
+The Vault now contains `project_url`. The `notification_webhook_secret` entry is still missing. Until it is set to the same value as the Edge Function secret, the notification dispatcher records `missing_secrets` and does not call `send-push`.
 
 Example Vault setup (replace the placeholder with the same secret configured for the Edge Function):
 
