@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(116);
+select plan(124);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -374,7 +374,27 @@ select lives_ok($update public.schools set status='suspended' where id='92000000
   'platform owner can suspend a school');
 select is((select status from public.schools where id='92000000-0000-4000-8000-000000000001'),'suspended',
   'school suspension status is persisted');
+select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000001',true);
+select is(private.is_guardian('93000000-0000-4000-8000-000000000001'),false,
+  'parents lose guardian authorization when their school is suspended');
+select is((select count(*)::int from public.bus_live),0,
+  'parents cannot read live bus locations while their school is suspended');
+select is((select count(*)::int from public.invoices),0,
+  'parents cannot read invoices while their school is suspended');
+select is((select count(*)::int from public.notifications),0,
+  'parents cannot read school notifications while their school is suspended');
+select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000003',true);
+select is(private.is_assigned_supervisor('96000000-0000-4000-8000-000000000001'),false,
+  'supervisors lose assigned-trip authorization when their school is suspended');
+select is((select count(*)::int from public.trips),0,
+  'supervisors cannot read trips while their school is suspended');
+select is((select count(*)::int from public.routes),0,
+  'supervisors cannot read routes while their school is suspended');
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000006',true);
+select is((select count(*)::int from public.children),0,
+  'school administrators cannot read child records while their school is suspended');
+select is(private.current_school_id(),null::uuid,
+  'suspended school administrators lose tenant-scoped access');
 select is(private.current_school_id(),null::uuid,
   'suspended school administrators lose tenant-scoped access');
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000007',true);
