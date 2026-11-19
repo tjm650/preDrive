@@ -15,7 +15,7 @@
 
 All 29 public application tables have RLS enabled. Policies use private SECURITY DEFINER predicates to avoid recursive policy evaluation. The current security advisor reports no overlapping permissive-policy warnings after policy consolidation.
 
-Private operational tables use no client-facing policies. The exception is `private.push_dispatch_attempts`: the live advisor reports RLS disabled. It has no grants to anon/authenticated and resides in the non-exposed private schema, but should still have RLS enabled.
+Private operational tables use no client-facing policies. The exception is `private.push_dispatch_attempts`: the live advisor reports RLS disabled. It has no table privileges for anon/authenticated, and the `private` schema is not in the configured PostgREST exposed-schema list. The advisor's critical finding still needs to be cleared by enabling RLS; the table is not currently client-readable through the Data API, but defense in depth requires RLS as well.
 
 Proposed final hardening SQL (not yet applied; awaiting explicit approval):
 
