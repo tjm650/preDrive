@@ -49,6 +49,16 @@ function constantTimeEqual(a: string, b: string) {
   return mismatch === 0;
 }
 
+function isTrustedPaynowUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'https:' &&
+      (parsed.hostname === 'paynow.co.zw' || parsed.hostname.endsWith('.paynow.co.zw'));
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
@@ -216,7 +226,8 @@ Deno.serve(async (request: Request) => {
     const checkoutUrl = field(resultFields, 'browserurl');
     const pollUrl = field(resultFields, 'pollurl');
     const paynowReference = field(resultFields, 'paynowreference');
-    if (resultStatus !== 'ok' || !checkoutUrl || !pollUrl) {
+    if (resultStatus !== 'ok' || !checkoutUrl || !pollUrl ||
+        !isTrustedPaynowUrl(checkoutUrl) || !isTrustedPaynowUrl(pollUrl)) {
       const providerError = field(resultFields, 'error') ?? 'Paynow could not initiate this payment.';
       await admin.from('payments').update({ status: 'failed' }).eq('id', paymentId);
       await admin.from('paynow_transactions').update({ status: 'failed' }).eq('payment_id', paymentId);
