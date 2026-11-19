@@ -163,6 +163,68 @@ Deno.serve(async (request: Request) => {
         ])
       : [[], []];
 
+    let schoolAdminData: Record<string, unknown> | null = null;
+    if (profile.role === 'school_admin' && schoolId) {
+      const [schoolChildren, schoolBuses, schoolRoutes, schoolIncidents, schoolInvoices, schoolNotifications, schoolThreads, schoolAuditLog, schoolGuardianships] = await Promise.all([
+        rows(admin.from('children').select('*').eq('school_id', schoolId)),
+        rows(admin.from('buses').select('id,school_id,registration,make,model,capacity,active,driver_name,created_at,updated_at').eq('school_id', schoolId)),
+        rows(admin.from('routes').select('*').eq('school_id', schoolId)),
+        rows(admin.from('incidents').select('*').eq('school_id', schoolId)),
+        rows(admin.from('invoices').select('*').eq('school_id', schoolId)),
+        rows(admin.from('notifications').select('*').eq('school_id', schoolId)),
+        rows(admin.from('threads').select('id,school_id,created_at,updated_at').eq('school_id', schoolId)),
+        rows(admin.from('audit_log').select('*').eq('school_id', schoolId)),
+        rows(admin.from('guardianships').select('*').in('child_id',
+          (await rows(admin.from('children').select('id').eq('school_id', schoolId))).map((item) => item.id as string))),
+      ]);
+      const schoolChildIds = schoolChildren.map((item) => item.id).filter((id): id is string => typeof id === 'string');
+      const schoolRouteIds = schoolRoutes.map((item) => item.id).filter((id): id is string => typeof id === 'string');
+      const schoolThreadIds = schoolThreads.map((item) => item.id).filter((id): id is string => typeof id === 'string');
+      const schoolInvoiceIds = schoolInvoices.map((item) => item.id).filter((id): id is string => typeof id === 'string');
+      const [schoolAuthorizedPickups, schoolAbsences, schoolRouteChildren, schoolTrips, schoolMessages, schoolThreadMembers, schoolPayments] = await Promise.all([
+        schoolChildIds.length ? rows(admin.from('authorized_pickups').select('id,child_id,name,relationship,phone,active,created_at,updated_at').in('child_id', schoolChildIds)) : Promise.resolve([]),
+        schoolChildIds.length ? rows(admin.from('absences').select('*').in('child_id', schoolChildIds)) : Promise.resolve([]),
+        schoolRouteIds.length ? rows(admin.from('route_children').select('*').in('route_id', schoolRouteIds)) : Promise.resolve([]),
+        schoolRouteIds.length ? rows(admin.from('trips').select('*').in('route_id', schoolRouteIds)) : Promise.resolve([]),
+        schoolThreadIds.length ? rows(admin.from('messages').select('id,thread_id,sender_id,body,created_at').in('thread_id', schoolThreadIds)) : Promise.resolve([]),
+        schoolThreadIds.length ? rows(admin.from('thread_members').select('id,thread_id,user_id,created_at').in('thread_id', schoolThreadIds)) : Promise.resolve([]),
+        schoolInvoiceIds.length ? rows(admin.from('payments').select('id,invoice_id,amount,currency,provider,provider_reference,method,status,paid_at,created_at,updated_at').in('invoice_id', schoolInvoiceIds)) : Promise.resolve([]),
+      ]);
+      const schoolTripIds = schoolTrips.map((item) => item.id).filter((id): id is string => typeof id === 'string');
+      const schoolStopIds = schoolRouteChildren.map((item) => item.stop_id).filter((id): id is string => typeof id === 'string');
+      const [schoolTripEvents, schoolStops, schoolBusLive, schoolLocationHistory] = schoolTripIds.length
+        ? await Promise.all([
+            rows(admin.from('trip_events').select('*').in('trip_id', schoolTripIds)),
+            schoolStopIds.length ? rows(admin.from('stops').select('*').in('id', schoolStopIds)) : Promise.resolve([]),
+            rows(admin.from('bus_live').select('trip_id,lat,lng,heading,speed,updated_at').in('trip_id', schoolTripIds)),
+            rows(admin.from('location_history').select('id,trip_id,lat,lng,speed,recorded_at').in('trip_id', schoolTripIds)),
+          ])
+        : [[], [], [], []];
+
+      schoolAdminData = {
+        children: schoolChildren,
+        guardianships: schoolGuardianships,
+        authorized_pickups: schoolAuthorizedPickups,
+        buses: schoolBuses,
+        routes: schoolRoutes,
+        route_children: schoolRouteChildren,
+        stops: schoolStops,
+        trips: schoolTrips,
+        trip_events: schoolTripEvents,
+        bus_live: schoolBusLive,
+        location_history: schoolLocationHistory,
+        absences: schoolAbsences,
+        incidents: schoolIncidents,
+        invoices: schoolInvoices,
+        payments: schoolPayments,
+        notifications: schoolNotifications,
+        threads: schoolThreads,
+        thread_members: schoolThreadMembers,
+        messages: schoolMessages,
+        audit_log: schoolAuditLog,
+      };
+    }
+
     const payload = {
       exported_at: new Date().toISOString(),
       account: {
@@ -196,6 +258,7 @@ Deno.serve(async (request: Request) => {
       parent_invitations: parentInvitations,
       subscriptions: ownSubscription,
       app_settings: ownSettings,
+      school_admin_data: schoolAdminData,
     };
 
     console.log(JSON.stringify({
