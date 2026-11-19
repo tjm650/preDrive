@@ -35,10 +35,18 @@ const jsonResponse = (body: unknown, status = 200, extraHeaders: Record<string, 
     },
   });
 
-async function rows(query: PromiseLike<{ data: unknown; error: { message: string } | null }>) {
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Record<string, unknown>[];
+async function rows(query: any) {
+  const pageSize = 1000;
+  const maxRows = 100000;
+  const collected: Record<string, unknown>[] = [];
+  for (let offset = 0; offset < maxRows; offset += pageSize) {
+    const { data, error } = await query.range(offset, offset + pageSize - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as Record<string, unknown>[];
+    collected.push(...page);
+    if (page.length < pageSize) return collected;
+  }
+  throw new Error('Export exceeds the 100,000-row safety limit. Contact support for a managed export.');
 }
 
 function uniqueById(items: Record<string, unknown>[]) {
