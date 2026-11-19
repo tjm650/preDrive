@@ -44,6 +44,19 @@ async function database() {
       client_recorded_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS failed_trip_events (
+      id INTEGER PRIMARY KEY,
+      trip_id TEXT NOT NULL,
+      child_id TEXT,
+      event_type TEXT NOT NULL,
+      lat REAL,
+      lng REAL,
+      metadata TEXT NOT NULL,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      client_recorded_at TEXT NOT NULL,
+      failure_reason TEXT NOT NULL,
+      failed_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS pending_locations (
       trip_id TEXT PRIMARY KEY,
       lat REAL NOT NULL,
@@ -102,6 +115,26 @@ export async function enqueueLocation(input: QueuedLocation) {
   );
 }
 
+export async function failedEventCount() {
+  const db = await database();
+  const row = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) AS count FROM failed_trip_events',
+  );
+  return row?.count ?? 0;
+}
+
+export async function retryFailedEvents() {
+  const db = await database();
+  await db.execAsync(`
+    INSERT OR IGNORE INTO pending_trip_events
+      (trip_id,child_id,event_type,lat,lng,metadata,idempotency_key,client_recorded_at)
+    SELECT trip_id,child_id,event_type,lat,lng,metadata,idempotency_key,client_recorded_at
+    FROM failed_trip_events ORDER BY id ASC;
+    DELETE FROM failed_trip_events;
+  `);
+  return pendingEventCount();
+}
+
 export async function pendingEventCount() {
   const db = await database();
   const row = await db.getFirstAsync<{ count: number }>(
@@ -115,7 +148,7 @@ export async function flushOfflineQueue(client: SupabaseClient) {
   const rpc = client.rpc as unknown as (
     name: string,
     args: Record<string, unknown>,
-  ) => Promise<{ error: { message: string } | null }>;
+  ) => Promise<{ error: { message: string; code?: string } | null }>; 
   const events = await db.getAllAsync<QueuedTripEvent>(
     'SELECT * FROM pending_trip_events ORDER BY id ASC LIMIT 100',
   );
@@ -131,7 +164,20 @@ export async function flushOfflineQueue(client: SupabaseClient) {
       p_idempotency_key: event.idempotency_key,
       p_client_recorded_at: event.client_recorded_at,
     });
-    if (error) break;
+    if (error) {
+      const permanent = Boolean(error.code && /^(22|23|28|40|42|P0002)/.test(error.code));
+      if (!permanent) break;
+      await db.runAsync(
+        `INSERT OR IGNORE INTO failed_trip_events
+          (id,trip_id,child_id,event_type,lat,lng,metadata,idempotency_key,client_recorded_at,failure_reason,failed_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        event.id, event.trip_id, event.child_id, event.event_type, event.lat, event.lng,
+        event.metadata, event.idempotency_key, event.client_recorded_at,
+        error.message.slice(0, 500), new Date().toISOString(),
+      );
+      await db.runAsync('DELETE FROM pending_trip_events WHERE id = ?', event.id);
+      continue;
+    }
     await db.runAsync('DELETE FROM pending_trip_events WHERE id = ?', event.id);
     syncedEvents += 1;
   }
@@ -150,7 +196,12 @@ export async function flushOfflineQueue(client: SupabaseClient) {
     await db.runAsync('DELETE FROM pending_locations WHERE trip_id = ?', location.trip_id);
     syncedLocations += 1;
   }
-  return { syncedEvents, syncedLocations, pendingEvents: await pendingEventCount() };
+  return {
+    syncedEvents,
+    syncedLocations,
+    pendingEvents: await pendingEventCount(),
+    failedEvents: await failedEventCount(),
+  };
 }
 
 export async function setActiveTripId(tripId: string | null) {
