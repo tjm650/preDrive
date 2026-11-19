@@ -395,8 +395,6 @@ select is((select count(*)::int from public.children),0,
   'school administrators cannot read child records while their school is suspended');
 select is(private.current_school_id(),null::uuid,
   'suspended school administrators lose tenant-scoped access');
-select is(private.current_school_id(),null::uuid,
-  'suspended school administrators lose tenant-scoped access');
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000007',true);
 select lives_ok($update public.schools set status='active' where id='92000000-0000-4000-8000-000000000001'$,
   'platform owner can reactivate a school');
