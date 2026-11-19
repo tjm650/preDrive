@@ -148,7 +148,7 @@ export async function flushOfflineQueue(client: SupabaseClient) {
   const rpc = client.rpc as unknown as (
     name: string,
     args: Record<string, unknown>,
-  ) => Promise<{ error: { message: string; code?: string } | null }>; 
+  ) => Promise<{ error: { message: string; code?: string } | null }>;
   const events = await db.getAllAsync<QueuedTripEvent>(
     'SELECT * FROM pending_trip_events ORDER BY id ASC LIMIT 100',
   );
@@ -171,9 +171,17 @@ export async function flushOfflineQueue(client: SupabaseClient) {
         `INSERT OR IGNORE INTO failed_trip_events
           (id,trip_id,child_id,event_type,lat,lng,metadata,idempotency_key,client_recorded_at,failure_reason,failed_at)
          VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-        event.id, event.trip_id, event.child_id, event.event_type, event.lat, event.lng,
-        event.metadata, event.idempotency_key, event.client_recorded_at,
-        error.message.slice(0, 500), new Date().toISOString(),
+        event.id,
+        event.trip_id,
+        event.child_id,
+        event.event_type,
+        event.lat,
+        event.lng,
+        event.metadata,
+        event.idempotency_key,
+        event.client_recorded_at,
+        error.message.slice(0, 500),
+        new Date().toISOString(),
       );
       await db.runAsync('DELETE FROM pending_trip_events WHERE id = ?', event.id);
       continue;

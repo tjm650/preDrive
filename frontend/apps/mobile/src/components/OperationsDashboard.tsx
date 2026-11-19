@@ -559,7 +559,9 @@ export function OperationsDashboard({
     if (client && connected) {
       const result = await flushOfflineQueue(client);
       await refreshQueue();
-      setNotice(`${result.syncedEvents} retried event(s) synchronised. ${result.failedEvents} still need review.`);
+      setNotice(
+        `${result.syncedEvents} retried event(s) synchronised. ${result.failedEvents} still need review.`,
+      );
       await load();
     } else {
       setNotice(`${count} event(s) returned to the offline queue and will retry when connected.`);
@@ -629,7 +631,10 @@ export function OperationsDashboard({
       </View>
       {failedQueued > 0 ? (
         <View style={styles.error}>
-          <Text style={styles.errorText}>{failedQueued} offline event(s) were rejected by the server and need review. They have been preserved on this device.</Text>
+          <Text style={styles.errorText}>
+            {failedQueued} offline event(s) were rejected by the server and need review. They have
+            been preserved on this device.
+          </Text>
           <Pressable onPress={() => void retryFailedQueue()} style={styles.smallButton}>
             <Text style={styles.smallButtonText}>Retry rejected events</Text>
           </Pressable>
