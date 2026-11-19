@@ -65,7 +65,6 @@ Deno.serve(async (request: Request) => {
   if (error) return Response.json({ error: 'Unable to load recipient' }, { status: 500 });
   if (!profile?.expo_push_token) return Response.json({ skipped: 'no_push_token' });
   const language = typeof profile.language === 'string' && profile.language in copy ? profile.language : 'en';
-  const titleKey = String(record.title_key ?? 'preDrive');
   const bodyKey = String(record.body_key ?? 'notification');
   const response = await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
