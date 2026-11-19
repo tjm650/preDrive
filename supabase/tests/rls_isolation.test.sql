@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(104);
+select plan(105);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -13,7 +13,7 @@ values
 ('91000000-0000-4000-8000-000000000005','authenticated','authenticated','parent-a2@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{}',now(),now()),
 ('91000000-0000-4000-8000-000000000006','authenticated','authenticated','admin-a@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{}',now(),now()),
 ('91000000-0000-4000-8000-000000000007','authenticated','authenticated','owner@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{}',now(),now()),
-('91000000-0000-4000-8000-000000000008','authenticated','authenticated','new-parent@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{"full_name":"New Parent"}',now(),now()),
+('91000000-0000-4000-8000-000000000008','authenticated','authenticated','new-parent@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{"full_name":"New Parent","role":"platform_owner","school_id":"92000000-0000-4000-8000-000000000002"}',now(),now()),
 ('91000000-0000-4000-8000-000000000009','authenticated','authenticated','second-new-parent@rls.test',extensions.crypt('test-password',extensions.gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}','{}',now(),now());
 
 insert into public.schools(id,name,slug) values
@@ -186,6 +186,8 @@ select ok(exists(select 1 from public.profiles where id='91000000-0000-4000-8000
   'auth.users insert automatically creates a profile');
 select is((select role::text from public.profiles where id='91000000-0000-4000-8000-000000000008'),'parent',
   'new accounts receive the safe parent role, never a client-supplied staff role');
+select is((select school_id from public.profiles where id='91000000-0000-4000-8000-000000000008'),null::uuid,
+  'user-editable metadata cannot assign a new account to a school');
 set local role authenticated;
 select set_config('test.school_join_code',public.create_school_join_code(now()+interval '1 day',1),true);
 select ok(length(current_setting('test.school_join_code'))=32,
