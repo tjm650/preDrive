@@ -54,6 +54,7 @@ type Invoice = {
   due_date: string;
   guardian_id: string | null;
 };
+type Payment = { invoice_id: string; amount: number; status: string; provider: string; provider_reference: string | null; paid_at: string | null };
 type Guardian = { id: string; full_name: string; role: string };
 type Staff = { id: string; full_name: string; role: string };
 
@@ -76,6 +77,7 @@ export default function OperationsPage() {
   const [routeAssignments, setRouteAssignments] = useState<RouteAssignment[]>([]);
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [guardians, setGuardians] = useState<Guardian[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,7 +131,7 @@ export default function OperationsPage() {
       return;
     }
     setSchoolId(profile.school_id);
-    const [childRows, busRows, routeRows, invoiceRows, guardianRows, staffRows, stopRows] =
+    const [childRows, busRows, routeRows, invoiceRows, paymentRows, guardianRows, staffRows, stopRows] =
       await Promise.all([
         client.from('children').select('*').eq('school_id', profile.school_id).order('first_name'),
         client.from('buses').select('*').eq('school_id', profile.school_id).order('registration'),
@@ -139,6 +141,7 @@ export default function OperationsPage() {
           .select('*')
           .eq('school_id', profile.school_id)
           .order('due_date', { ascending: false }),
+        client.from('payments').select('invoice_id,amount,status,provider,provider_reference,paid_at'),
         client
           .from('profiles')
           .select('id,full_name,role')
@@ -158,6 +161,7 @@ export default function OperationsPage() {
       busRows.error ||
       routeRows.error ||
       invoiceRows.error ||
+      paymentRows.error ||
       guardianRows.error ||
       staffRows.error ||
       stopRows.error
@@ -186,6 +190,7 @@ export default function OperationsPage() {
     setRouteAssignments((assignmentRows.data ?? []) as RouteAssignment[]);
     setTrips((tripRows.data ?? []) as TripRecord[]);
     setInvoices((invoiceRows.data ?? []) as unknown as Invoice[]);
+    setPayments((paymentRows.data ?? []) as Payment[]);
     setGuardians((guardianRows.data ?? []) as Guardian[]);
     setStaff((staffRows.data ?? []) as Staff[]);
     setLoading(false);
@@ -683,13 +688,19 @@ export default function OperationsPage() {
                         <p className="mt-1 text-xs text-[#71827c]">
                           Due {invoice.due_date} · {invoice.status}
                         </p>
+                        <p className="mt-1 text-xs text-[#71827c]">
+                          Outstanding: {invoice.currency} {Math.max(0, Number(invoice.amount_usd) - payments.filter((payment) => payment.invoice_id === invoice.id && payment.status === 'succeeded').reduce((total, payment) => total + Number(payment.amount), 0)).toFixed(2)}
+                        </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {invoice.status !== 'paid' && invoice.status !== 'void' ? (
                           <button
                             onClick={() => {
                               setPaymentInvoiceId(invoice.id);
-                              setPaymentAmount(String(invoice.amount_usd));
+                              const alreadyPaid = payments
+                                .filter((payment) => payment.invoice_id === invoice.id && payment.status === 'succeeded')
+                                .reduce((total, payment) => total + Number(payment.amount), 0);
+                              setPaymentAmount(Math.max(0, Number(invoice.amount_usd) - alreadyPaid).toFixed(2));
                               setPaymentReference('');
                             }}
                             className="rounded-lg border border-[#0b8067] px-3 py-2 text-xs font-bold text-[#0b8067]"
