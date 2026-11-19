@@ -57,14 +57,14 @@ The inspected mobile and web package manifests and Supabase client entry points 
 
 ## Remaining confirmed gaps / risks
 
-- The requested `schools.code`, `schools.status`, `authorized_pickups.active`, `payments.method`, `payments.idempotency_key`, and the requested invoice/payment enums/columns do not match the current baseline schema and still need additive compatibility migrations.
-- Current `children.home_radius_m` accepts 100–10,000m rather than only 500/1,000/2,000m.
+- The requested `schools.code` and `schools.status` fields, plus some requested invoice/payment enum and column details, still need additive compatibility work. `authorized_pickups.active`, `payments.method`, and `payments.idempotency_key` have now been added.
+- `children.home_radius_m` has been constrained to 500, 1,000 or 2,000 metres; existing values are normalized during migration.
 - Current proximity notification uses type `arrived`, not the requested `bus_arrived` key.
 - Current trip safety notification trigger runs when a trip transitions to completed; the required explicit end-trip RPC behavior must be checked against the active workflow migrations and tests.
-- The initial schema contains no visible `auth.users` profile-creation trigger or `join_school_with_code` RPC in the inspected baseline migrations. This must be implemented with care for invitation provisioning and the existing seed.
-- `demo_requests` currently has an unrestricted `WITH CHECK (true)` insert policy and lacks the requested status / children-count fields and database-side abuse controls.
-- `location_history` retention and stale-location notification scheduling were not found in the inspected migration set.
-- The `bus_near` dedupe index exists, but proximity logic and `bus_arrived` naming need alignment and regression tests.
+- The auth profile-creation trigger and `join_school_with_code` RPC are implemented in migration `20261119000200_auth_profiles_and_school_join_codes.sql`; the seed and invite provisioning paths have been adapted.
+- `demo_requests` now has anon-only validated insertion, status / children-count fields, a honeypot, and per-email rate limiting.
+- Stale-location notifications and 90-day location-history retention are now implemented and scheduled through pg_cron when available.
+- The `bus_near` one-shot dedupe and 100m arrival threshold exist; the legacy notification key remains `arrived` for client compatibility and still needs an explicit `bus_arrived` compatibility decision.
 - The current seed contains one demo tenant; the RLS test fixture separately creates two tenants. A second seeded demo school remains outstanding.
 
 ## Execution status
@@ -97,7 +97,7 @@ The main branch now also includes `20261119000300_stale_location_and_retention.s
 - Adds a bounded 10,000-row cleanup operation for GPS history older than 90 days, scheduled hourly to avoid long-running deletes.
 - Extends English, Shona and Ndebele push copy for stale GPS alerts.
 
-The RLS suite now declares 91 assertions, including checks for the end-trip alias, stale-location monitor, retention routine and geofence constraint. These are source-level additions only; pgTAP and cron execution have not yet been run.
+The RLS suite now declares 110 assertions, including checks for the end-trip alias, stale-location monitor, retention routine and geofence constraint. These are source-level additions only; pgTAP and cron execution have not yet been run.
 
 
 ## Pickup authorization and payment integrity
