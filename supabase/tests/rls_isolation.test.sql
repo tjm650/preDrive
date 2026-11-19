@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(138);
+select plan(143);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -440,6 +440,32 @@ select throws_ok($delete from public.profiles where id='91000000-0000-4000-8000-
   '23514',null,'the final guardian cannot be deleted from the database');
 select ok(exists(select 1 from public.profiles where id='91000000-0000-4000-8000-000000000008'),
   'blocked final-guardian deletion leaves the parent profile intact');
+
+-- Exercise the signed Paynow callback's atomic database reconciliation path.
+insert into public.invoices(id,school_id,guardian_id,amount_usd,currency,status,due_date)
+values ('99000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001',
+  '91000000-0000-4000-8000-000000000001',25.00,'USD','pending',current_date);
+insert into public.payments(id,invoice_id,amount,currency,provider,provider_reference,method,idempotency_key,status)
+values ('9a000000-0000-4000-8000-000000000001','99000000-0000-4000-8000-000000000001',
+  25.00,'USD','paynow','PREDRIVE-TEST-CALLBACK','paynow','test-paynow-idem-01','pending');
+insert into public.paynow_transactions(payment_id,merchant_reference,status)
+values ('9a000000-0000-4000-8000-000000000001','PREDRIVE-TEST-CALLBACK','pending');
+set local role service_role;
+select set_config('request.jwt.claim.role','service_role',true);
+select is(public.apply_paynow_callback('PREDRIVE-TEST-CALLBACK','PAYNOW-TEST-123',25.00,'Paid'),'succeeded',
+  'valid Paynow payment callback marks the payment successful');
+select is((select status::text from public.invoices where id='99000000-0000-4000-8000-000000000001'),'paid',
+  'successful Paynow callback atomically marks a fully paid invoice as paid');
+select is(public.apply_paynow_callback('PREDRIVE-TEST-CALLBACK','PAYNOW-TEST-123',25.00,'Paid'),'succeeded',
+  'replayed Paynow callback is idempotent');
+select is((select count(*)::int from public.audit_log
+  where entity_id='9a000000-0000-4000-8000-000000000001' and action='paynow_payment_succeeded'),1,
+  'replayed Paynow callback does not duplicate the payment audit entry');
+select throws_ok(
+  $select public.apply_paynow_callback('PREDRIVE-TEST-CALLBACK','PAYNOW-TEST-123',24.00,'Paid')$,
+  '22023',null,'Paynow callback with a mismatched amount is rejected'
+);
+reset role;
 
 select * from finish();
 rollback;
