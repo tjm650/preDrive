@@ -57,7 +57,7 @@ The inspected mobile and web package manifests and Supabase client entry points 
 
 ## Remaining confirmed gaps / risks
 
-- The requested `schools.code` and `schools.status` fields, plus some requested invoice/payment enum and column details, still need additive compatibility work. `authorized_pickups.active`, `payments.method`, and `payments.idempotency_key` have now been added.
+- `schools.status`, `authorized_pickups.active`, `payments.method`, and `payments.idempotency_key` have been added. A plaintext `schools.code` is intentionally replaced by private hashed join-code credentials; some requested invoice/payment enum and column details remain to be reconciled.
 - `children.home_radius_m` has been constrained to 500, 1,000 or 2,000 metres; existing values are normalized during migration.
 - Current proximity notification uses type `arrived`, not the requested `bus_arrived` key.
 - Current trip safety notification trigger runs when a trip transitions to completed; the required explicit end-trip RPC behavior must be checked against the active workflow migrations and tests.
@@ -97,7 +97,7 @@ The main branch now also includes `20261119000300_stale_location_and_retention.s
 - Adds a bounded 10,000-row cleanup operation for GPS history older than 90 days, scheduled hourly to avoid long-running deletes.
 - Extends English, Shona and Ndebele push copy for stale GPS alerts.
 
-The RLS suite now declares 110 assertions, including checks for the end-trip alias, stale-location monitor, retention routine and geofence constraint. These are source-level additions only; pgTAP and cron execution have not yet been run.
+The RLS suite now declares 116 assertions, including checks for the end-trip alias, stale-location monitor, retention routine and geofence constraint. These are source-level additions only; pgTAP and cron execution have not yet been run.
 
 
 ## Pickup authorization and payment integrity
@@ -110,7 +110,7 @@ The main branch now includes `20261119000400_pickup_and_payment_hardening.sql`:
 - Payments now include a `method` and optional `idempotency_key`. Unique partial indexes prevent duplicate provider references and repeated idempotency keys for the same invoice/provider, closing the concurrency gap in manual reconciliation.
 - pgTAP now covers revoked pickup PIN rejection, the new payment fields, and both uniqueness indexes.
 
-The RLS test plan is now 110 assertions. Runtime execution is still pending.
+The RLS test plan is now 116 assertions. Runtime execution is still pending.
 
 
 ## Public demo-request abuse controls
