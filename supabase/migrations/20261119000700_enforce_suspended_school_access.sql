@@ -111,6 +111,46 @@ revoke all on function private.can_read_bus(uuid) from public, anon;
 grant execute on function private.can_read_route(uuid) to authenticated;
 grant execute on function private.can_read_bus(uuid) to authenticated;
 
+-- Remove legacy permissive FOR ALL policies whose owner-id checks bypass school suspension.
+drop policy if exists buses_school_access on public.buses;
+drop policy if exists routes_school_access on public.routes;
+drop policy if exists stops_access on public.stops;
+drop policy if exists route_children_access on public.route_children;
+drop policy if exists threads_access on public.threads;
+drop policy if exists incidents_access on public.incidents;
+drop policy if exists trips_supervisor_update on public.trips;
+
+create policy buses_admin_write on public.buses for all to authenticated
+using (private.is_school_admin(school_id))
+with check (private.is_school_admin(school_id));
+create policy routes_admin_write on public.routes for all to authenticated
+using (private.is_school_admin(school_id))
+with check (private.is_school_admin(school_id));
+create policy stops_admin_write on public.stops for all to authenticated
+using (private.is_school_admin((select r.school_id from public.routes r where r.id = stops.route_id)))
+with check (private.is_school_admin((select r.school_id from public.routes r where r.id = stops.route_id)));
+create policy route_children_admin_write on public.route_children for all to authenticated
+using (private.is_school_admin((select r.school_id from public.routes r where r.id = route_children.route_id)))
+with check (private.is_school_admin((select r.school_id from public.routes r where r.id = route_children.route_id)));
+create policy threads_admin_write on public.threads for all to authenticated
+using (private.is_school_admin(school_id))
+with check (private.is_school_admin(school_id));
+create policy incidents_admin_write on public.incidents for all to authenticated
+using (private.is_school_admin(school_id))
+with check (private.is_school_admin(school_id));
+create policy incidents_member_insert on public.incidents for insert to authenticated with check (
+  reported_by = (select auth.uid())
+  and school_id = private.current_school_id()
+  and (
+    (child_id is not null and private.is_guardian(child_id))
+    or (trip_id is not null and private.is_assigned_supervisor(trip_id)
+        and (child_id is null or private.is_child_on_trip(child_id, trip_id)))
+  )
+);
+create policy trips_supervisor_update on public.trips for update to authenticated
+using (private.is_assigned_supervisor(trips.id))
+with check (private.is_assigned_supervisor(trips.id));
+
 -- Re-check school membership for rows whose owner id alone previously bypassed tenant status.
 drop policy if exists trips_read on public.trips;
 create policy trips_read on public.trips for select to authenticated using (
