@@ -204,8 +204,9 @@ grant execute on function public.join_school_with_code(text) to authenticated;
 create or replace function private.protect_profile_tenant_identity()
 returns trigger
 language plpgsql
+security invoker
 set search_path = ''
-as $$
+as $
 declare
   request_role text;
   allowed_enrolment boolean;
