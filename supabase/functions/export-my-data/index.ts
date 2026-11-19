@@ -165,7 +165,7 @@ Deno.serve(async (request: Request) => {
 
     let schoolAdminData: Record<string, unknown> | null = null;
     if (profile.role === 'school_admin' && schoolId) {
-      const [schoolChildren, schoolBuses, schoolRoutes, schoolIncidents, schoolInvoices, schoolNotifications, schoolThreads, schoolAuditLog, schoolGuardianships] = await Promise.all([
+      const [schoolChildren, schoolBuses, schoolRoutes, schoolIncidents, schoolInvoices, schoolNotifications, schoolThreads, schoolAuditLog] = await Promise.all([
         rows(admin.from('children').select('*').eq('school_id', schoolId)),
         rows(admin.from('buses').select('id,school_id,registration,make,model,capacity,active,driver_name,created_at,updated_at').eq('school_id', schoolId)),
         rows(admin.from('routes').select('*').eq('school_id', schoolId)),
@@ -174,10 +174,11 @@ Deno.serve(async (request: Request) => {
         rows(admin.from('notifications').select('*').eq('school_id', schoolId)),
         rows(admin.from('threads').select('id,school_id,created_at,updated_at').eq('school_id', schoolId)),
         rows(admin.from('audit_log').select('*').eq('school_id', schoolId)),
-        rows(admin.from('guardianships').select('*').in('child_id',
-          (await rows(admin.from('children').select('id').eq('school_id', schoolId))).map((item) => item.id as string))),
       ]);
       const schoolChildIds = schoolChildren.map((item) => item.id).filter((id): id is string => typeof id === 'string');
+      const schoolGuardianships = schoolChildIds.length
+        ? await rows(admin.from('guardianships').select('*').in('child_id', schoolChildIds))
+        : [];
       const schoolRouteIds = schoolRoutes.map((item) => item.id).filter((id): id is string => typeof id === 'string');
       const schoolThreadIds = schoolThreads.map((item) => item.id).filter((id): id is string => typeof id === 'string');
       const schoolInvoiceIds = schoolInvoices.map((item) => item.id).filter((id): id is string => typeof id === 'string');
@@ -192,14 +193,16 @@ Deno.serve(async (request: Request) => {
       ]);
       const schoolTripIds = schoolTrips.map((item) => item.id).filter((id): id is string => typeof id === 'string');
       const schoolStopIds = schoolRouteChildren.map((item) => item.stop_id).filter((id): id is string => typeof id === 'string');
-      const [schoolTripEvents, schoolStops, schoolBusLive, schoolLocationHistory] = schoolTripIds.length
+      const schoolStops = schoolStopIds.length
+        ? await rows(admin.from('stops').select('*').in('id', schoolStopIds))
+        : [];
+      const [schoolTripEvents, schoolBusLive, schoolLocationHistory] = schoolTripIds.length
         ? await Promise.all([
             rows(admin.from('trip_events').select('*').in('trip_id', schoolTripIds)),
-            schoolStopIds.length ? rows(admin.from('stops').select('*').in('id', schoolStopIds)) : Promise.resolve([]),
             rows(admin.from('bus_live').select('trip_id,lat,lng,heading,speed,updated_at').in('trip_id', schoolTripIds)),
             rows(admin.from('location_history').select('id,trip_id,lat,lng,speed,recorded_at').in('trip_id', schoolTripIds)),
           ])
-        : [[], [], [], []];
+        : [[], [], []];
 
       schoolAdminData = {
         children: schoolChildren,
