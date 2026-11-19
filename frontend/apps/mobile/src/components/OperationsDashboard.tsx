@@ -20,9 +20,11 @@ import { supabase } from '../lib/supabase';
 import {
   enqueueLocation,
   enqueueTripEvent,
+  failedEventCount,
   flushOfflineQueue,
   getActiveTripId,
   pendingEventCount,
+  retryFailedEvents,
   setActiveTripId,
 } from '../lib/offline';
 
@@ -124,13 +126,16 @@ export function OperationsDashboard({
   const [notice, setNotice] = useState<string | null>(null);
   const [connected, setConnected] = useState(true);
   const [queued, setQueued] = useState(0);
+  const [failedQueued, setFailedQueued] = useState(0);
   const [pins, setPins] = useState<Record<string, string>>({});
   const [selectedPickups, setSelectedPickups] = useState<Record<string, string>>({});
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
   const client = supabase;
 
   const refreshQueue = useCallback(async () => {
-    setQueued(await pendingEventCount());
+    const [pending, failed] = await Promise.all([pendingEventCount(), failedEventCount()]);
+    setQueued(pending);
+    setFailedQueued(failed);
   }, []);
 
   const load = useCallback(async () => {
@@ -548,6 +553,19 @@ export function OperationsDashboard({
     }
   }
 
+  async function retryFailedQueue() {
+    const count = await retryFailedEvents();
+    await refreshQueue();
+    if (client && connected) {
+      const result = await flushOfflineQueue(client);
+      await refreshQueue();
+      setNotice(`${result.syncedEvents} retried event(s) synchronised. ${result.failedEvents} still need review.`);
+      await load();
+    } else {
+      setNotice(`${count} event(s) returned to the offline queue and will retry when connected.`);
+    }
+  }
+
   async function signOutSafely() {
     if (client && connected) {
       try {
@@ -609,6 +627,14 @@ export function OperationsDashboard({
         </Text>
         {queued > 0 ? <Text style={styles.queueText}>{queued} queued</Text> : null}
       </View>
+      {failedQueued > 0 ? (
+        <View style={styles.error}>
+          <Text style={styles.errorText}>{failedQueued} offline event(s) were rejected by the server and need review. They have been preserved on this device.</Text>
+          <Pressable onPress={() => void retryFailedQueue()} style={styles.smallButton}>
+            <Text style={styles.smallButtonText}>Retry rejected events</Text>
+          </Pressable>
+        </View>
+      ) : null}
       {error ? (
         <Text accessibilityRole="alert" style={styles.error}>
           {error}
