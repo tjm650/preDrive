@@ -343,7 +343,7 @@ begin
   select * into route_row from public.routes where id = p_route_id for update;
   if not found then raise exception 'Route not found' using errcode = 'P0002'; end if;
   if not private.is_school_admin(route_row.school_id) then
-    raise exception 'Only this school's administrator can confirm a field check' using errcode = '42501';
+    raise exception 'Only this school''s administrator can confirm a field check' using errcode = '42501';
   end if;
   select count(*) into stop_count from public.stops where route_id = p_route_id;
   if stop_count < 2 or route_row.geometry_status <> 'provider_verified' then
