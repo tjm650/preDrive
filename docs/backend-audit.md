@@ -97,7 +97,7 @@ The main branch now also includes `20261119000300_stale_location_and_retention.s
 - Adds a bounded 10,000-row cleanup operation for GPS history older than 90 days, scheduled hourly to avoid long-running deletes.
 - Extends English, Shona and Ndebele push copy for stale GPS alerts.
 
-The RLS suite now declares 116 assertions, including checks for the end-trip alias, stale-location monitor, retention routine and geofence constraint. These are source-level additions only; pgTAP and cron execution have not yet been run.
+The RLS suite now declares 124 assertions, including checks for the end-trip alias, stale-location monitor, retention routine and geofence constraint. These are source-level additions only; pgTAP and cron execution have not yet been run.
 
 
 ## Pickup authorization and payment integrity
@@ -110,7 +110,7 @@ The main branch now includes `20261119000400_pickup_and_payment_hardening.sql`:
 - Payments now include a `method` and optional `idempotency_key`. Unique partial indexes prevent duplicate provider references and repeated idempotency keys for the same invoice/provider, closing the concurrency gap in manual reconciliation.
 - pgTAP now covers revoked pickup PIN rejection, the new payment fields, and both uniqueness indexes.
 
-The RLS test plan is now 116 assertions. Runtime execution is still pending.
+The RLS test plan is now 124 assertions. Runtime execution is still pending.
 
 
 ## Public demo-request abuse controls
@@ -130,4 +130,4 @@ This is a database-level per-email abuse control, not a substitute for edge/IP-b
 
 Migration `20261119000600_school_lifecycle_controls.sql` adds `schools.status` with `active`, `suspended`, and `archived` states. Only platform owners can change it. Suspending or archiving a school removes tenant-scoped access for its school administrators and users while preserving all records; reactivation restores access. Existing join codes cannot be used while a school is inactive, and new codes cannot be issued.
 
-A plaintext `schools.code` column was deliberately not added. School join codes are separate high-entropy credentials whose bcrypt hashes are stored in the private schema, avoiding exposure through ordinary school queries. The RLS suite now has 116 assertions, including suspend/reactivate behavior.
+A plaintext `schools.code` column was deliberately not added. School join codes are separate high-entropy credentials whose bcrypt hashes are stored in the private schema, avoiding exposure through ordinary school queries. The RLS suite now has 124 assertions, including suspend/reactivate behavior and verification that parents, supervisors and school administrators lose tenant-scoped data access while suspended.
