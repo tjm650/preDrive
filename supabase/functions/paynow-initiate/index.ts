@@ -189,13 +189,14 @@ Deno.serve(async (request: Request) => {
     if (transactionInsertError) throw transactionInsertError;
 
     const resultUrl = `${url.replace(/\/$/, '')}/functions/v1/paynow-callback`;
-    const returnUrl = Deno.env.get('PAYNOW_RETURN_URL') ?? siteUrl;
+    const returnUrl = new URL(Deno.env.get('PAYNOW_RETURN_URL') ?? siteUrl);
+    returnUrl.searchParams.set('reference', merchantReference);
     const fields = new URLSearchParams();
     fields.set('id', integrationId);
     fields.set('reference', merchantReference);
     fields.set('amount', amount);
     fields.set('additionalinfo', `preDrive invoice ${invoice.id}`);
-    fields.set('returnurl', returnUrl);
+    fields.set('returnurl', returnUrl.toString());
     fields.set('resulturl', resultUrl);
     if (user.email) fields.set('authemail', user.email);
     if (method !== 'web') {
