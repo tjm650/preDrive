@@ -116,7 +116,9 @@ Deno.serve(async (request: Request) => {
     feature?.geometry?.type !== 'LineString' ||
     !points ||
     points.length < 2 ||
+    typeof distance !== 'number' ||
     !Number.isFinite(distance) ||
+    typeof duration !== 'number' ||
     !Number.isFinite(duration)
   ) {
     return jsonResponse({ error: 'Routing provider returned incomplete road geometry.' }, 502);

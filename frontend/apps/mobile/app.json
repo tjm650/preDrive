@@ -37,7 +37,10 @@
       "bundleIdentifier": "zw.co.predrive.mobile"
     },
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "6b904474-dcd6-4602-8ee1-b530850e6ded"
+      }
     }
   }
 }
