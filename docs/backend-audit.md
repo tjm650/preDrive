@@ -111,3 +111,16 @@ The main branch now includes `20261119000400_pickup_and_payment_hardening.sql`:
 - pgTAP now covers revoked pickup PIN rejection, the new payment fields, and both uniqueness indexes.
 
 The RLS test plan is now 97 assertions. Runtime execution is still pending.
+
+
+## Public demo-request abuse controls
+
+The main branch now includes `20261119000500_demo_request_validation.sql`:
+
+- Adds child-count and workflow-status fields, strict input bounds, normalized email validation, and an optional honeypot.
+- Keeps public submission strictly `anon` INSERT-only. Authenticated users cannot submit through this public endpoint; platform owners can review requests and update only their status.
+- A private database trigger applies a per-normalized-email limit of three submissions per 24 hours, serialized with an advisory transaction lock. It stores only a SHA-256 email digest in the private rate-limit table.
+- The trigger forces new submissions to the `new` status and server timestamp, preventing clients from self-qualifying or forging workflow state.
+- pgTAP now checks anonymous submission, rate limiting, honeypot rejection, authenticated-user denial, and the new request fields.
+
+This is a database-level per-email abuse control, not a substitute for edge/IP-based rate limiting or CAPTCHA. The UI was intentionally left unchanged.
