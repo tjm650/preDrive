@@ -144,7 +144,7 @@ Two authenticated Edge Functions have been added and configured in `supabase/con
 
 Access JWTs already issued by Supabase may remain cryptographically valid until expiry after session revocation. The deleted profile and membership links make normal RLS checks deny access during that period. Staff and platform-owner self-deletion remain intentionally disabled and require an administrator-led offboarding workflow.
 
-The RLS suite now has 143 assertions, including the account-deletion foreign-key behavior and a database-level guard that prevents deleting a child's final registered guardian. The new Edge Functions are committed but have not been deployed or exercised against the connected project.
+The RLS suite now has 143 assertions, including the account-deletion foreign-key behavior and a database-level guard that prevents deleting a child's final registered guardian. Superseded by the live deployment on 2026-11-19: all 10 Edge Functions are now deployed and ACTIVE in Supabase project `rjsdhgbjvghjnuiilizm`. Their runtime integration paths still require the secrets listed in `docs/runbook.md` and have not yet been exercised with real provider credentials.
 
 
 A further database trigger in `20261119000900_prevent_guardian_orphaning.sql` serializes guardian deletions per child and rejects deletion if it would remove the final parent guardian. This closes the race where two guardian accounts could otherwise pass simultaneous application-level preflight checks.
@@ -160,7 +160,7 @@ The Paynow source implementation is now in place:
 - `apply_paynow_callback` performs payment, transaction, invoice and audit updates atomically in Postgres. Only the service role can execute it.
 - The `paynow_transactions` table has RLS enabled and is inaccessible to anon/authenticated clients. It stores sensitive poll URLs and checkout metadata.
 
-Required server secrets before deployment: `PAYNOW_INTEGRATION_ID`, `PAYNOW_INTEGRATION_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `SUPABASE_URL`, and `SITE_URL`. Optional settings: `PAYNOW_API_BASE` and `PAYNOW_RETURN_URL`. No Paynow credentials have been supplied or stored in the repository, so the integration is implemented but cannot initiate real payments until these secrets are configured.
+Required custom Edge Function secrets before real Paynow use: `PAYNOW_INTEGRATION_ID`, `PAYNOW_INTEGRATION_KEY`, and `SITE_URL`. Supabase injects `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY` and `SUPABASE_URL` into the Edge Function runtime. Optional settings: `PAYNOW_API_BASE` and `PAYNOW_RETURN_URL`. No Paynow credentials have been supplied or stored in the repository, so the integration is implemented but cannot initiate real payments until these secrets are configured.
 
 Official protocol references: [Paynow initiate transaction](https://developers.paynow.co.zw/docs/paynow/initiate_transaction/), [mobile money](https://developers.paynow.co.zw/docs/paynow/initiate_mobile_transaction/), [hash generation](https://developers.paynow.co.zw/docs/paynow/generating_hash/), and [callback hash validation](https://developers.paynow.co.zw/docs/paynow/validating_hash/).
 
@@ -173,3 +173,33 @@ A new `admin-invite-user` Edge Function provides one entry point for school admi
 
 
 Migration `20261119001200_revoke_school_join_codes.sql` adds `revoke_school_join_code(code)`. The issuing school administrator or a platform owner can revoke a leaked code immediately; revocation is idempotent and audited. Tests cover successful revocation and rejection of a revoked code.
+
+
+## Live Supabase deployment verification — 2026-11-19
+
+The configured and verified target is **preDrive / `rjsdhgbjvghjnuiilizm`** (`https://rjsdhgbjvghjnuiilizm.supabase.co`, region `eu-west-1`, PostgreSQL 17). The repository's `supabase/config.toml` and mobile/web public environment templates point at this project.
+
+- **35 migrations** are applied. Remote migration-history versions were synchronized to the matching repository migration filenames so `supabase migration list` and future `supabase db push` do not replay the schema.
+- **29/29 public application tables** have RLS enabled; 87 public policies are installed.
+- **143/143 pgTAP assertions pass** against the live schema. The test fixture runs inside a transaction and rolls back; no demo users or schools were left in the live database.
+- **10/10 Edge Functions** are deployed and ACTIVE with their intended JWT-verification settings.
+- Realtime publication includes `notifications`, `trip_events`, `bus_live`, `trips`, `messages` and `absences`.
+- Generated TypeScript database types have been regenerated from this project and committed to `frontend/packages/shared/src/database.types.ts`.
+- FK index advisor findings and overlapping permissive-policy findings are resolved. Unused-index notices are expected while the live project is empty.
+- The live database currently contains zero schools and zero Auth users. Local seed/demo records have intentionally not been inserted into this live project.
+
+### Outstanding configuration and security items
+
+1. **Critical advisor finding — `private.push_dispatch_attempts` has RLS disabled.** The table is in the non-exposed private schema and has no client grants, but Supabase still flags it. The proposed final hardening statement is below. It has not been applied automatically; explicit approval is required.
+
+   ```sql
+   ALTER TABLE private.push_dispatch_attempts ENABLE ROW LEVEL SECURITY;
+   ```
+
+2. **Vault is empty.** The notification dispatcher requires Vault entries named `project_url` and `notification_webhook_secret`. The latter must match the Edge Function secret `NOTIFICATION_WEBHOOK_SECRET`. Until configured, push dispatch is not operational.
+3. **Edge Function secrets are not configured.** Set `SITE_URL`, `NOTIFICATION_WEBHOOK_SECRET`, `OPENROUTESERVICE_API_KEY`, `PAYNOW_INTEGRATION_ID` and `PAYNOW_INTEGRATION_KEY` as applicable. See `docs/runbook.md`.
+4. **Production web origin and Auth redirect URLs are unknown.** Configure the actual preDrive web origin in `SITE_URL` and Supabase Auth URL Configuration before browser invitations and OAuth/deep-link flows are used.
+5. Supabase Security Advisor still flags 13 authenticated-callable SECURITY DEFINER RPCs. These are intentional atomic operations with explicit role/tenant/assigned-trip checks; keep them under review. It also warns that `pg_net` is installed in `public`; moving it requires checking the `net.http_post` notification-dispatch dependency first.
+6. Real Paynow and OpenRouteService calls have not been exercised because provider credentials were not supplied. Push delivery likewise remains unverified until the webhook and Vault secrets are configured.
+
+See `docs/architecture.md`, `docs/schema.md`, `docs/security.md` and `docs/runbook.md` for the complete design and operational procedures.
