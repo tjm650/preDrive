@@ -196,7 +196,7 @@ The configured and verified target is **preDrive / `rjsdhgbjvghjnuiilizm`** (`ht
    ALTER TABLE private.push_dispatch_attempts ENABLE ROW LEVEL SECURITY;
    ```
 
-2. **Vault is empty.** The notification dispatcher requires Vault entries named `project_url` and `notification_webhook_secret`. The latter must match the Edge Function secret `NOTIFICATION_WEBHOOK_SECRET`. Until configured, push dispatch is not operational.
+2. **Vault setup is partial.** The `project_url` entry is configured. The `notification_webhook_secret` entry is still missing and must match the Edge Function secret `NOTIFICATION_WEBHOOK_SECRET`. Until configured, push dispatch is not operational.
 3. **Edge Function secrets are not configured.** Set `SITE_URL`, `NOTIFICATION_WEBHOOK_SECRET`, `OPENROUTESERVICE_API_KEY`, `PAYNOW_INTEGRATION_ID` and `PAYNOW_INTEGRATION_KEY` as applicable. See `docs/runbook.md`.
 4. **Production web origin and Auth redirect URLs are unknown.** Configure the actual preDrive web origin in `SITE_URL` and Supabase Auth URL Configuration before browser invitations and OAuth/deep-link flows are used.
 5. Supabase Security Advisor still flags 13 authenticated-callable SECURITY DEFINER RPCs. These are intentional atomic operations with explicit role/tenant/assigned-trip checks; keep them under review. It also warns that `pg_net` is installed in `public`; moving it requires checking the `net.http_post` notification-dispatch dependency first.
