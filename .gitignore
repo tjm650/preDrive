@@ -11,3 +11,6 @@ coverage/
 .DS_Store
 *.log
 supabase/.temp/
+
+# Firebase Android client configuration (provided to EAS as a secret file)
+frontend/apps/mobile/google-services.json
