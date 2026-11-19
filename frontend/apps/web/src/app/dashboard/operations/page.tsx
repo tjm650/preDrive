@@ -1097,7 +1097,8 @@ export default function OperationsPage() {
                     >
                       <h3 className="text-sm font-extrabold">Record verified payment</h3>
                       <p className="text-xs leading-5 text-amber-800">
-                        Only record funds already verified in the bank or mobile-money account. This saves an audit record; it does not process or collect a payment.
+                        Only record funds already verified in the bank or mobile-money account. This
+                        saves an audit record; it does not process or collect a payment.
                       </p>
                       <p className="text-xs text-[#71827c]">
                         Invoice {paymentInvoiceId.slice(0, 8)} ·{' '}
