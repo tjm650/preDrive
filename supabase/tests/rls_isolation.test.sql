@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(124);
+select plan(129);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -340,6 +340,16 @@ select ok(exists(select 1 from pg_constraint where conrelid='public.children'::r
 select ok(to_regprocedure('public.verify_pickup_handover(uuid,uuid,uuid,text,double precision,double precision,text)') is not null,'atomic pickup handover RPC is installed');
 select ok(to_regprocedure('public.register_push_token(text)') is not null,'push token registration RPC is installed');
 select ok(to_regprocedure('public.create_child_with_guardian(text,uuid,text,text)') is not null,'atomic child enrolment RPC is installed');
+select ok(exists(select 1 from pg_constraint where conname='absences_reported_by_fkey' and confdeltype='n'),
+  'absence history survives parent deletion with reporter anonymized');
+select ok(exists(select 1 from pg_constraint where conname='incidents_reported_by_fkey' and confdeltype='n'),
+  'incident history survives parent deletion with reporter anonymized');
+select ok(exists(select 1 from pg_constraint where conname='invoices_guardian_id_fkey' and confdeltype='n'),
+  'invoice history survives parent deletion with guardian link anonymized');
+select ok(exists(select 1 from pg_constraint where conname='audit_log_actor_id_fkey' and confdeltype='n'),
+  'audit history survives parent deletion with actor anonymized');
+select ok(exists(select 1 from pg_constraint where conname='messages_sender_id_fkey' and confdeltype='n'),
+  'message sender references do not block account deletion');
 select ok(to_regprocedure('public.record_manual_payment(uuid,numeric,text,text)') is not null,'manual payment reconciliation RPC is installed');
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='authorized_pickups' and column_name='active'),
   'pickup authorizations support revocation');
