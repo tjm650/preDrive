@@ -217,6 +217,7 @@ begin
   if (new.role is distinct from old.role
       or new.school_id is distinct from old.school_id)
      and request_role <> 'service_role'
+     and session_user not in ('postgres', 'supabase_admin')
      and not allowed_enrolment then
     raise exception 'Profile role and school assignment can only be changed by trusted provisioning'
       using errcode = '42501';
