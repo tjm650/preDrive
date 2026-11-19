@@ -1,3 +1,22 @@
+-- Resolve a trip's school through its route without invoking public-table RLS.
+create or replace function private.is_trip_school_admin(target_trip uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.trips t
+    join public.routes r on r.id = t.route_id
+    where t.id = target_trip
+      and private.is_school_admin(r.school_id)
+  )
+$$;
+revoke all on function private.is_trip_school_admin(uuid) from public, anon;
+grant execute on function private.is_trip_school_admin(uuid) to authenticated;
+
 -- Split write policies from read policies so broad FOR ALL policies cannot
 -- recursively participate in SELECT policy evaluation.
 create or replace function private.is_guardian_on_active_route(target_route uuid)
