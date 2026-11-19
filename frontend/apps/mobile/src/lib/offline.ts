@@ -135,6 +135,17 @@ export async function retryFailedEvents() {
   return pendingEventCount();
 }
 
+export async function tripEventQueueStatus(tripId: string) {
+  const db = await database();
+  const pending = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) AS count FROM pending_trip_events WHERE trip_id = ?', tripId,
+  );
+  const failed = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) AS count FROM failed_trip_events WHERE trip_id = ?', tripId,
+  );
+  return { pending: pending?.count ?? 0, failed: failed?.count ?? 0 };
+}
+
 export async function pendingEventCount() {
   const db = await database();
   const row = await db.getFirstAsync<{ count: number }>(
@@ -165,7 +176,7 @@ export async function flushOfflineQueue(client: SupabaseClient) {
       p_client_recorded_at: event.client_recorded_at,
     });
     if (error) {
-      const permanent = Boolean(error.code && /^(22|23|28|40|42|P0002)/.test(error.code));
+      const permanent = Boolean(error.code && /^(22|23|42|P0002)/.test(error.code));
       if (!permanent) break;
       await db.runAsync(
         `INSERT OR IGNORE INTO failed_trip_events
