@@ -92,7 +92,7 @@ where id='91000000-0000-4000-8000-000000000002';
 -- Parent: only their own child, child events, invoice, notification and active bus.
 set local role authenticated;
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000001',true);
-select lives_ok($select public.register_push_token('ExpoPushToken[TEST-DEVICE-01]')$,
+select lives_ok($$select public.register_push_token('ExpoPushToken[TEST-DEVICE-01]')$$,
   'authenticated user can register their device push token');
 reset role;
 select is((select expo_push_token from public.profiles where id='91000000-0000-4000-8000-000000000001'),
@@ -100,7 +100,7 @@ select is((select expo_push_token from public.profiles where id='91000000-0000-4
 select is((select expo_push_token from public.profiles where id='91000000-0000-4000-8000-000000000002'),
   null::text,'same device token is removed from the previous profile');
 set local role authenticated;
-select lives_ok($select public.register_push_token(null)$,
+select lives_ok($$select public.register_push_token(null)$$,
   'authenticated user can clear their push token during sign-out');
 reset role;
 select is((select expo_push_token from public.profiles where id='91000000-0000-4000-8000-000000000001'),
@@ -122,7 +122,7 @@ select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000003'
 select is((select count(*)::int from public.trips),1,'supervisor sees only their assigned trip');
 select throws_ok(
   $$insert into public.trip_events(trip_id,child_id,type,recorded_by)
-   values ('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','handover_verified','91000000-0000-4000-8000-000000000003')$$,
+   values ('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','handover_verified','91000000-0000-4000-8000-000000000003')$$$,
   '42501',null,'supervisor cannot forge a verified handover with a direct table insert'
 );
 select is((select count(*)::int from public.route_children),2,'supervisor sees the assigned route manifest only');
@@ -133,21 +133,21 @@ select is((select count(*)::int from public.bus_live),1,'supervisor sees live lo
 select is((select count(id)::int from public.authorized_pickups),1,'supervisor sees pickup authorizations only for assigned active trip children');
 select is((select count(*)::int from public.routes),1,'supervisor sees only their assigned route');
 select throws_ok(
-  $$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','handover_verified',null,null,'{}'::jsonb,'forged-handover-01',now())$$,
+  $$$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','handover_verified',null,null,'{}'::jsonb,'forged-handover-01',now())$$$,
   '22023',null,'generic trip event RPC cannot forge a verified handover'
 );
 select throws_ok(
-  $$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','dropped_home',null,null,'{}'::jsonb,'wrong-route-event-01',now())$$,
+  $$$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','dropped_home',null,null,'{}'::jsonb,'wrong-route-event-01',now())$$$,
   '22023',null,'pickup routes cannot record a home drop-off'
 );
 select throws_ok(
-  $$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','absent',null,null,'{}'::jsonb,'false-absence-event-01',now())$$,
+  $$$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','absent',null,null,'{}'::jsonb,'false-absence-event-01',now())$$$,
   '22023',null,'a boarded child cannot be marked absent'
 );
 select is((public.complete_trip('96000000-0000-4000-8000-000000000001')->>'completed')::boolean,false,
   'trip completion is blocked while manifest children are unaccounted for');
 select throws_ok(
-  $$select public.record_trip_event('96000000-0000-4000-8000-000000000001',null,'child_missing',null,null,'{}'::jsonb,'missing-no-child-01',now())$$,
+  $$$select public.record_trip_event('96000000-0000-4000-8000-000000000001',null,'child_missing',null,null,'{}'::jsonb,'missing-no-child-01',now())$$$,
   '22023',null,'child-specific safety events must identify a manifest child'
 );
 
@@ -160,23 +160,23 @@ select is((select count(*)::int from public.authorized_pickups),1,'school admin 
 select is((select count(*)::int from public.subscriptions),1,'school admin sees only their school subscription');
 select is((select count(*)::int from public.invoices),2,'school admin sees invoices only in their school');
 select throws_ok(
-  $$delete from public.route_children where route_id='95000000-0000-4000-8000-000000000001' and child_id='93000000-0000-4000-8000-000000000001'$$,
+  $$delete from public.route_children where route_id='95000000-0000-4000-8000-000000000001' and child_id='93000000-0000-4000-8000-000000000001'$$$,
   '55000',null,'active trips lock route manifest membership'
 );
 select throws_ok(
-  $$insert into public.stops(route_id,name,lat,lng,position) values ('95000000-0000-4000-8000-000000000001','Late stop',-17.82,31.02,2)$$,
+  $$insert into public.stops(route_id,name,lat,lng,position) values ('95000000-0000-4000-8000-000000000001','Late stop',-17.82,31.02,2)$$$,
   '55000',null,'active trips lock route stop changes'
 );
 select throws_ok(
-  $$update public.routes set type='dropoff' where id='95000000-0000-4000-8000-000000000001'$$,
+  $$update public.routes set type='dropoff' where id='95000000-0000-4000-8000-000000000001'$$$,
   '55000',null,'active trips lock route type changes'
 );
 select throws_ok(
-  $$update public.buses set active=false where id='94000000-0000-4000-8000-000000000001'$$,
+  $$update public.buses set active=false where id='94000000-0000-4000-8000-000000000001'$$$,
   '55000',null,'active trips lock assigned vehicle changes'
 );
 select throws_ok(
-  $$update public.children set archived_at=now() where id='93000000-0000-4000-8000-000000000001'$$,
+  $$update public.children set archived_at=now() where id='93000000-0000-4000-8000-000000000001'$$$,
   '55000',null,'children cannot be archived while on a route manifest'
 );
 
