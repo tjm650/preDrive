@@ -190,7 +190,7 @@ The configured and verified target is **preDrive / `rjsdhgbjvghjnuiilizm`** (`ht
 
 ### Outstanding configuration and security items
 
-1. **Critical advisor finding — `private.push_dispatch_attempts` has RLS disabled.** The table is in the non-exposed private schema and has no client grants, but Supabase still flags it. The proposed final hardening statement is below. It has not been applied automatically; explicit approval is required.
+1. **Critical advisor finding — `private.push_dispatch_attempts` has RLS disabled.** The table is in the non-exposed `private` schema. A live privilege check confirms anon has no schema USAGE, and neither anon nor authenticated has SELECT/INSERT table privileges. It is not currently client-readable through PostgREST, but the Supabase advisor still reports a critical RLS-disabled finding. The proposed final hardening statement is below. It has not been applied automatically; explicit approval is required.
 
    ```sql
    ALTER TABLE private.push_dispatch_attempts ENABLE ROW LEVEL SECURITY;
