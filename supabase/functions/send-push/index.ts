@@ -22,6 +22,7 @@ const copy: Record<string, Record<string, string>> = {
     child_unaccounted: 'A child has not been accounted for at trip end',
     child_missing:
       'A child has been reported missing during the trip. Contact the school immediately.',
+    bus_location_stale: 'The bus location has not updated for more than 60 seconds.',
   },
   sn: {
     boarded: 'Mwana wenyu apinda mubhazi',
@@ -35,6 +36,7 @@ const copy: Record<string, Record<string, string>> = {
     arrived: 'Bhazi remwana wenyu rasvika',
     child_unaccounted: 'Mwana haasati asimbiswa pakupera kwerwendo',
     child_missing: 'Mwana anonzi arasika parwendo. Bata chikoro nekukasika.',
+    bus_location_stale: 'Nzvimbo yebhazi haina kuvandudzwa kwemasekonzi anodarika 60.',
   },
   nd: {
     boarded: 'Umntwana wakho ugibele ibhasi',
@@ -48,6 +50,7 @@ const copy: Record<string, Record<string, string>> = {
     arrived: 'Ibhasi yomntwana wakho isifikile',
     child_unaccounted: 'Umntwana akaqinisekiswanga ekupheleni kohambo',
     child_missing: 'Kubikwe ukuthi umntwana ulahlekile ohambweni. Thinta isikolo masinyane.',
+    bus_location_stale: 'Indawo yebhasi ayikavuselelwa imizuzwana engaphezu kuka-60.',
   },
 };
 Deno.serve(async (request: Request) => {
