@@ -124,3 +124,10 @@ The main branch now includes `20261119000500_demo_request_validation.sql`:
 - pgTAP now checks anonymous submission, rate limiting, honeypot rejection, authenticated-user denial, and the new request fields. The same suite also exercises stale-GPS alert creation, duplicate suppression during one outage, recovery, and re-alerting after a second outage.
 
 This is a database-level per-email abuse control, not a substitute for edge/IP-based rate limiting or CAPTCHA. The UI was intentionally left unchanged.
+
+
+## School lifecycle and tenant suspension
+
+Migration `20261119000600_school_lifecycle_controls.sql` adds `schools.status` with `active`, `suspended`, and `archived` states. Only platform owners can change it. Suspending or archiving a school removes tenant-scoped access for its school administrators and users while preserving all records; reactivation restores access. Existing join codes cannot be used while a school is inactive, and new codes cannot be issued.
+
+A plaintext `schools.code` column was deliberately not added. School join codes are separate high-entropy credentials whose bcrypt hashes are stored in the private schema, avoiding exposure through ordinary school queries. The RLS suite now has 116 assertions, including suspend/reactivate behavior.
