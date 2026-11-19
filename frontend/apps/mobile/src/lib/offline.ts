@@ -138,10 +138,12 @@ export async function retryFailedEvents() {
 export async function tripEventQueueStatus(tripId: string) {
   const db = await database();
   const pending = await db.getFirstAsync<{ count: number }>(
-    'SELECT COUNT(*) AS count FROM pending_trip_events WHERE trip_id = ?', tripId,
+    'SELECT COUNT(*) AS count FROM pending_trip_events WHERE trip_id = ?',
+    tripId,
   );
   const failed = await db.getFirstAsync<{ count: number }>(
-    'SELECT COUNT(*) AS count FROM failed_trip_events WHERE trip_id = ?', tripId,
+    'SELECT COUNT(*) AS count FROM failed_trip_events WHERE trip_id = ?',
+    tripId,
   );
   return { pending: pending?.count ?? 0, failed: failed?.count ?? 0 };
 }
