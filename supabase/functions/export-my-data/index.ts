@@ -165,7 +165,8 @@ Deno.serve(async (request: Request) => {
 
     let schoolAdminData: Record<string, unknown> | null = null;
     if (profile.role === 'school_admin' && schoolId) {
-      const [schoolChildren, schoolBuses, schoolRoutes, schoolIncidents, schoolInvoices, schoolNotifications, schoolThreads, schoolAuditLog] = await Promise.all([
+      const [schoolProfiles, schoolChildren, schoolBuses, schoolRoutes, schoolIncidents, schoolInvoices, schoolNotifications, schoolThreads, schoolAuditLog] = await Promise.all([
+        rows(admin.from('profiles').select('id,school_id,role,full_name,phone,language,avatar_url,created_at,updated_at').eq('school_id', schoolId)),
         rows(admin.from('children').select('*').eq('school_id', schoolId)),
         rows(admin.from('buses').select('id,school_id,registration,make,model,capacity,active,driver_name,created_at,updated_at').eq('school_id', schoolId)),
         rows(admin.from('routes').select('*').eq('school_id', schoolId)),
@@ -205,6 +206,7 @@ Deno.serve(async (request: Request) => {
         : [[], [], []];
 
       schoolAdminData = {
+        profiles: schoolProfiles,
         children: schoolChildren,
         guardianships: schoolGuardianships,
         authorized_pickups: schoolAuthorizedPickups,
