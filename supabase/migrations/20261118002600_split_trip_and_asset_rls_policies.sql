@@ -32,6 +32,7 @@ grant execute on function private.is_guardian_on_active_route(uuid) to authentic
 grant execute on function private.is_guardian_on_active_bus(uuid) to authenticated;
 
 drop policy if exists can_read_route_legacy on public.routes;
+drop policy if exists routes_guardian_active_read on public.routes;
 drop policy if exists routes_read on public.routes;
 create policy routes_read on public.routes
 for select to authenticated
@@ -53,6 +54,7 @@ create policy routes_admin_delete on public.routes
 for delete to authenticated
 using (private.is_school_admin(school_id));
 
+drop policy if exists buses_guardian_active_read on public.buses;
 drop policy if exists buses_read on public.buses;
 create policy buses_read on public.buses
 for select to authenticated
@@ -101,6 +103,9 @@ for delete to authenticated
 using (private.is_trip_school_admin(trip_id));
 
 drop policy if exists bus_live_supervisor_write on public.bus_live;
+drop policy if exists bus_live_supervisor_insert on public.bus_live;
+drop policy if exists bus_live_supervisor_update on public.bus_live;
+drop policy if exists bus_live_supervisor_delete on public.bus_live;
 create policy bus_live_supervisor_insert on public.bus_live
 for insert to authenticated
 with check (private.is_assigned_supervisor(trip_id) or private.is_trip_school_admin(trip_id));
