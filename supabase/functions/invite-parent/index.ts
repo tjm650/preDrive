@@ -22,7 +22,7 @@ const authClient = createClient(url, anonKey, { auth: { persistSession: false } 
 Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return textResponse('Method not allowed', 405);
-  const token = request.headers.get('authorization')?.replace(/^Bearer\\s+/i, '');
+  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) return textResponse('Unauthorized', 401);
   const { data: authData, error: authError } = await authClient.auth.getUser(token);
   if (authError || !authData.user) return textResponse('Unauthorized', 401);
@@ -30,7 +30,7 @@ Deno.serve(async (request: Request) => {
   const body = await request.json().catch(() => null) as { email?: string; full_name?: string } | null;
   const email = body?.email?.trim().toLowerCase() ?? '';
   const fullName = body?.full_name?.trim() ?? '';
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || fullName.length < 2 || fullName.length > 120) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || fullName.length < 2 || fullName.length > 120) {
     return jsonResponse({ error: 'Provide a valid parent name and email address.' }, 400);
   }
 
