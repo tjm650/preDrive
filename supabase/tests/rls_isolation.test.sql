@@ -212,9 +212,9 @@ select is((select school_id from public.profiles where id='91000000-0000-4000-80
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000006',true);
 select is((select count(*)::int from public.children),2,'school admin sees all children in their school');
 select is((select count(*)::int from public.schools),1,'school admin sees only their own school');
-select throws_ok($update public.profiles set role='platform_owner' where id='91000000-0000-4000-8000-000000000006'$,
+select throws_ok($$update public.profiles set role='platform_owner' where id='91000000-0000-4000-8000-000000000006'$$,
   '42501',null,'school administrator cannot promote their own profile');
-select throws_ok($update public.profiles set school_id='92000000-0000-4000-8000-000000000002' where id='91000000-0000-4000-8000-000000000006'$,
+select throws_ok($$update public.profiles set school_id='92000000-0000-4000-8000-000000000002' where id='91000000-0000-4000-8000-000000000006'$$,
   '42501',null,'school administrator cannot move their own profile to another tenant');
 select is((select count(*)::int from public.authorized_pickups),2,'school admin sees active and revoked pickup authorizations only in their school');
 select is((select count(*)::int from public.subscriptions),1,'school admin sees only their school subscription');
@@ -286,31 +286,31 @@ select is((select count(*)::int from public.invoices where school_id in ('920000
 -- Anonymous visitors may submit validated demo requests, but authenticated users may not.
 set local role anon;
 select lives_ok(
-  $insert into public.demo_requests(school_name,contact_name,email,children_count)
-    values ('Demo School','Demo Contact','demo-request-limit@predrive.test',12)$,
+  $$insert into public.demo_requests(school_name,contact_name,email,children_count)
+    values ('Demo School','Demo Contact','demo-request-limit@predrive.test',12)$$,
   'anonymous visitors can submit a valid demo request'
 );
 select lives_ok(
-  $insert into public.demo_requests(school_name,contact_name,email,children_count)
+  $$insert into public.demo_requests(school_name,contact_name,email,children_count)
     values ('Demo School 2','Demo Contact 2','DEMO-REQUEST-LIMIT@predrive.test',20),
-           ('Demo School 3','Demo Contact 3','demo-request-limit@predrive.test',30)$,
+           ('Demo School 3','Demo Contact 3','demo-request-limit@predrive.test',30)$$,
   'the demo request rate limit allows up to three requests per email in 24 hours'
 );
 select throws_ok(
-  $insert into public.demo_requests(school_name,contact_name,email)
-    values ('Demo School 4','Demo Contact 4','demo-request-limit@predrive.test')$,
+  $$insert into public.demo_requests(school_name,contact_name,email)
+    values ('Demo School 4','Demo Contact 4','demo-request-limit@predrive.test')$$,
   'P0001',null,'the fourth demo request for one email is rate limited'
 );
 select throws_ok(
-  $insert into public.demo_requests(school_name,contact_name,email,website)
-    values ('Bot School','Bot Contact','bot@predrive.test','https://spam.example')$,
+  $$insert into public.demo_requests(school_name,contact_name,email,website)
+    values ('Bot School','Bot Contact','bot@predrive.test','https://spam.example')$$,
   '42501',null,'the demo request honeypot rejects automated submissions'
 );
 reset role;
 set local role authenticated;
 select throws_ok(
-  $insert into public.demo_requests(school_name,contact_name,email)
-    values ('Authenticated School','Authenticated Contact','signed-in@predrive.test')$,
+  $$insert into public.demo_requests(school_name,contact_name,email)
+    values ('Authenticated School','Authenticated Contact','signed-in@predrive.test')$$,
   '42501',null,'authenticated users cannot use the anonymous demo request endpoint'
 );
 reset role;
@@ -398,7 +398,7 @@ select ok(exists(select 1 from information_schema.columns where table_schema='pu
   'schools have an explicit lifecycle status');
 set local role authenticated;
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000007',true);
-select lives_ok($update public.schools set status='suspended' where id='92000000-0000-4000-8000-000000000001'$,
+select lives_ok($$update public.schools set status='suspended' where id='92000000-0000-4000-8000-000000000001'$$,
   'platform owner can suspend a school');
 select is((select status from public.schools where id='92000000-0000-4000-8000-000000000001'),'suspended',
   'school suspension status is persisted');
@@ -424,7 +424,7 @@ select is((select count(*)::int from public.children),0,
 select is(private.current_school_id(),null::uuid,
   'suspended school administrators lose tenant-scoped access');
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000007',true);
-select lives_ok($update public.schools set status='active' where id='92000000-0000-4000-8000-000000000001'$,
+select lives_ok($$update public.schools set status='active' where id='92000000-0000-4000-8000-000000000001'$$,
   'platform owner can reactivate a school');
 select is((select status from public.schools where id='92000000-0000-4000-8000-000000000001'),'active',
   'school reactivation restores the active lifecycle status');
@@ -436,7 +436,7 @@ values ('92000000-0000-4000-8000-000000000001','Guardian Protection Fixture');
 insert into public.guardianships(guardian_id,child_id,relationship)
 select '91000000-0000-4000-8000-000000000008', id, 'Parent'
 from public.children where first_name='Guardian Protection Fixture';
-select throws_ok($delete from public.profiles where id='91000000-0000-4000-8000-000000000008'$,
+select throws_ok($$delete from public.profiles where id='91000000-0000-4000-8000-000000000008'$$,
   '23514',null,'the final guardian cannot be deleted from the database');
 select ok(exists(select 1 from public.profiles where id='91000000-0000-4000-8000-000000000008'),
   'blocked final-guardian deletion leaves the parent profile intact');
