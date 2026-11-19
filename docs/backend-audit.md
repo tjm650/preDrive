@@ -70,3 +70,17 @@ The inspected mobile and web package manifests and Supabase client entry points 
 ## Execution status
 
 The audit report and corrective migration/test changes are committed on `backend/audit-and-hardening`. No UI files were changed. A local Supabase database, Docker engine and Supabase CLI were not available through the connected GitHub repository interface; therefore the migration and pgTAP tests have **not** been executed. The branch is not production-ready until the local migration reset, pgTAP suite, TypeScript checks and app builds pass.
+
+
+## Authentication and school enrolment implementation
+
+The main branch now includes `20261119000200_auth_profiles_and_school_join_codes.sql`:
+
+- An `auth.users` insert trigger creates a minimal profile automatically. Every self-registered account starts as an unassigned `parent`; user-editable metadata is used only for the display name and never for role or tenant authorization.
+- The profile school constraint permits a parent profile to remain unassigned until enrolment. Staff and platform-owner role assignment remains a trusted provisioning operation.
+- School administrators can issue high-entropy, expiring, usage-limited join codes through `create_school_join_code(expires_at, max_uses)`. Only a bcrypt hash is stored; the plaintext code is returned once.
+- Parents join through `join_school_with_code(code)`. The RPC locks the code row, enforces expiry and use limits, rate-limits attempts per account, assigns the school, and writes an audit record. Invalid, expired, exhausted, or ineligible attempts return NULL.
+- The profile identity trigger now runs as invoker and permits tenant/role changes only for trusted database/service-role execution or the validated SECURITY DEFINER enrolment path. Direct authenticated profile updates remain denied.
+- The local demo seed and RLS fixtures upsert profiles because the auth trigger now creates them before the seed/test profile rows are applied.
+
+**Verification status:** pgTAP coverage was extended from 81 to 87 assertions for automatic profile creation, safe default role, join-code issuance, successful parent enrolment, one-use exhaustion, and direct tenant-assignment denial. The test file has been updated but has not been executed. The connected Supabase project currently reports zero applied migrations, tables, and Edge Functions; do not treat the repository migration chain as deployed.
