@@ -133,21 +133,21 @@ select is((select count(*)::int from public.bus_live),1,'supervisor sees live lo
 select is((select count(id)::int from public.authorized_pickups),1,'supervisor sees pickup authorizations only for assigned active trip children');
 select is((select count(*)::int from public.routes),1,'supervisor sees only their assigned route');
 select throws_ok(
-  $$$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','handover_verified',null,null,'{}'::jsonb,'forged-handover-01',now())$$,
+  $$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','handover_verified',null,null,'{}'::jsonb,'forged-handover-01',now())$$,
   '22023',null,'generic trip event RPC cannot forge a verified handover'
 );
 select throws_ok(
-  $$$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','dropped_home',null,null,'{}'::jsonb,'wrong-route-event-01',now())$$,
+  $$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','dropped_home',null,null,'{}'::jsonb,'wrong-route-event-01',now())$$,
   '22023',null,'pickup routes cannot record a home drop-off'
 );
 select throws_ok(
-  $$$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','absent',null,null,'{}'::jsonb,'false-absence-event-01',now())$$,
+  $$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','absent',null,null,'{}'::jsonb,'false-absence-event-01',now())$$,
   '22023',null,'a boarded child cannot be marked absent'
 );
 select is((public.complete_trip('96000000-0000-4000-8000-000000000001')->>'completed')::boolean,false,
   'trip completion is blocked while manifest children are unaccounted for');
 select throws_ok(
-  $$$select public.record_trip_event('96000000-0000-4000-8000-000000000001',null,'child_missing',null,null,'{}'::jsonb,'missing-no-child-01',now())$$,
+  $$select public.record_trip_event('96000000-0000-4000-8000-000000000001',null,'child_missing',null,null,'{}'::jsonb,'missing-no-child-01',now())$$,
   '22023',null,'child-specific safety events must identify a manifest child'
 );
 
