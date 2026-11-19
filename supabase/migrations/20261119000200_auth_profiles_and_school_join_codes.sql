@@ -204,9 +204,8 @@ grant execute on function public.join_school_with_code(text) to authenticated;
 create or replace function private.protect_profile_tenant_identity()
 returns trigger
 language plpgsql
-security definer
 set search_path = ''
-as $
+as $$
 declare
   request_role text;
   allowed_enrolment boolean;
@@ -216,8 +215,8 @@ begin
 
   if (new.role is distinct from old.role
       or new.school_id is distinct from old.school_id)
+     and current_user not in ('postgres', 'supabase_admin', 'service_role')
      and request_role <> 'service_role'
-     and session_user not in ('postgres', 'supabase_admin')
      and not allowed_enrolment then
     raise exception 'Profile role and school assignment can only be changed by trusted provisioning'
       using errcode = '42501';
@@ -225,6 +224,6 @@ begin
 
   return new;
 end
-$;
+$$;
 
 revoke all on function private.protect_profile_tenant_identity() from public, anon, authenticated;
