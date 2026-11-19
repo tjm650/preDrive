@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(56);
+select plan(62);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -85,9 +85,27 @@ insert into public.subscriptions(school_id,plan,status) values
 ('92000000-0000-4000-8000-000000000001','starter','trialing'),
 ('92000000-0000-4000-8000-000000000002','starter','trialing');
 
+-- Device tokens are reassigned to the currently authenticated account and cleared on sign-out.
+update public.profiles set expo_push_token='ExpoPushToken[TEST-DEVICE-01]'
+where id='91000000-0000-4000-8000-000000000002';
+
 -- Parent: only their own child, child events, invoice, notification and active bus.
 set local role authenticated;
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000001',true);
+select lives_ok($select public.register_push_token('ExpoPushToken[TEST-DEVICE-01]')$,
+  'authenticated user can register their device push token');
+reset role;
+select is((select expo_push_token from public.profiles where id='91000000-0000-4000-8000-000000000001'),
+  'ExpoPushToken[TEST-DEVICE-01]','device token is attached to the current profile');
+select is((select expo_push_token from public.profiles where id='91000000-0000-4000-8000-000000000002'),
+  null::text,'same device token is removed from the previous profile');
+set local role authenticated;
+select lives_ok($select public.register_push_token(null)$,
+  'authenticated user can clear their push token during sign-out');
+reset role;
+select is((select expo_push_token from public.profiles where id='91000000-0000-4000-8000-000000000001'),
+  null::text,'sign-out clears the active profile push token');
+set local role authenticated;
 select is((select count(*)::int from public.children),1,'parent sees only their own child');
 select ok(not exists(select 1 from public.children where id='93000000-0000-4000-8000-000000000002'),'parent cannot read another family in the same school');
 select ok(not exists(select 1 from public.children where id='93000000-0000-4000-8000-000000000003'),'parent cannot read a child in another school');
@@ -97,7 +115,7 @@ select is((select count(*)::int from public.notifications where type='test'),1,'
 select is((select count(*)::int from public.bus_live),1,'parent sees location only for an active trip containing their child');
 select is((select count(*)::int from public.routes),1,'parent sees route metadata only for an active trip containing their child');
 select is((select count(*)::int from public.buses),1,'parent sees vehicle metadata only for an active trip containing their child');
-select ok(not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relname = any(array['schools','profiles','children','guardianships','authorized_pickups','buses','routes','stops','route_children','trips','trip_events','bus_live','location_history','absences','notifications','messages','threads','thread_members','incidents','subscriptions','invoices','payments','app_settings','audit_log','demo_requests','push_receipts','staff_invitations']) and not c.relrowsecurity),'RLS is enabled on every preDrive public table');
+select ok(not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relname = any(array['schools','profiles','children','guardianships','authorized_pickups','buses','routes','stops','route_children','trips','trip_events','bus_live','location_history','absences','notifications','messages','threads','thread_members','incidents','subscriptions','invoices','payments','app_settings','audit_log','demo_requests','push_receipts','staff_invitations','parent_invitations']) and not c.relrowsecurity),'RLS is enabled on every preDrive public table');
 
 -- Supervisor: assigned trip manifest and its guardian contacts only.
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000003',true);
@@ -178,6 +196,7 @@ select ok(to_regprocedure('public.verify_pickup_handover(uuid,uuid,uuid,text,dou
 select ok(to_regprocedure('public.register_push_token(text)') is not null,'push token registration RPC is installed');
 select ok(to_regprocedure('public.verify_route_field_check(uuid)') is not null,'route field-check gate is installed');
 select ok(to_regclass('public.staff_invitations') is not null,'staff invitation audit table is installed');
+select ok(to_regclass('public.parent_invitations') is not null,'parent invitation audit table is installed');
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='children' and column_name='archived_at'),'child soft archival is supported');
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='routes' and column_name='geometry_status'),'route provenance is recorded');
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='trip_events' and column_name='idempotency_key'),'trip events support offline idempotency');
