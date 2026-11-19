@@ -146,11 +146,11 @@ select throws_ok(
 select is((public.complete_trip('96000000-0000-4000-8000-000000000001')->>'completed')::boolean,false,
   'trip completion is blocked while manifest children are unaccounted for');
 select throws_ok(
-  $select public.record_trip_event('96000000-0000-4000-8000-000000000001',null,'child_missing',null,null,'{}'::jsonb,'missing-no-child-01',now())$,
+  $$select public.record_trip_event('96000000-0000-4000-8000-000000000001',null,'child_missing',null,null,'{}'::jsonb,'missing-no-child-01',now())$$,
   '22023',null,'child-specific safety events must identify a manifest child'
 );
 select lives_ok(
-  $select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000002','child_missing',null,null,'{}'::jsonb,'missing-child-a2-01',now())$,
+  $$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000002','child_missing',null,null,'{}'::jsonb,'missing-child-a2-01',now())$$,
   'supervisor can alert for a manifest child missing before boarding'
 );
 select is(
