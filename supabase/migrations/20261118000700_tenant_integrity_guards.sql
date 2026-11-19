@@ -96,8 +96,12 @@ begin
   if a_school is null or a_school<>b_school then raise exception 'Thread member must belong to the thread school' using errcode='23514'; end if;
  when 'messages' then
   select school_id into a_school from public.threads where id=new.thread_id;
-  select school_id into b_school from public.profiles where id=new.sender_id;
-  if a_school is null or a_school<>b_school then raise exception 'Message sender must belong to the thread school' using errcode='23514'; end if;
+  if new.sender_id is not null then
+   select school_id into b_school from public.profiles where id=new.sender_id;
+   if a_school is null or a_school<>b_school then raise exception 'Message sender must belong to the thread school' using errcode='23514'; end if;
+  elsif a_school is null then
+   raise exception 'Message must belong to a school thread' using errcode='23514';
+  end if;
  end case;
  return new;
 end $$;
