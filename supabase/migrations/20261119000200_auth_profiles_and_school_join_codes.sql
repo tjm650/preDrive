@@ -172,6 +172,10 @@ begin
 
   if not found then return null; end if;
 
+  -- This transaction-local capability is set only after a valid, locked code
+  -- has been verified. The profile trigger consumes it for this one RPC transaction.
+  perform set_config('predrive.allow_profile_tenant_update', 'on', true);
+
   update public.profiles
   set school_id = code_row.school_id
   where id = actor and role = 'parent' and school_id is null;
@@ -202,17 +206,24 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $
+declare
+  request_role text;
+  allowed_enrolment boolean;
 begin
+  request_role := coalesce(current_setting('request.jwt.claim.role', true), '');
+  allowed_enrolment := coalesce(current_setting('predrive.allow_profile_tenant_update', true), '') = 'on';
+
   if (new.role is distinct from old.role
       or new.school_id is distinct from old.school_id)
-     and current_user not in ('postgres', 'service_role') then
+     and request_role <> 'service_role'
+     and not allowed_enrolment then
     raise exception 'Profile role and school assignment can only be changed by trusted provisioning'
       using errcode = '42501';
   end if;
 
   return new;
 end
-$$;
+$;
 
 revoke all on function private.protect_profile_tenant_identity() from public, anon, authenticated;
