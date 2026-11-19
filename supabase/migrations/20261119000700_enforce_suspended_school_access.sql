@@ -120,6 +120,14 @@ drop policy if exists threads_access on public.threads;
 drop policy if exists incidents_access on public.incidents;
 drop policy if exists trips_supervisor_update on public.trips;
 
+drop policy if exists buses_admin_write on public.buses;
+drop policy if exists routes_admin_write on public.routes;
+drop policy if exists stops_admin_write on public.stops;
+drop policy if exists route_children_admin_write on public.route_children;
+drop policy if exists threads_admin_write on public.threads;
+drop policy if exists incidents_admin_write on public.incidents;
+drop policy if exists incidents_member_insert on public.incidents;
+
 create policy buses_admin_write on public.buses for all to authenticated
 using (private.is_school_admin(school_id))
 with check (private.is_school_admin(school_id));
