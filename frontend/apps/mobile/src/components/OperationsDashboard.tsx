@@ -93,6 +93,14 @@ async function registerPushToken(client: SupabaseClient) {
   const permissions = await Notifications.getPermissionsAsync();
   const granted = permissions.granted || (await Notifications.requestPermissionsAsync()).granted;
   if (!granted) return;
+  if (Constants.appOwnership !== 'expo') {
+    await Notifications.setNotificationChannelAsync('safety', {
+      name: 'Safety alerts',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      sound: 'default',
+    });
+  }
   const token = await Notifications.getExpoPushTokenAsync({
     projectId,
   });
@@ -301,6 +309,15 @@ export function OperationsDashboard({
     void registerPushToken(client).catch(() =>
       setNotice('Push notifications could not be registered on this build.'),
     );
+    const received = Notifications.addNotificationReceivedListener((notification) => {
+      const title = notification.request.content.title ?? 'preDrive safety update';
+      const body = notification.request.content.body;
+      setNotice(body ? `${title}: ${body}` : title);
+      void load();
+    });
+    const response = Notifications.addNotificationResponseReceivedListener(() => {
+      void load();
+    });
     const unsubscribe = NetInfo.addEventListener((state) => {
       const online = Boolean(state.isConnected && state.isInternetReachable !== false);
       setConnected(online);
@@ -312,7 +329,11 @@ export function OperationsDashboard({
           })
           .catch(() => undefined);
     });
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      received.remove();
+      response.remove();
+    };
   }, [client, load, refreshQueue]);
 
   const activeTrip = useMemo(() => cards.find((trip) => trip.status === 'active') ?? null, [cards]);
@@ -527,6 +548,17 @@ export function OperationsDashboard({
     }
   }
 
+  async function signOutSafely() {
+    if (client && connected) {
+      try {
+        await asRpc(client).rpc('register_push_token', { p_token: null });
+      } catch {
+        // The next account login reassigns this device token atomically.
+      }
+    }
+    onSignOut();
+  }
+
   async function markNotificationRead(notificationId: string) {
     if (!client) return;
     const { error: updateError } = await client
@@ -564,7 +596,7 @@ export function OperationsDashboard({
           <Text style={styles.heading}>Good day, {profile.full_name.split(' ')[0]}.</Text>
           <Text style={styles.subtitle}>{profile.role.replace('_', ' ')} workspace</Text>
         </View>
-        <Pressable onPress={onSignOut} style={styles.signOut}>
+        <Pressable onPress={() => void signOutSafely()} style={styles.signOut}>
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
       </View>
