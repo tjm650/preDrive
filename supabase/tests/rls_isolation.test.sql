@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(105);
+select plan(110);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -309,6 +309,23 @@ select ok(exists(select 1 from information_schema.columns where table_schema='pu
   'demo requests record the expected child count');
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='demo_requests' and column_name='status'),
   'demo requests have a platform-managed workflow status');
+
+-- The stale GPS monitor alerts once per outage and rearms after a fresh location.
+update public.bus_live set updated_at=now()-interval '2 minutes'
+where trip_id='96000000-0000-4000-8000-000000000001';
+select is(public.check_stale_bus_locations(),1,'stale active bus location creates one administrator alert');
+select is((select count(*)::int from public.notifications
+  where type='bus_location_stale' and user_id='91000000-0000-4000-8000-000000000006'),1,
+  'stale location notification is delivered to the school administrator');
+select is(public.check_stale_bus_locations(),0,'repeated monitor runs do not duplicate an active stale-location alert');
+update public.bus_live set updated_at=now()
+where trip_id='96000000-0000-4000-8000-000000000001';
+update public.bus_live set updated_at=now()-interval '2 minutes'
+where trip_id='96000000-0000-4000-8000-000000000001';
+select is(public.check_stale_bus_locations(),1,'a later GPS outage alerts again after location recovery');
+select is((select count(*)::int from public.notifications
+  where type='bus_location_stale' and user_id='91000000-0000-4000-8000-000000000006'),2,
+  'recovered stale-location episodes generate a fresh administrator notification');
 
 select ok(to_regprocedure('public.start_trip(uuid)') is not null,'start trip RPC is installed');
 select ok(to_regprocedure('public.record_trip_event(uuid,uuid,public.trip_event_type,double precision,double precision,jsonb,text,timestamp with time zone)') is not null,'idempotent trip event RPC is installed');
