@@ -160,7 +160,7 @@ select is((select count(*)::int from public.authorized_pickups),1,'school admin 
 select is((select count(*)::int from public.subscriptions),1,'school admin sees only their school subscription');
 select is((select count(*)::int from public.invoices),2,'school admin sees invoices only in their school');
 select lives_ok(
-  $$select public.create_child_with_guardian('Child A3','91000000-0000-4000-8000-000000000001',null,'Parent')$,
+  $$select public.create_child_with_guardian('Child A3','91000000-0000-4000-8000-000000000001',null,'Parent')$$,
   'school admin can atomically enrol a child with an existing parent'
 );
 select is((select count(*)::int from public.children where first_name='Child A3'),1,
@@ -168,26 +168,26 @@ select is((select count(*)::int from public.children where first_name='Child A3'
 select is((select count(*)::int from public.guardianships g join public.children c on c.id=g.child_id where c.first_name='Child A3' and g.guardian_id='91000000-0000-4000-8000-000000000001'),1,
   'new child is linked to the selected parent');
 select throws_ok(
-  $$select public.create_child_with_guardian('Child A4','91000000-0000-4000-8000-000000000002',null,'Parent')$,
+  $$select public.create_child_with_guardian('Child A4','91000000-0000-4000-8000-000000000002',null,'Parent')$$,
   '22023',null,'school admin cannot link a child to a parent in another school'
 );
 select lives_ok(
-  $$select public.record_manual_payment((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),10,'USD','TEST-PAY-01')$,
+  $$select public.record_manual_payment((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),10,'USD','TEST-PAY-01')$$,
   'school admin can record a verified partial payment'
 );
 select is((select coalesce(sum(amount),0)::numeric from public.payments where provider_reference='TEST-PAY-01'),10::numeric,
   'partial payment is stored with its receipt reference');
 select throws_ok(
-  $$select public.record_manual_payment((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),1,'USD','TEST-PAY-01')$,
+  $$select public.record_manual_payment((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),1,'USD','TEST-PAY-01')$$,
   '23505',null,'duplicate manual payment references are rejected'
 );
 select throws_ok(
   $$insert into public.payments(invoice_id,amount,currency,provider,provider_reference,status,paid_at)
-    values ((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),1,'USD','manual','TEST-DIRECT','succeeded',now())$,
+    values ((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),1,'USD','manual','TEST-DIRECT','succeeded',now())$$,
   '42501',null,'authenticated clients cannot bypass payment reconciliation'
 );
 select lives_ok(
-  $$select public.record_manual_payment((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),15,'USD','TEST-PAY-02')$,
+  $$select public.record_manual_payment((select id from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),15,'USD','TEST-PAY-02')$$,
   'final verified payment closes the invoice balance'
 );
 select is((select status::text from public.invoices where guardian_id='91000000-0000-4000-8000-000000000001'),'paid',
