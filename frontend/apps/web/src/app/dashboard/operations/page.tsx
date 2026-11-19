@@ -976,6 +976,7 @@ export default function OperationsPage() {
                     <button type="button" onClick={() => setPaymentInvoiceId('')} className="w-full py-2 text-xs font-bold text-[#71827c]">Cancel</button>
                   </form>
                 ) : null}
+                </>
               ) : null}
               <p className="mt-5 text-xs leading-5 text-[#8a9a93]">
                 All operations are checked by the signed-in account and enforced by database
