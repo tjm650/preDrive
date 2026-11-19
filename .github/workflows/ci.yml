@@ -52,6 +52,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Verify formatting
         run: pnpm format:check
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Typecheck Supabase Edge Functions
+        run: |
+          deno check supabase/functions/send-push/index.ts
+          deno check supabase/functions/check-push-receipts/index.ts
+          deno check supabase/functions/invite-staff/index.ts
+          deno check supabase/functions/invite-parent/index.ts
+          deno check supabase/functions/build-route-geometry/index.ts
       - name: Lint
         run: pnpm lint
       - name: Typecheck all workspaces
