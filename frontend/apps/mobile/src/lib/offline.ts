@@ -4,6 +4,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export type TripEventKind =
   'boarded' | 'arrived_school' | 'dropped_home' | 'absent' | 'sos' | 'delay' | 'child_missing';
 
+export type FailedTripEvent = Pick<
+  QueuedTripEvent,
+  'id' | 'trip_id' | 'child_id' | 'event_type' | 'client_recorded_at'
+> & { failure_reason: string; failed_at: string };
+
 export type QueuedTripEvent = {
   id: number;
   trip_id: string;
@@ -121,6 +126,14 @@ export async function failedEventCount() {
     'SELECT COUNT(*) AS count FROM failed_trip_events',
   );
   return row?.count ?? 0;
+}
+
+export async function listFailedEvents(limit = 10) {
+  const db = await database();
+  return db.getAllAsync<FailedTripEvent>(
+    'SELECT id,trip_id,child_id,event_type,client_recorded_at,failure_reason,failed_at FROM failed_trip_events ORDER BY failed_at DESC LIMIT ?',
+    Math.max(1, Math.min(limit, 50)),
+  );
 }
 
 export async function retryFailedEvents() {
