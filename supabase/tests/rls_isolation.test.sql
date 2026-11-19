@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(91);
+select plan(97);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -44,6 +44,9 @@ insert into public.guardianships(guardian_id,child_id,relationship) values
 insert into public.authorized_pickups(child_id,name,relationship,pin_hash) values
 ('93000000-0000-4000-8000-000000000001','A1 Pickup','Aunt','test-hash-a'),
 ('93000000-0000-4000-8000-000000000003','B1 Pickup','Uncle','test-hash-b');
+insert into public.authorized_pickups(child_id,name,relationship,pin_hash,active)
+values ('93000000-0000-4000-8000-000000000001','Revoked Pickup','Aunt',
+  extensions.crypt('1234',extensions.gen_salt('bf')),false);
 
 insert into public.buses(id,school_id,registration,capacity) values
 ('94000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','TEST-A',10),
@@ -139,6 +142,9 @@ select is((select count(*)::int from public.trip_events),1,'supervisor sees even
 select is((select count(*)::int from public.bus_live),1,'supervisor sees live location for their assigned trip');
 select is((select count(*)::int from public.location_history),1,'assigned supervisor can read location history for their trip');
 select is((select count(id)::int from public.authorized_pickups),1,'supervisor sees pickup authorizations only for assigned active trip children');
+select is(public.verify_pickup_pin('93000000-0000-4000-8000-000000000001',
+  (select id from public.authorized_pickups where name='Revoked Pickup'),'1234'),false,
+  'revoked pickup authorizations cannot pass PIN verification');
 select is((select count(*)::int from public.routes),1,'supervisor sees only their assigned route');
 select throws_ok(
   $$select public.record_trip_event('96000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','handover_verified',null,null,'{}'::jsonb,'forged-handover-01',now())$$,
@@ -199,7 +205,7 @@ select throws_ok($update public.profiles set role='platform_owner' where id='910
   '42501',null,'school administrator cannot promote their own profile');
 select throws_ok($update public.profiles set school_id='92000000-0000-4000-8000-000000000002' where id='91000000-0000-4000-8000-000000000006'$,
   '42501',null,'school administrator cannot move their own profile to another tenant');
-select is((select count(*)::int from public.authorized_pickups),1,'school admin sees pickup authorizations only in their school');
+select is((select count(*)::int from public.authorized_pickups),2,'school admin sees active and revoked pickup authorizations only in their school');
 select is((select count(*)::int from public.subscriptions),1,'school admin sees only their school subscription');
 select is((select count(*)::int from public.invoices),2,'school admin sees invoices only in their school');
 select lives_ok(
@@ -262,7 +268,7 @@ select throws_ok(
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000007',true);
 select is((select count(*)::int from public.children where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),4,'platform owner can read fixture children across schools');
 select is((select count(*)::int from public.schools where id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),2,'platform owner can read fixture schools');
-select is((select count(*)::int from public.authorized_pickups),2,'platform owner can read pickup authorizations across schools');
+select is((select count(*)::int from public.authorized_pickups),3,'platform owner can read pickup authorizations across schools');
 select is((select count(*)::int from public.subscriptions where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),2,'platform owner can read fixture subscriptions across schools');
 select is((select count(*)::int from public.invoices where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),3,'platform owner can read fixture invoices across schools');
 
@@ -280,6 +286,16 @@ select ok(to_regprocedure('public.verify_pickup_handover(uuid,uuid,uuid,text,dou
 select ok(to_regprocedure('public.register_push_token(text)') is not null,'push token registration RPC is installed');
 select ok(to_regprocedure('public.create_child_with_guardian(text,uuid,text,text)') is not null,'atomic child enrolment RPC is installed');
 select ok(to_regprocedure('public.record_manual_payment(uuid,numeric,text,text)') is not null,'manual payment reconciliation RPC is installed');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='authorized_pickups' and column_name='active'),
+  'pickup authorizations support revocation');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='payments' and column_name='method'),
+  'payments record the payment method');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='payments' and column_name='idempotency_key'),
+  'payments support idempotency keys');
+select ok(exists(select 1 from pg_indexes where schemaname='public' and indexname='payments_invoice_provider_reference_uidx'),
+  'payment provider references are protected against duplicate recording');
+select ok(exists(select 1 from pg_indexes where schemaname='public' and indexname='payments_invoice_provider_idempotency_uidx'),
+  'payment idempotency keys are unique per invoice and provider');
 select ok(to_regprocedure('public.verify_route_field_check(uuid)') is not null,'route field-check gate is installed');
 select ok(to_regclass('public.staff_invitations') is not null,'staff invitation audit table is installed');
 select ok(to_regclass('public.parent_invitations') is not null,'parent invitation audit table is installed');
