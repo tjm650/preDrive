@@ -122,10 +122,20 @@ supabase functions deploy build-route-geometry
 supabase secrets set \
   NOTIFICATION_WEBHOOK_SECRET='a-long-random-secret' \
   SITE_URL='https://YOUR_WEB_APP_DOMAIN' \
-  OPENROUTESERVICE_API_KEY='YOUR_OPENROUTESERVICE_KEY'
+  OPENROUTESERVICE_API_KEY='YOUR_OPENROUTESERVICE_KEY' \
+  EXPO_ACCESS_TOKEN='YOUR_EXPO_ACCESS_TOKEN'
 ```
 
-Supabase injects the project URL and service-role key into the Edge Function runtime. The staff-invitation and route-geometry functions also require the Supabase anon key for caller-token verification.
+Supabase injects the project URL, anon key and service-role key into the Edge Function runtime. The staff/parent invitation and route-geometry functions verify the caller's bearer token and require the anon key. The Expo access token is optional if your Expo project does not require authenticated push requests.
+
+The notification trigger runs inside Postgres, so it cannot read Edge Function secrets directly. In the Supabase SQL Editor, add the matching project URL and webhook secret to **Vault** (use the same random value as `NOTIFICATION_WEBHOOK_SECRET` above):
+
+```sql
+select vault.create_secret('https://YOUR_PROJECT_REF.supabase.co', 'project_url');
+select vault.create_secret('YOUR_SAME_RANDOM_WEBHOOK_SECRET', 'notification_webhook_secret');
+```
+
+Do not commit these values. The database trigger uses Vault to enqueue `send-push` through `pg_net`; the receipt checker runs every 15 minutes through `pg_cron`.
 
 Configure a Database Webhook for INSERT on `public.notifications`, targeting `send-push` and sending the matching `x-webhook-secret` header. Schedule `check-push-receipts` at least every 15 minutes with the same secret header. It checks Expo receipts and clears tokens reported as `DeviceNotRegistered`.
 
