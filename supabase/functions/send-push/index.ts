@@ -20,7 +20,8 @@ const copy: Record<string, Record<string, string>> = {
     bus_near: "Your child's bus is approaching home",
     arrived: "Your child's bus has arrived",
     child_unaccounted: 'A child has not been accounted for at trip end',
-    child_missing: 'A child has been reported missing during the trip. Contact the school immediately.',
+    child_missing:
+      'A child has been reported missing during the trip. Contact the school immediately.',
   },
   sn: {
     boarded: 'Mwana wenyu apinda mubhazi',
@@ -64,7 +65,8 @@ Deno.serve(async (request: Request) => {
     .maybeSingle();
   if (error) return Response.json({ error: 'Unable to load recipient' }, { status: 500 });
   if (!profile?.expo_push_token) return Response.json({ skipped: 'no_push_token' });
-  const language = typeof profile.language === 'string' && profile.language in copy ? profile.language : 'en';
+  const language =
+    typeof profile.language === 'string' && profile.language in copy ? profile.language : 'en';
   const bodyKey = String(record.body_key ?? 'notification');
   const response = await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
