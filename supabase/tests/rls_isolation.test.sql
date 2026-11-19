@@ -1,4 +1,5 @@
 begin;
+select set_config('request.jwt.claim.role','service_role',true);
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 select plan(143);
@@ -77,9 +78,6 @@ insert into public.bus_live(trip_id,lat,lng) values
 ('96000000-0000-4000-8000-000000000001',-17.8,31.0),
 ('96000000-0000-4000-8000-000000000002',-17.8,31.0);
 
-insert into public.location_history(trip_id,lat,lng,speed,recorded_at)
-values ('96000000-0000-4000-8000-000000000001',-17.8,31.0,25,now());
-
 insert into public.invoices(school_id,guardian_id,amount_usd,currency,status,due_date) values
 ('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000001',25,'USD','pending',current_date),
 ('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000005',25,'USD','pending',current_date),
@@ -99,6 +97,7 @@ update public.profiles set expo_push_token='ExpoPushToken[TEST-DEVICE-01]'
 where id='91000000-0000-4000-8000-000000000002';
 
 -- Parent: only their own child, child events, invoice, notification and active bus.
+select set_config('request.jwt.claim.role','authenticated',true);
 set local role authenticated;
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000001',true);
 select lives_ok($$select public.register_push_token('ExpoPushToken[TEST-DEVICE-01]')$$,
