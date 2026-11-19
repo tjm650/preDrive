@@ -117,6 +117,9 @@ Deno.serve(async (request: Request) => {
         .select('merchant_reference,browser_url,status')
         .eq('payment_id', existing.id).maybeSingle();
       if (existing.status === 'succeeded') return jsonResponse({ payment_id: existing.id, status: 'succeeded' });
+      if (existing.status === 'failed') {
+        return jsonResponse({ error: 'The previous attempt failed. Start a new attempt with a new idempotency key.' }, 409);
+      }
       if (tx?.browser_url) {
         return jsonResponse({
           payment_id: existing.id,
