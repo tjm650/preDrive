@@ -47,7 +47,7 @@ Deno.serve(async (request: Request) => {
   const receivedHash = field(fields, 'hash');
   const reference = field(fields, 'reference');
   const amountText = field(fields, 'amount');
-  const providerStatus = field(fields, 'status')?.trim().toLowerCase();
+  const providerStatus = field(fields, 'status');
   const paynowReference = field(fields, 'paynowreference');
 
   if (!receivedHash || !reference || !amountText || !providerStatus) {
@@ -66,96 +66,18 @@ Deno.serve(async (request: Request) => {
   }
 
   try {
-    const { data: transaction, error: transactionError } = await admin
-      .from('paynow_transactions')
-      .select('payment_id,merchant_reference,status')
-      .eq('merchant_reference', reference)
-      .maybeSingle();
-    if (transactionError) throw transactionError;
-    if (!transaction) return textResponse('Unknown reference', 404);
-
-    const { data: payment, error: paymentError } = await admin
-      .from('payments')
-      .select('id,invoice_id,amount,currency,status,provider_reference')
-      .eq('id', transaction.payment_id)
-      .eq('provider', 'paynow')
-      .maybeSingle();
-    if (paymentError) throw paymentError;
-    if (!payment || payment.provider_reference !== reference) return textResponse('Payment not found', 404);
-    if (Math.abs(Number(payment.amount) - amount) >= 0.005) {
-      console.error(JSON.stringify({
-        event: 'paynow_callback_amount_mismatch',
-        payment_id: payment.id,
-        expected: payment.amount,
-        received: amountText,
-      }));
-      return textResponse('Amount mismatch', 400);
-    }
-
-    if (payment.status === 'succeeded') return textResponse('OK');
-    if (payment.status === 'failed' && providerStatus !== 'paid') return textResponse('OK');
-
-    let nextStatus: 'pending' | 'succeeded' | 'failed' = 'pending';
-    if (providerStatus === 'paid') nextStatus = 'succeeded';
-    else if (['cancelled', 'failed', 'disputed'].includes(providerStatus)) nextStatus = 'failed';
-
-    const { data: invoice, error: invoiceError } = await admin
-      .from('invoices')
-      .select('id,school_id,amount_usd,currency,status')
-      .eq('id', payment.invoice_id)
-      .maybeSingle();
-    if (invoiceError) throw invoiceError;
-    if (!invoice) return textResponse('Invoice not found', 404);
-    if (String(invoice.currency).toUpperCase() !== String(payment.currency).toUpperCase()) {
-      return textResponse('Currency mismatch', 400);
-    }
-
-    const { error: paymentUpdateError } = await admin.from('payments').update({
-      status: nextStatus,
-      paid_at: nextStatus === 'succeeded' ? new Date().toISOString() : null,
-    }).eq('id', payment.id);
-    if (paymentUpdateError) throw paymentUpdateError;
-
-    const { error: transactionUpdateError } = await admin.from('paynow_transactions').update({
-      paynow_reference: paynowReference,
-      status: nextStatus,
-    }).eq('payment_id', payment.id);
-    if (transactionUpdateError) throw transactionUpdateError;
-
-    if (nextStatus === 'succeeded') {
-      const { data: successfulPayments, error: totalError } = await admin
-        .from('payments').select('amount').eq('invoice_id', invoice.id).eq('status', 'succeeded');
-      if (totalError) throw totalError;
-      const paidTotal = (successfulPayments ?? []).reduce((sum, item) => sum + Number(item.amount), 0);
-      if (paidTotal + 0.0001 >= Number(invoice.amount_usd)) {
-        const { error: invoiceUpdateError } = await admin.from('invoices')
-          .update({ status: 'paid', updated_at: new Date().toISOString() })
-          .eq('id', invoice.id)
-          .in('status', ['pending', 'overdue']);
-        if (invoiceUpdateError) throw invoiceUpdateError;
-      }
-    }
-
-    await admin.from('audit_log').insert({
-      school_id: invoice.school_id,
-      actor_id: null,
-      action: `paynow_payment_${nextStatus}`,
-      entity_type: 'payment',
-      entity_id: payment.id,
-      metadata: {
-        invoice_id: invoice.id,
-        provider_reference: paynowReference,
-        amount,
-        currency: payment.currency,
-        provider_status: providerStatus,
-      },
+    const { data: result, error } = await admin.rpc('apply_paynow_callback', {
+      p_merchant_reference: reference,
+      p_paynow_reference: paynowReference,
+      p_amount: amount,
+      p_provider_status: providerStatus,
     });
+    if (error) throw error;
 
     console.log(JSON.stringify({
       event: 'paynow_callback_processed',
-      payment_id: payment.id,
-      invoice_id: invoice.id,
-      status: nextStatus,
+      reference,
+      status: result,
     }));
     return textResponse('OK');
   } catch (error) {
