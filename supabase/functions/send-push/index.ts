@@ -20,6 +20,7 @@ const copy: Record<string, Record<string, string>> = {
     bus_near: "Your child's bus is approaching home",
     arrived: "Your child's bus has arrived",
     child_unaccounted: 'A child has not been accounted for at trip end',
+    child_missing: 'A child has been reported missing during the trip. Contact the school immediately.',
   },
   sn: {
     boarded: 'Mwana wenyu apinda mubhazi',
@@ -32,6 +33,7 @@ const copy: Record<string, Record<string, string>> = {
     bus_near: 'Bhazi remwana wenyu rava pedyo nekumba',
     arrived: 'Bhazi remwana wenyu rasvika',
     child_unaccounted: 'Mwana haasati asimbiswa pakupera kwerwendo',
+    child_missing: 'Mwana anonzi arasika parwendo. Bata chikoro nekukasika.',
   },
   nd: {
     boarded: 'Umntwana wakho ugibele ibhasi',
@@ -44,6 +46,7 @@ const copy: Record<string, Record<string, string>> = {
     bus_near: 'Ibhasi yomntwana wakho isisondela ekhaya',
     arrived: 'Ibhasi yomntwana wakho isifikile',
     child_unaccounted: 'Umntwana akaqinisekiswanga ekupheleni kohambo',
+    child_missing: 'Kubikwe ukuthi umntwana ulahlekile ohambweni. Thinta isikolo masinyane.',
   },
 };
 Deno.serve(async (request: Request) => {
@@ -61,7 +64,7 @@ Deno.serve(async (request: Request) => {
     .maybeSingle();
   if (error) return Response.json({ error: 'Unable to load recipient' }, { status: 500 });
   if (!profile?.expo_push_token) return Response.json({ skipped: 'no_push_token' });
-  const language = profile.language in copy ? profile.language : 'en';
+  const language = typeof profile.language === 'string' && profile.language in copy ? profile.language : 'en';
   const titleKey = String(record.title_key ?? 'preDrive');
   const bodyKey = String(record.body_key ?? 'notification');
   const response = await fetch('https://exp.host/--/api/v2/push/send', {
@@ -72,10 +75,12 @@ Deno.serve(async (request: Request) => {
     },
     body: JSON.stringify({
       to: profile.expo_push_token,
-      title: titleKey === 'child_unaccounted' ? 'preDrive · Safety alert' : 'preDrive',
+      title: ['sos', 'child_missing', 'child_unaccounted', 'handover_rejected'].includes(bodyKey)
+        ? 'preDrive · Safety alert'
+        : 'preDrive',
       body: copy[language]?.[bodyKey] ?? 'You have a new school transport update.',
       data: { notificationId: record.id, type: record.type },
-      priority: record.priority === 'critical' ? 'high' : 'default',
+      priority: record.priority === 'critical' || record.priority === 'high' ? 'high' : 'default',
       sound: 'default',
     }),
   });
