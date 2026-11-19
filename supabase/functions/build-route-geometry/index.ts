@@ -5,10 +5,12 @@ const url = Deno.env.get('SUPABASE_URL');
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
 const routingKey = Deno.env.get('OPENROUTESERVICE_API_KEY');
+const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:3000';
 if (!url || !serviceKey || !anonKey) throw new Error('Missing Supabase function secrets');
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': siteUrl,
+  Vary: 'Origin',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
