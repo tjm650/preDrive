@@ -13,7 +13,7 @@ begin
 
   if p_token is not null and (
     length(p_token) > 512
-    or p_token !~ '^(Expo|Exponent)PushToken\\[[A-Za-z0-9_-]+\\]$'
+    or p_token !~ '^(Expo|Exponent)PushToken\[[A-Za-z0-9_-]+\]$'
   ) then
     raise exception 'Invalid Expo push token' using errcode='22023';
   end if;
