@@ -54,6 +54,14 @@ All 10 functions are already active in the live project. The commands above are 
 
 ## Required secrets before enabling integrations
 
+Set these in Supabase Dashboard → Edge Functions → Secrets, or create a private `supabase/functions/.env.production` file and run:
+
+```bash
+supabase secrets set --project-ref rjsdhgbjvghjnuiilizm --env-file supabase/functions/.env.production
+```
+
+The committed `supabase/functions/.env.example` is a placeholder only; never populate it or commit real secrets.
+
 Set these in Supabase Dashboard → Edge Functions → Secrets (or via `supabase secrets set`):
 
 | Secret | Used by | Required |
