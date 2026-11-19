@@ -79,7 +79,7 @@ as $predrive$
     where r.id = target_route
       and (
         private.can_read_school(r.school_id)
-        or private.is_route_assigned(r.id)
+        or exists (select 1 from public.trips t where t.route_id = r.id and private.is_assigned_supervisor(t.id))
         or exists (
           select 1 from public.trips t
           where t.route_id = r.id and t.status = 'active'
@@ -97,7 +97,7 @@ as $predrive$
     where b.id = target_bus
       and (
         private.can_read_school(b.school_id)
-        or private.is_bus_on_assigned_trip(b.id)
+        or exists (select 1 from public.trips t where t.bus_id = b.id and private.is_assigned_supervisor(t.id))
         or exists (
           select 1 from public.trips t
           where t.bus_id = b.id and t.status = 'active'
