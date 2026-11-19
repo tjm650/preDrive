@@ -10,12 +10,12 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
-declare school_id uuid;
+declare admin_school_id uuid;
 declare child_id uuid;
 begin
   if auth.uid() is null then raise exception 'Authentication required' using errcode='28000'; end if;
-  school_id := private.current_school_id();
-  if private.current_role() <> 'school_admin' or school_id is null then
+  admin_school_id := private.current_school_id();
+  if private.current_role() <> 'school_admin' or admin_school_id is null then
     raise exception 'Only a school administrator can enrol children' using errcode='42501';
   end if;
   if p_first_name is null or length(btrim(p_first_name)) not between 1 and 100 then
@@ -29,18 +29,18 @@ begin
   end if;
   if not exists (
     select 1 from public.profiles p
-    where p.id = p_guardian_id and p.school_id = school_id and p.role = 'parent'
+    where p.id = p_guardian_id and p.school_id = admin_school_id and p.role = 'parent'
   ) then raise exception 'Choose a parent account belonging to this school' using errcode='22023'; end if;
 
   insert into public.children(school_id,first_name,class_name)
-  values(school_id,btrim(p_first_name),nullif(btrim(p_class_name),''))
+  values(admin_school_id,btrim(p_first_name),nullif(btrim(p_class_name),''))
   returning id into child_id;
 
   insert into public.guardianships(guardian_id,child_id,relationship)
   values(p_guardian_id,child_id,btrim(p_relationship));
 
   insert into public.audit_log(school_id,actor_id,action,entity_type,entity_id,metadata)
-  values(school_id,auth.uid(),'child_enrolled','child',child_id,
+  values(admin_school_id,auth.uid(),'child_enrolled','child',child_id,
     jsonb_build_object('guardian_id',p_guardian_id,'relationship',btrim(p_relationship)));
   return child_id;
 end
