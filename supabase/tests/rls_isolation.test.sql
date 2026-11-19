@@ -462,7 +462,7 @@ select is((select count(*)::int from public.audit_log
   where entity_id='9a000000-0000-4000-8000-000000000001' and action='paynow_payment_succeeded'),1,
   'replayed Paynow callback does not duplicate the payment audit entry');
 select throws_ok(
-  $select public.apply_paynow_callback('PREDRIVE-TEST-CALLBACK','PAYNOW-TEST-123',24.00,'Paid')$,
+  $$select public.apply_paynow_callback('PREDRIVE-TEST-CALLBACK','PAYNOW-TEST-123',24.00,'Paid')$$,
   '22023',null,'Paynow callback with a mismatched amount is rejected'
 );
 reset role;
