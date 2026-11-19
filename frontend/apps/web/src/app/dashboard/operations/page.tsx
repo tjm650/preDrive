@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-type Tab = 'children' | 'fleet' | 'routes' | 'trips' | 'billing' | 'staff';
+type Tab = 'children' | 'parents' | 'fleet' | 'routes' | 'trips' | 'billing' | 'staff';
 type Child = {
   id: string;
   first_name: string;
@@ -67,6 +67,8 @@ type Staff = { id: string; full_name: string; role: string };
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'children', label: 'Children' },
+  { id: 'parents', label: 'Parents' },
+  
   { id: 'fleet', label: 'Fleet' },
   { id: 'routes', label: 'Routes' },
   { id: 'trips', label: 'Trips' },
@@ -94,6 +96,8 @@ export default function OperationsPage() {
   const [childName, setChildName] = useState('');
   const [childClass, setChildClass] = useState('');
   const [childGuardian, setChildGuardian] = useState('');
+  const [parentName, setParentName] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
   const [busRegistration, setBusRegistration] = useState('');
   const [busMake, setBusMake] = useState('');
   const [busModel, setBusModel] = useState('');
@@ -323,6 +327,19 @@ export default function OperationsPage() {
       if (inviteError) throw inviteError;
       setStaffEmail('');
       setStaffName('');
+    });
+  }
+
+  async function inviteParent(event: FormEvent<HTMLFormElement>) {
+    await submit(event, async () => {
+      const client = createClient();
+      if (!client) throw new Error('School session is unavailable.');
+      const { error: inviteError } = await client.functions.invoke('invite-parent', {
+        body: { email: parentEmail.trim(), full_name: parentName.trim() },
+      });
+      if (inviteError) throw inviteError;
+      setParentEmail('');
+      setParentName('');
     });
   }
 
@@ -586,8 +603,29 @@ export default function OperationsPage() {
                         ? 'Trip schedule'
                         : tab === 'billing'
                           ? 'Invoices'
-                          : 'School staff'}
+                          : tab === 'parents'
+                            ? 'Parent accounts'
+                            : 'School staff'}
               </h2>
+              {tab === 'parents' ? (
+                <div className="mt-5 divide-y divide-[#edf2ef]">
+                  {guardians.map((guardian) => (
+                    <div key={guardian.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+                      <div>
+                        <p className="font-bold">{guardian.full_name}</p>
+                        <p className="mt-1 text-xs capitalize text-[#71827c]">{guardian.role.replace('_', ' ')}</p>
+                      </div>
+                      <button
+                        onClick={() => { setChildGuardian(guardian.id); setTab('children'); }}
+                        className="rounded-lg border border-[#0b8067] px-3 py-2 text-xs font-bold text-[#0b8067]"
+                      >
+                        Link to a child
+                      </button>
+                    </div>
+                  ))}
+                  {guardians.length === 0 ? <Empty>No parent accounts registered yet.</Empty> : null}
+                </div>
+              ) : null}
               {tab === 'children' ? (
                 <div className="mt-5 divide-y divide-[#edf2ef]">
                   {children.map((child) => (
@@ -938,6 +976,20 @@ export default function OperationsPage() {
                     </select>
                   </Field>
                   <Submit disabled={saving}>Schedule trip</Submit>
+                </form>
+              ) : null}
+              {tab === 'parents' ? (
+                <form onSubmit={(e) => void inviteParent(e)} className="mt-4 space-y-3">
+                  <Field label="Parent / guardian full name">
+                    <input required minLength={2} value={parentName} onChange={(e) => setParentName(e.target.value)} className="control" />
+                  </Field>
+                  <Field label="Email address">
+                    <input required type="email" value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} className="control" />
+                  </Field>
+                  <Submit disabled={saving}>Invite parent</Submit>
+                  <p className="text-xs leading-5 text-[#71827c]">
+                    The parent receives an account invitation. After creating the account, link them to their child from the Children tab.
+                  </p>
                 </form>
               ) : null}
               {tab === 'staff' ? (
