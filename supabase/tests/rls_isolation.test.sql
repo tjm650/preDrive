@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(97);
+select plan(104);
 
 -- Isolated two-school fixture. Every row is rolled back at the end of this test.
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
@@ -271,6 +271,42 @@ select is((select count(*)::int from public.schools where id in ('92000000-0000-
 select is((select count(*)::int from public.authorized_pickups),3,'platform owner can read pickup authorizations across schools');
 select is((select count(*)::int from public.subscriptions where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),2,'platform owner can read fixture subscriptions across schools');
 select is((select count(*)::int from public.invoices where school_id in ('92000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002')),3,'platform owner can read fixture invoices across schools');
+
+-- Anonymous visitors may submit validated demo requests, but authenticated users may not.
+set local role anon;
+select lives_ok(
+  $insert into public.demo_requests(school_name,contact_name,email,children_count)
+    values ('Demo School','Demo Contact','demo-request-limit@predrive.test',12)$,
+  'anonymous visitors can submit a valid demo request'
+);
+select lives_ok(
+  $insert into public.demo_requests(school_name,contact_name,email,children_count)
+    values ('Demo School 2','Demo Contact 2','DEMO-REQUEST-LIMIT@predrive.test',20),
+           ('Demo School 3','Demo Contact 3','demo-request-limit@predrive.test',30)$,
+  'the demo request rate limit allows up to three requests per email in 24 hours'
+);
+select throws_ok(
+  $insert into public.demo_requests(school_name,contact_name,email)
+    values ('Demo School 4','Demo Contact 4','demo-request-limit@predrive.test')$,
+  'P0001',null,'the fourth demo request for one email is rate limited'
+);
+select throws_ok(
+  $insert into public.demo_requests(school_name,contact_name,email,website)
+    values ('Bot School','Bot Contact','bot@predrive.test','https://spam.example')$,
+  '42501',null,'the demo request honeypot rejects automated submissions'
+);
+reset role;
+set local role authenticated;
+select throws_ok(
+  $insert into public.demo_requests(school_name,contact_name,email)
+    values ('Authenticated School','Authenticated Contact','signed-in@predrive.test')$,
+  '42501',null,'authenticated users cannot use the anonymous demo request endpoint'
+);
+reset role;
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='demo_requests' and column_name='children_count'),
+  'demo requests record the expected child count');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='demo_requests' and column_name='status'),
+  'demo requests have a platform-managed workflow status');
 
 select ok(to_regprocedure('public.start_trip(uuid)') is not null,'start trip RPC is installed');
 select ok(to_regprocedure('public.record_trip_event(uuid,uuid,public.trip_event_type,double precision,double precision,jsonb,text,timestamp with time zone)') is not null,'idempotent trip event RPC is installed');
