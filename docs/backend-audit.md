@@ -131,3 +131,17 @@ This is a database-level per-email abuse control, not a substitute for edge/IP-b
 Migration `20261119000600_school_lifecycle_controls.sql` adds `schools.status` with `active`, `suspended`, and `archived` states. Only platform owners can change it. Suspending or archiving a school removes tenant-scoped access for its school administrators and users while preserving all records; reactivation restores access. Existing join codes cannot be used while a school is inactive, and new codes cannot be issued.
 
 A plaintext `schools.code` column was deliberately not added. School join codes are separate high-entropy credentials whose bcrypt hashes are stored in the private schema, avoiding exposure through ordinary school queries. The RLS suite now has 124 assertions, including suspend/reactivate behavior and verification that parents, supervisors and school administrators lose tenant-scoped data access while suspended.
+
+
+## Personal data export and parent account deletion
+
+Two authenticated Edge Functions have been added and configured in `supabase/config.toml`:
+
+- `export-my-data` verifies the caller's JWT, reads only records linked to that account/role, excludes credential hashes and push tokens, paginates through the Supabase row limit, and returns a no-store JSON download.
+- `delete-my-account` is limited to parent accounts, requires recent sign-in plus email confirmation, and refuses deletion if any linked child would be left without another registered guardian. It removes authored messages, anonymizes reporter/guardian/audit references, revokes refresh sessions, and then deletes the Auth identity.
+- Migration `20261119000800_parent_account_deletion_support.sql` changes the relevant foreign keys to preserve operational/audit records with anonymized references instead of blocking parent deletion.
+- The tenant-integrity trigger was updated to permit null reporters only for this anonymization path; non-null reporters must still belong to the same school.
+
+Access JWTs already issued by Supabase may remain cryptographically valid until expiry after session revocation. The deleted profile and membership links make normal RLS checks deny access during that period. Staff and platform-owner self-deletion remain intentionally disabled and require an administrator-led offboarding workflow.
+
+The RLS suite now has 129 assertions, including the account-deletion foreign-key behavior. The new Edge Functions are committed but have not been deployed or exercised against the connected project.
