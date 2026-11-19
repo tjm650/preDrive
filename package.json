@@ -6,9 +6,9 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "lint": "eslint .",
-    "format:check": "prettier --check .",
-    "format": "prettier --write .",
+    "lint": "eslint --config frontend/eslint.config.mjs frontend",
+    "format:check": "prettier --config frontend/prettier.config.mjs --ignore-path frontend/.prettierignore --check frontend",
+    "format": "prettier --config frontend/prettier.config.mjs --ignore-path frontend/.prettierignore --write frontend",
     "typecheck": "pnpm -r typecheck",
     "db:types": "supabase gen types typescript --local > frontend/packages/shared/src/database.types.ts",
     "test:db": "supabase test db",
