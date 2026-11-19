@@ -80,13 +80,13 @@ A school-transport safety platform for creches and pre-schools in Zimbabwe. The 
 
 The local seed creates these Auth users and matching profiles:
 
-| Role           | Email                      |
-| -------------- | -------------------------- |
-| Supervisor     | `supervisor@predrive.test` |
-| Driver profile | `driver@predrive.test`     |
-| Parent         | `parent@predrive.test`     |
-| School admin   | `admin@predrive.test`      |
-| Platform owner | `owner@predrive.test`      |
+| Role | Email |
+| --- | --- |
+| Supervisor | `supervisor@predrive.test` |
+| Driver profile | `driver@predrive.test` |
+| Parent | `parent@predrive.test` |
+| School admin | `admin@predrive.test` |
+| Platform owner | `owner@predrive.test` |
 
 Shared local-only password: `PreDrive-Demo-2026!`. These are public demo credentials. Never use them in staging or production. Reset them before sharing a demo environment.
 
@@ -141,6 +141,28 @@ Configure a Database Webhook for INSERT on `public.notifications`, targeting `se
 
 The mobile app registers its Expo push token using the authenticated `register_push_token` RPC; the token is not readable through the client profile API.
 
+### Push notification verification
+
+The app registers Expo push tokens and the database creates recipient-specific notification rows. The `send-push` Edge Function sends each new row to Expo; `check-push-receipts` checks delivery receipts every 15 minutes.
+
+After migrations have been deployed and reviewed:
+
+1. In Supabase **Edge Functions → Secrets**, set `NOTIFICATION_WEBHOOK_SECRET` to a newly generated random value. Use that same value in Vault. Never commit it or paste it into source control.
+2. In the Supabase SQL Editor, store the project URL and matching webhook secret in Vault:
+
+   ```sql
+   select vault.create_secret('https://YOUR_PROJECT_REF.supabase.co', 'project_url');
+   select vault.create_secret('YOUR_SAME_RANDOM_WEBHOOK_SECRET', 'notification_webhook_secret');
+   ```
+
+3. Deploy `send-push` and `check-push-receipts`.
+4. Set `SITE_URL` to the deployed web-app origin for invitation functions. Set `EXPO_ACCESS_TOKEN` if the Expo project uses authenticated push access.
+5. Register a real test device's Expo push token and insert a test notification for that user. Inspect Edge Function logs, the private dispatch-attempt record and `public.push_receipts`.
+
+The database trigger uses `pg_net` for asynchronous dispatch, so notification inserts do not wait for Expo. Missing Vault configuration and enqueue failures are recorded without blocking the notification transaction. Receipt polling is scheduled through `pg_cron`.
+
+A queued pg_net request means only that the HTTP request was enqueued, not that Expo delivered it. Expo receipts can report device unregistration; the worker clears invalid tokens. Verify the function logs and receipt status before treating delivery as healthy. Physical-device tests, background permission checks and a full delivery/receipt test are required before operational use. Push is supplemental and must never be the only emergency channel.
+
 ## Road routing
 
 The route editor stores ordered stops. Once at least two stops have valid coordinates, a school administrator can request road geometry through `build-route-geometry`. It calls the OpenRouteService Directions GeoJSON endpoint and stores the returned LineString, distance, duration, provider and verification timestamp.
@@ -158,6 +180,159 @@ A `provider_verified` status means the routing provider returned a road route fo
 - School administrators are school-scoped; platform owners have cross-school read access but not school-admin write privileges.
 - Pickup PIN hashes and Expo push tokens are not selectable through the client API. PIN attempts are throttled and audited.
 - Realtime publication membership does not replace RLS; clients subscribe with authenticated sessions.
+
+## Child-safety pre-launch checklist
+
+This checklist is a review aid, not a child-safety certification, legal opinion or substitute for a school's safeguarding policy. A school safeguarding lead must approve the operating procedure before live transport begins.
+
+### Identity, consent and enrolment
+
+- [ ] Verify each parent/guardian identity through the school's normal enrolment process.
+- [ ] Confirm guardian consent for transport, location sharing, emergency contacts and authorised pickup arrangements.
+- [ ] Link every child to the correct guardian account; check sibling and cross-school separation.
+- [ ] Verify authorised pickup names and PINs with the guardian. Do not reuse one PIN across unrelated families.
+- [ ] Ensure staff accounts are individual accounts, not shared logins.
+
+### Route and vehicle readiness
+
+- [ ] Physically inspect each stop, access point, road crossing, pickup/drop-off area and route hazard.
+- [ ] Confirm route geometry is provider-calculated and then manually field-checked; provider output alone is not a safety assessment.
+- [ ] Confirm vehicle registration, capacity, roadworthiness, insurance and driver eligibility using the school's own process.
+- [ ] Confirm the assigned supervisor and emergency contact procedure for each trip.
+- [ ] Check that manifest membership and assigned vehicle/route cannot be changed while a trip is active.
+
+### Supervisor trip controls
+
+- [ ] Reconcile each child against the manifest before departure.
+- [ ] Record boarding and absence per child.
+- [ ] Confirm arrival at school for pickup routes.
+- [ ] Confirm the authorised pickup person and PIN before home release.
+- [ ] Verify that a failed or unavailable PIN check blocks release.
+- [ ] Confirm a child cannot be marked absent after boarding or dropped home without verified handover.
+- [ ] Confirm trip completion is blocked while any manifest child remains unaccounted for.
+
+### Emergency and offline behaviour
+
+- [ ] Test SOS and missing-child alerts with school administrators and guardians.
+- [ ] Confirm the school has a phone-based fallback if data service or push delivery fails.
+- [ ] Test airplane mode, weak connectivity, app backgrounding, device restart and event replay after reconnection.
+- [ ] Confirm queued routine events retain their idempotency keys and do not create duplicate records.
+- [ ] Confirm the supervisor knows not to rely on a queued SOS/missing-child event as delivered.
+- [ ] Confirm the school has a documented procedure for a child who is not at the expected stop or destination.
+
+### Privacy and security
+
+- [ ] Verify parents can access only their own children's records and active-trip location.
+- [ ] Verify supervisors can access only assigned trip manifests and necessary guardian contacts.
+- [ ] Verify platform-owner access is read-only and school administrators remain tenant-scoped.
+- [ ] Confirm pickup PIN hashes are not exposed through client reads or logs.
+- [ ] Review location and incident-data retention, access logging, device security and account offboarding.
+- [ ] Obtain local privacy and child-safeguarding review for Zimbabwe before production deployment.
+
+### Physical acceptance tests
+
+- [ ] Run a complete pickup trip with test accounts and a real Android device.
+- [ ] Run a complete drop-off trip with a successful authorised handover.
+- [ ] Test a wrong PIN, unknown pickup person, duplicate handover attempt and offline handover attempt.
+- [ ] Test an absent child, an unaccounted child, a missing-child alert and an SOS event.
+- [ ] Verify notifications, Realtime updates, push receipts and offline replay end to end.
+- [ ] Record test evidence, defects, responsible owner and sign-off date.
+
+**Go-live rule:** Do not use preDrive as the sole safety control until all applicable checks are completed, defects are resolved, and the school safeguarding lead has signed off its own operating procedures.
+
+## Operations runbook
+
+This runbook is an operational starting point for a school using preDrive. Each school must adapt it to its own safeguarding policy, transport arrangements, emergency contacts and local legal obligations.
+
+### Before a school enables live trips
+
+- Confirm the school administrator, supervisors and parent accounts belong to the correct school.
+- Confirm every child is linked to the correct guardian and the guardian has provided the school's required consent.
+- Verify authorised pickup people and PINs with the guardian using the school's identity-check procedure.
+- Confirm each route's stops and road geometry have been physically checked. Only routes marked as manually verified can be scheduled.
+- Confirm the assigned bus, driver, supervisor, passenger capacity and emergency contact procedure.
+- Train supervisors to use the manifest, boarding, absence, arrival, handover, SOS and missing-child actions.
+- Test the complete workflow on the actual Android devices and mobile network conditions used by the school.
+- Confirm the school can contact guardians and emergency services without relying on the app.
+
+### Daily trip procedure
+
+#### Before departure
+
+1. The supervisor checks the vehicle and confirms the correct trip, route and manifest.
+2. Reconcile the children physically present against the manifest before departure.
+3. Record each child boarding or absent. Do not infer boarding from GPS or a parent's location.
+4. Do not start a trip until the route, vehicle and assigned supervisor are correct.
+
+#### During the trip
+
+- Keep the device charged and location permission enabled for the trip.
+- Use the SOS action for an emergency and the child-missing action for a child who cannot be accounted for.
+- If the device is offline, the app can queue routine trip events for later sync. SOS and missing-child alerts require connectivity; if they cannot be sent, use the school's phone/emergency procedure immediately.
+- Do not treat a push notification as proof that a recipient has read or acted on it.
+
+#### Arrival and handover
+
+- Record arrival at school only for pickup routes and home drop-off only for drop-off routes.
+- Before releasing a child, select the authorised pickup person and complete the PIN verification.
+- If the authorised person is not listed, the PIN fails, or the connection needed for verification is unavailable, do not release the child. Contact the school administrator and follow the school's documented escalation process.
+- Complete the trip only after every manifest child has a final, reconciled status.
+
+### Incident response
+
+For SOS, a missing child, a failed handover, an unaccounted child or a vehicle incident:
+
+1. Follow the school's safeguarding and emergency response plan first. Contact emergency services where appropriate; do not wait for an app notification.
+2. Keep the child supervised and account for the rest of the manifest.
+3. Notify the school lead and the relevant guardians through the approved channels.
+4. Record the incident and actions taken as soon as it is safe to do so.
+5. Preserve relevant trip events and audit records; do not delete or edit incident evidence.
+6. Escalate suspected unauthorised access or exposure of child/location data to the platform owner and the school's privacy lead.
+
+### Monitoring checks
+
+The following SQL checks are for an administrator with database access:
+
+```sql
+-- Push dispatches that could not be queued
+select * from private.push_dispatch_attempts
+where status <> 'queued'
+order by created_at desc;
+
+-- HTTP requests rejected or failed by pg_net
+select *
+from net._http_response
+where status_code >= 400 or error_msg is not null
+order by created desc;
+
+-- Push receipt outcomes
+select status, count(*)
+from public.push_receipts
+group by status;
+
+-- Confirm the receipt worker is scheduled
+select jobid, jobname, schedule, active
+from cron.job
+where jobname = 'predrive-check-push-receipts';
+```
+
+A queued request only means pg_net accepted the request. Confirm Edge Function logs and Expo receipt status before treating push delivery as healthy. Alerting and an on-call rota still need to be configured for the deploying school/platform operator.
+
+### Deployment, backup and recovery
+
+- Run the local migration reset, pgTAP suite, generated-type check, web build and Android export before deployment.
+- Inspect the target Supabase project's migration history and data before applying migrations. Use `supabase db push`; never use a remote database reset on a live project.
+- Keep Supabase backups enabled according to the selected plan and the school's recovery objectives. Export critical configuration and maintain a separate, access-controlled backup where required.
+- Perform a restore drill into an isolated project before live use and record the recovery time and data-loss window. A backup that has never been restored is not a verified recovery plan.
+- Keep Edge Function secrets in Supabase Secrets and Vault, rotate them after suspected exposure, and never commit them to GitHub.
+- After a deployment, verify login, role scoping, a complete test trip, push dispatch, receipt polling, route field-check gating and the recovery of queued offline events.
+
+### Data and access hygiene
+
+- Review school-admin and supervisor access regularly and revoke accounts promptly when staff leave.
+- Keep child profiles, pickup authorisations, PINs, location data and incident details limited to the people who need them.
+- Do not share screenshots, exports or logs containing children's personal information in public channels.
+- Define retention and deletion periods with the school and obtain local privacy/legal review before live use.
 
 ## Outstanding launch gates
 
