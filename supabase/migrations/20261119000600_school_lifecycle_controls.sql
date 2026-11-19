@@ -67,7 +67,8 @@ begin
   select p.school_id into school
   from public.profiles p
   join public.schools s on s.id = p.school_id and s.status = 'active'
-  where p.id = actor and p.role = 'school_admin';
+  where p.id = actor and p.role = 'school_admin'
+  for share of s;
   if school is null then
     raise exception 'Only an administrator of an active school can create a join code' using errcode = '42501';
   end if;
@@ -116,7 +117,7 @@ begin
   join public.schools s on s.id = c.school_id and s.status = 'active'
   where c.revoked_at is null and c.expires_at > now() and c.uses_count < c.max_uses
     and extensions.crypt(upper(btrim(p_code)), c.code_hash) = c.code_hash
-  for update of c;
+  for update of c, s;
   if not found then return null; end if;
   perform set_config('predrive.allow_profile_tenant_update', 'on', true);
   update public.profiles set school_id = code_row.school_id
