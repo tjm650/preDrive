@@ -349,3 +349,49 @@ A queued request only means pg_net accepted the request. Confirm Edge Function l
 ## Architecture
 
 The requested `apps/mobile`, `apps/web` and `packages/shared` workspaces are nested under the top-level `frontend/` directory, alongside top-level `supabase/`.
+
+
+## Staging Supabase environment
+
+The existing Supabase project `preDrive` (`rjsdhgbjvghjnuiilizm`, `eu-west-1`) is the controlled staging backend. It is not the production environment. The mobile client uses the public project URL and a Supabase publishable key only.
+
+### Configure the Android app
+
+1. Copy `frontend/apps/mobile/.env.example` to `frontend/apps/mobile/.env`.
+2. Replace the publishable-key placeholder with the active key from **Supabase Dashboard → Project Settings → API Keys → Publishable key**. The URL and EAS project ID are already set to this staging project.
+3. Keep `.env` local and uncommitted. `EXPO_PUBLIC_*` values are compiled into the client bundle; only the URL and publishable key belong here. Never use a secret key or legacy `service_role` key in the mobile app.
+
+### Apply the versioned schema to staging
+
+From the repository root, authenticate and link the Supabase CLI:
+
+```sh
+supabase login
+supabase link --project-ref rjsdhgbjvghjnuiilizm
+supabase db push --dry-run
+```
+
+Review the dry-run carefully: it should target the preDrive staging project and show the repository's 31 pending migrations. Then apply them:
+
+```sh
+supabase db push
+supabase migration list --linked
+```
+
+Do not run `supabase db reset --linked` or `supabase db push --include-seed` for this setup. The committed `supabase/seed.sql` contains five shared-password demo identities and fictional child/trip records intended only for local development. Staging accounts and data should be deliberately created for the approved test scenarios.
+
+### Restrict account creation
+
+Staging is invite/admin-provisioned: turn off public sign-ups in **Supabase Dashboard → Authentication → Settings**. Create only the approved test users. Assign their roles through trusted administrative provisioning after migrations are applied; do not trust client-editable user metadata for authorization.
+
+### Start the mobile app against staging
+
+After creating the local `.env` file and applying migrations:
+
+```sh
+pnpm --filter @predrive/mobile exec expo start --dev-client --tunnel
+```
+
+Restart Expo after changing environment variables. For EAS development/preview builds, configure the same `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` values in the corresponding EAS environment; do not add any server-only Supabase keys to EAS client environments.
+
+Staging is for controlled operational testing with synthetic/minimized data. Do not enter real children's medical, contact, location or safeguarding information until the platform has passed its outstanding security, recovery, safeguarding and operational launch gates.
