@@ -112,6 +112,18 @@ Deno.serve(async (request: Request) => {
     return jsonResponse({ error: 'Account records could not be prepared for deletion. No account deletion was attempted.' }, 500);
   }
 
+  // Revoke all refresh tokens before deleting the identity. Existing access JWTs can
+  // remain cryptographically valid until expiry, but the profile and RLS memberships are removed.
+  const { error: revokeError } = await admin.auth.admin.signOut(token);
+  if (revokeError) {
+    console.error(JSON.stringify({
+      event: 'account_session_revocation_failed',
+      user_id: user.id,
+      message: revokeError.message,
+    }));
+    return jsonResponse({ error: 'Unable to revoke account sessions. Account deletion was not attempted.' }, 500);
+  }
+
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
   if (deleteError) {
     console.error(JSON.stringify({
