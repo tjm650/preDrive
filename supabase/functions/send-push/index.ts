@@ -79,7 +79,7 @@ Deno.serve(async (request: Request) => {
     },
     body: JSON.stringify({
       to: profile.expo_push_token,
-      title: ['sos', 'child_missing', 'child_unaccounted', 'handover_rejected'].includes(bodyKey)
+      title: ['sos', 'child_missing', 'child_unaccounted', 'handover_rejected', 'bus_location_stale'].includes(bodyKey)
         ? 'preDrive · Safety alert'
         : 'preDrive',
       body: copy[language]?.[bodyKey] ?? 'You have a new school transport update.',
