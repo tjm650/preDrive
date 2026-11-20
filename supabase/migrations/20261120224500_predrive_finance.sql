@@ -194,10 +194,11 @@ create table if not exists public.payments (
     exchange_rate_snapshot is null or exchange_rate_snapshot > 0
   ),
   constraint payments_state_timestamps_check check (
-    (status = 'succeeded' and succeeded_at is not null and failed_at is null and cancelled_at is null)
-    or (status = 'failed' and failed_at is not null and succeeded_at is null and cancelled_at is null)
-    or (status = 'cancelled' and cancelled_at is not null and succeeded_at is null and failed_at is null)
-    or (status in ('pending', 'processing', 'refunded') and failed_at is null and cancelled_at is null)
+    (status = 'succeeded' and succeeded_at is not null and refunded_at is null and failed_at is null and cancelled_at is null)
+    or (status = 'refunded' and succeeded_at is not null and refunded_at is not null and failed_at is null and cancelled_at is null)
+    or (status = 'failed' and failed_at is not null and succeeded_at is null and refunded_at is null and cancelled_at is null)
+    or (status = 'cancelled' and cancelled_at is not null and succeeded_at is null and refunded_at is null and failed_at is null)
+    or (status in ('pending', 'processing') and succeeded_at is null and refunded_at is null and failed_at is null and cancelled_at is null)
   )
 );
 
@@ -334,6 +335,99 @@ create table if not exists public.receipts (
   constraint receipts_school_number_key unique (school_id, receipt_number),
   constraint receipts_one_per_payment_key unique (school_id, payment_id)
 );
+
+
+-- Enforce guardian ownership and currency consistency at the database boundary.
+create or replace function private.assert_invoice_guardian()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $
+begin
+  if not exists (
+    select 1
+    from public.school_memberships as membership
+    join public.guardian_children as link
+      on link.school_id = membership.school_id
+     and link.guardian_user_id = membership.user_id
+     and link.child_id = new.child_id
+     and link.active = true
+    where membership.school_id = new.school_id
+      and membership.user_id = new.guardian_user_id
+      and membership.role = 'guardian'::public.user_role
+      and membership.active = true
+  ) then
+    raise exception using
+      errcode = '23503',
+      message = 'INVOICE_GUARDIAN_NOT_LINKED_TO_CHILD';
+  end if;
+
+  return new;
+end;
+$;
+
+revoke all on function private.assert_invoice_guardian() from public, anon, authenticated, service_role;
+
+drop trigger if exists invoices_assert_guardian on public.invoices;
+create trigger invoices_assert_guardian
+before insert or update of school_id, child_id, guardian_user_id
+on public.invoices
+for each row execute function private.assert_invoice_guardian();
+
+create or replace function private.assert_invoice_line_currency()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+  invoice_currency public.currency_code;
+  fee_currency public.currency_code;
+begin
+  select invoice.currency
+    into invoice_currency
+  from public.invoices as invoice
+  where invoice.id = new.invoice_id
+    and invoice.school_id = new.school_id;
+
+  if invoice_currency is null or invoice_currency <> new.currency then
+    raise exception using
+      errcode = '23514',
+      message = 'INVOICE_LINE_CURRENCY_MISMATCH';
+  end if;
+
+  if new.fee_item_id is not null then
+    select fee.currency
+      into fee_currency
+    from public.fee_items as fee
+    where fee.id = new.fee_item_id
+      and fee.school_id = new.school_id;
+
+    if fee_currency is null or fee_currency <> new.currency then
+      raise exception using
+        errcode = '23514',
+        message = 'FEE_ITEM_CURRENCY_MISMATCH';
+    end if;
+  end if;
+
+  if new.line_total_minor <> round(new.quantity * new.unit_amount_minor)::bigint then
+    raise exception using
+      errcode = '23514',
+      message = 'INVOICE_LINE_TOTAL_MISMATCH';
+  end if;
+
+  return new;
+end;
+$;
+
+revoke all on function private.assert_invoice_line_currency() from public, anon, authenticated, service_role;
+
+drop trigger if exists invoice_lines_assert_currency on public.invoice_lines;
+create trigger invoice_lines_assert_currency
+before insert or update of school_id, invoice_id, fee_item_id, quantity, unit_amount_minor, line_total_minor, currency
+on public.invoice_lines
+for each row execute function private.assert_invoice_line_currency();
 
 -- Keep mutable finance records' updated_at values consistent with the foundation.
 do $$
