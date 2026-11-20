@@ -126,7 +126,7 @@ create table if not exists public.approved_collectors (
     on delete cascade,
   constraint approved_collectors_lock_state_check check (
     (pin_failed_attempts < 3 and pin_locked_until is null)
-    (pin_failed_attempts = 3 and pin_locked_until is not null)
+    or (pin_failed_attempts = 3 and pin_locked_until is not null)
   )
 );
 
