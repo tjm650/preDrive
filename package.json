@@ -1,6 +1,20 @@
 {
-  "name":"predrive","version":"1.0.0","private":true,
-  "packageManager":"pnpm@10.23.0","engines":{"node":">=20.19.0"},
-  "scripts":{"dev:web":"pnpm --filter @predrive/web dev","dev:mobile":"pnpm --filter @predrive/mobile start","build:web":"pnpm --filter @predrive/web build","typecheck":"pnpm -r typecheck","format:check":"prettier --check ."},
-  "devDependencies":{"prettier":"^3.6.2","typescript":"~5.9.3"}
+  "name": "predrive",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @predrive/web dev",
+    "dev:mobile": "pnpm --filter @predrive/mobile start",
+    "build:web": "pnpm --filter @predrive/web build",
+    "typecheck": "pnpm -r typecheck",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "typescript": "~5.9.3"
+  }
 }
