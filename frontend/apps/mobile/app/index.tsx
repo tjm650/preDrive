@@ -93,23 +93,23 @@ export default function HomeScreen() {
             <Text style={styles.logoText}>p</Text>
           </View>
           <Text style={styles.brand}>preDrive</Text>
-          <Text style={styles.region}>ZIMBABWE</Text>
+          {/* <Text style={styles.region}>ZIMBABWE</Text> */}
         </View>
         {profile ? (
           <OperationsDashboard profile={profile} onSignOut={() => void signOut()} />
         ) : (
           <>
             <View style={styles.hero}>
-              <Text style={styles.eyebrow}>SCHOOL TRANSPORT, WITH CARE</Text>
+              {/* <Text style={styles.eyebrow}>SCHOOL TRANSPORT, WITH CARE</Text> */}
               <Text style={styles.heading}>
                 Every journey.{'\n'}Every child.{'\n'}Accounted for.
               </Text>
-              <Text style={styles.subheading}>
+              {/* <Text style={styles.subheading}>
                 A safer, clearer way to manage school transport across Zimbabwe.
-              </Text>
+              </Text> */}
             </View>
             <View style={styles.form}>
-              <Text style={styles.formTitle}>Welcome back</Text>
+              {/* <Text style={styles.formTitle}>Welcome back</Text> */}
               <Text style={styles.formHint}>Sign in with the account provided by your school.</Text>
               <Text style={styles.label}>Email address</Text>
               <TextInput
@@ -149,14 +149,14 @@ export default function HomeScreen() {
                   <Text style={styles.primaryButtonText}>Sign in securely</Text>
                 )}
               </Pressable>
-              <Text style={styles.footnote}>
+              {/* <Text style={styles.footnote}>
                 Access is managed by your school. If you need help, contact your school
                 administrator.
-              </Text>
+              </Text> */}
             </View>
           </>
         )}
-        <Text style={styles.footer}>Built for safer school journeys · Zimbabwe</Text>
+        {/* <Text style={styles.footer}>Built for safer school journeys · Zimbabwe</Text> */}
       </ScrollView>
     </SafeAreaView>
   );
