@@ -78,7 +78,7 @@ export function TeacherAttendanceRegister({ entries, loading = false, error, onR
                 );
               })}
             </View>
-            {savedId === child.id ? <Text accessibilityRole="status" style={styles.saved}>Attendance updated.</Text> : null}
+            {savedId === child.id ? <Text style={styles.saved}>Attendance updated.</Text> : null}
             {!onUpdate ? <Text style={styles.notice}>Attendance entry will be enabled when the school service is connected.</Text> : null}
           </AppCard>
         );
