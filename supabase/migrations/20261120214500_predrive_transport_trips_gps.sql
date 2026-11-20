@@ -165,7 +165,8 @@ create table if not exists public.trips (
     and (ended_at is null or started_at is not null and ended_at >= started_at)
   ),
   constraint trips_terminal_state_check check (
-    (status <> 'completed' or ended_at is not null)
+    (status <> 'active' or started_at is not null)
+    and (status <> 'completed' or (started_at is not null and ended_at is not null))
     and (status <> 'cancelled' or cancelled_at is not null)
   ),
   constraint trips_cancellation_reason_check check (
@@ -196,6 +197,7 @@ create table if not exists public.trip_children (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint trip_children_id_school_key unique (id, school_id),
+  constraint trip_children_id_school_trip_key unique (id, school_id, trip_id),
   constraint trip_children_trip_child_key unique (trip_id, child_id),
   constraint trip_children_idempotency_school_key unique (school_id, idempotency_key),
   constraint trip_children_trip_school_fkey
@@ -229,9 +231,9 @@ create table if not exists public.trip_events (
   constraint trip_events_trip_school_fkey
     foreign key (trip_id, school_id)
     references public.trips (id, school_id) on delete restrict,
-  constraint trip_events_trip_child_school_fkey
-    foreign key (trip_child_id, school_id)
-    references public.trip_children (id, school_id) on delete restrict,
+  constraint trip_events_trip_child_school_trip_fkey
+    foreign key (trip_child_id, school_id, trip_id)
+    references public.trip_children (id, school_id, trip_id) on delete restrict,
   constraint trip_events_idempotency_key_check check (
     idempotency_key is null or idempotency_key::text <> '00000000-0000-0000-0000-000000000000'
   )
@@ -277,6 +279,45 @@ create table if not exists public.bus_position_history (
     foreign key (bus_id, school_id)
     references public.buses (id, school_id) on delete restrict
 );
+
+-- Ensure assigned staff IDs represent the correct school-scoped staff roles.
+create or replace function private.assert_trip_staff_roles()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $fn$
+begin
+  if not exists (
+    select 1 from public.staff_members staff
+    where staff.id = new.driver_id
+      and staff.school_id = new.school_id
+      and staff.role = 'driver'::public.user_role
+      and staff.active = true
+  ) then
+    raise exception using errcode = '23514', message = 'TRIP_DRIVER_ROLE_REQUIRED';
+  end if;
+
+  if new.supervisor_id is not null and not exists (
+    select 1 from public.staff_members staff
+    where staff.id = new.supervisor_id
+      and staff.school_id = new.school_id
+      and staff.role = 'supervisor'::public.user_role
+      and staff.active = true
+  ) then
+    raise exception using errcode = '23514', message = 'TRIP_SUPERVISOR_ROLE_REQUIRED';
+  end if;
+
+  return new;
+end;
+$fn$;
+
+revoke all on function private.assert_trip_staff_roles() from public, anon, authenticated, service_role;
+drop trigger if exists trips_assert_staff_roles on public.trips;
+create trigger trips_assert_staff_roles
+before insert or update of school_id, driver_id, supervisor_id
+on public.trips
+for each row execute function private.assert_trip_staff_roles();
 
 -- Append-only event journal: even trusted application roles cannot mutate or delete events.
 create or replace function private.reject_trip_event_mutation()
@@ -398,8 +439,10 @@ from public, anon, authenticated, service_role;
 
 grant all privileges on table
   public.buses, public.transport_routes, public.route_stops, public.route_schedules,
-  public.trips, public.trip_children, public.trip_events, public.bus_positions,
-  public.bus_position_history
+  public.trips, public.trip_children, public.bus_positions, public.bus_position_history
 to service_role;
+
+grant select, insert on public.trip_events to service_role;
+revoke update, delete, truncate on public.trip_events from service_role;
 
 grant usage, select on sequence public.bus_position_history_id_seq to service_role;
