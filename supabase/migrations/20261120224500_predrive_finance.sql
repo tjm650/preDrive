@@ -126,8 +126,6 @@ create table if not exists public.invoices (
   constraint invoices_guardian_membership_fkey
     foreign key (school_id, guardian_user_id)
     references public.school_memberships (school_id, user_id) on delete restrict,
-  constraint invoices_created_by_fkey
-    foreign key (created_by) references public.profiles(id) on delete restrict,
   constraint invoices_amount_equation_check check (
     total_minor = greatest(subtotal_minor - credit_minor, 0)
     and paid_minor <= total_minor
