@@ -1,0 +1,10 @@
+{
+ "app":{"name":"preDrive","tagline":"School transport safety"},
+ "common":{"loading":"Loading","retry":"Try again","cancel":"Cancel","save":"Save","close":"Close","search":"Search","back":"Back","unknownError":"Something went wrong. Please try again."},
+ "navigation":{"home":"Home","journeys":"Journeys","children":"Children","fees":"Fees","route":"Route","vehicle":"Vehicle","safety":"Safety","settings":"Settings","signOut":"Sign out"},
+ "auth":{"signIn":"Sign in","welcome":"Welcome back","email":"Email address","password":"Password","forgotPassword":"Forgot password?","resetPassword":"Reset your password","sendReset":"Send reset instructions","backToSignIn":"Back to sign in","showPassword":"Show password","hidePassword":"Hide password","authenticationUnavailable":"Secure sign-in is not connected yet. Your details have not been sent."},
+ "status":{"pending":"Pending confirmation","confirmed":"Confirmed","failed":"Failed","offline":"Offline","online":"Online"},
+ "connectivity":{"offlineTitle":"You're offline","offlineDescription":"Some information may be out of date. Pending child check-ins will be clearly marked until confirmed."},
+ "safety":{"urgent":"Urgent","warning":"Warning","information":"Information","sos":"Emergency alert"},
+ "finance":{"usd":"US$","zig":"ZiG","indicativeRate":"indicative rate","pendingPayment":"Payment pending"}
+}

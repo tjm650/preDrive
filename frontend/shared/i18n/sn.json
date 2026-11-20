@@ -1,0 +1,10 @@
+{
+ "app":{"name":"preDrive","tagline":"Kuchengetedzwa kwevana parwendo rwechikoro"},
+ "common":{"loading":"Zviri kutakurwa","retry":"Edza zvakare","cancel":"Kanzura","save":"Chengeta","close":"Vhara","search":"Tsvaga","back":"Dzokera","unknownError":"Pane zvanganisika. Edza zvakare."},
+ "navigation":{"home":"Kumba","journeys":"Nzendo","children":"Vana","fees":"Mari yechikoro","route":"Nzira","vehicle":"Motokari","safety":"Chengetedzo","settings":"Zvirongwa","signOut":"Buda"},
+ "auth":{"signIn":"Pinda","welcome":"Tinokugamuchirai zvakare","email":"Kero yeemail","password":"Pasiwedhi","forgotPassword":"Wakanganwa pasiwedhi?","resetPassword":"Chinja pasiwedhi yako","sendReset":"Tumira mirayiridzo yekuchinja","backToSignIn":"Dzokera pakupinda","showPassword":"Ratidza pasiwedhi","hidePassword":"Viga pasiwedhi","authenticationUnavailable":"Kupinda kwakachengeteka hakusati kwabatanidzwa. Mashoko ako haana kutumirwa."},
+ "status":{"pending":"Yakamirira kusimbiswa","confirmed":"Yasimbiswa","failed":"Yatadza","offline":"Hapana internet","online":"Internet iripo"},
+ "connectivity":{"offlineTitle":"Hamuna internet","offlineDescription":"Rumwe ruzivo runogona kunge rusiri rutsva. Kuongororwa kwevana kucharatidzwa sekusina kusimbiswa kusvika kwasimbiswa."},
+ "safety":{"urgent":"Zvinokurumidza","warning":"Yambiro","information":"Ruzivo","sos":"Chiziviso chechimbichimbi"},
+ "finance":{"usd":"US$","zig":"ZiG","indicativeRate":"mutengo unofungidzirwa","pendingPayment":"Mari yakamirira"}
+}
