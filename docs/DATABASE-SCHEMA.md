@@ -306,10 +306,10 @@ Generate the complete types only after all migrations have been applied to a loc
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm exec supabase --version
-pnpm exec supabase start
-pnpm exec supabase db reset
-pnpm exec supabase gen types typescript --local --schema public > frontend/shared/types/database.types.ts
+pnpm dlx supabase --version
+pnpm dlx supabase start
+pnpm dlx supabase db reset
+pnpm dlx supabase gen types --lang typescript --local --schema public > frontend/shared/types/database.types.ts
 ```
 
 Then verify the generated file includes all 42 tables, the five analytics views, public enums and RPCs before committing it. Do not generate the final shared types from the connected remote project until the full migration chain has been applied and verified in the intended development environment.
