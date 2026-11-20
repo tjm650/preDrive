@@ -61,8 +61,10 @@ create table if not exists public.vehicle_checks (
     foreign key (trip_id, school_id)
     references public.trips (id, school_id) on delete restrict,
   constraint vehicle_checks_items_shape_check check (
-    jsonb_typeof(items) = 'array'
-    and jsonb_array_length(items) = 8
+    case
+      when jsonb_typeof(items) = 'array' then jsonb_array_length(items) = 8
+      else false
+    end
   ),
   constraint vehicle_checks_checked_at_check check (checked_at <= created_at + interval '5 minutes')
 );
@@ -102,7 +104,7 @@ create table if not exists public.incidents (
   reported_by uuid not null references public.profiles(id) on delete restrict,
   occurred_at timestamptz not null,
   resolved_at timestamptz,
-  resolved_by uuid references public.profiles(id) on delete set null,
+  resolved_by uuid references public.profiles(id) on delete restrict,
   resolution_notes text check (resolution_notes is null or char_length(btrim(resolution_notes)) between 2 and 2000),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -135,7 +137,7 @@ create table if not exists public.alerts (
   dedupe_key text check (dedupe_key is null or char_length(btrim(dedupe_key)) between 1 and 200),
   created_by uuid references public.profiles(id) on delete set null,
   acknowledged_at timestamptz,
-  acknowledged_by uuid references public.profiles(id) on delete set null,
+  acknowledged_by uuid references public.profiles(id) on delete restrict,
   resolved_at timestamptz,
   resolved_by uuid references public.profiles(id) on delete set null,
   repeat_until_acknowledged boolean not null default false,
@@ -178,7 +180,7 @@ create table if not exists public.alert_recipients (
     references public.alerts (id, school_id) on delete cascade,
   constraint alert_recipients_membership_fkey
     foreign key (school_id, recipient_user_id)
-    references public.school_memberships (school_id, user_id) on delete cascade,
+    references public.school_memberships (school_id, user_id) on delete restrict,
   constraint alert_recipients_school_alert_user_key
     unique (school_id, alert_id, recipient_user_id)
 );
