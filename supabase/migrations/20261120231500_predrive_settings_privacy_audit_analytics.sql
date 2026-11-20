@@ -7,6 +7,7 @@ create table if not exists public.settings (
   school_id uuid not null references public.schools(id) on delete restrict,
   setting_key text not null check (setting_key in (
     'default_pickup_radius_meters',
+    'indicative_zig_per_usd',
     'arrival_notification_lead_minutes',
     'trip_generation_days_ahead',
     'on_time_tolerance_minutes',
@@ -26,6 +27,9 @@ create table if not exists public.settings (
       when 'default_pickup_radius_meters' then
         jsonb_typeof(setting_value) = 'number'
         and (setting_value #>> '{}')::numeric in (500, 1000, 2000)
+      when 'indicative_zig_per_usd' then
+        jsonb_typeof(setting_value) = 'number'
+        and (setting_value #>> '{}')::numeric > 0
       when 'arrival_notification_lead_minutes' then
         jsonb_typeof(setting_value) = 'number'
         and (setting_value #>> '{}')::numeric between 1 and 60
@@ -47,7 +51,7 @@ create table if not exists public.settings (
 );
 
 comment on table public.settings is
-  'Allowlisted school configuration only. Exchange-rate source of truth remains schools.indicative_zig_per_usd; this table is not an unrestricted JSON settings bucket.';
+  'Allowlisted school configuration only. The indicative USD/ZiG exchange rate is stored here per the product brief; schools.indicative_zig_per_usd is a legacy compatibility column pending adapter migration.';
 
 create table if not exists public.consent_records (
   id uuid primary key default gen_random_uuid(),
