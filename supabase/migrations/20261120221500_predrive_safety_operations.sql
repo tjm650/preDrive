@@ -200,7 +200,7 @@ create table if not exists public.sos_events (
     references public.trips (id, school_id) on delete restrict,
   constraint sos_events_alert_school_fkey
     foreign key (alert_id, school_id)
-    references public.alerts (id, school_id) on delete set null,
+    references public.alerts (id, school_id) on delete restrict,
   constraint sos_events_resolution_state_check check (
     (resolved_at is null and resolved_by is null)
     or (resolved_at is not null and resolved_by is not null)
@@ -340,5 +340,5 @@ grant all privileges on table
   public.broadcasts
 to service_role;
 
-revoke update, delete, truncate on public.vehicle_checks, public.delay_reports, public.sos_events
+revoke update, delete, truncate on public.vehicle_checks, public.delay_reports
 from service_role;
