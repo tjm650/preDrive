@@ -100,7 +100,7 @@ create table if not exists public.device_tokens (
   constraint device_tokens_membership_fkey
     foreign key (school_id, user_id)
     references public.school_memberships(school_id, user_id) on delete cascade,
-  constraint device_tokens_token_unique unique (push_token),
+  constraint device_tokens_school_token_unique unique (school_id, push_token),
   constraint device_tokens_revocation_check check (
     (active = true and revoked_at is null)
     or (active = false and revoked_at is not null)
@@ -262,6 +262,8 @@ $$;
 -- Tenant and operational indexes.
 create index if not exists settings_school_key_idx
   on public.settings (school_id, setting_key);
+create index if not exists settings_updated_by_fkey_idx
+  on public.settings (updated_by) where updated_by is not null;
 
 create index if not exists consent_records_child_purpose_time_idx
   on public.consent_records (school_id, child_id, purpose, effective_at desc)
@@ -279,6 +281,10 @@ create index if not exists device_tokens_updated_at_idx
 
 create index if not exists deletion_requests_school_status_requested_idx
   on public.deletion_requests (school_id, status, requested_at);
+create index if not exists deletion_requests_requested_by_fkey_idx
+  on public.deletion_requests (requested_by);
+create index if not exists deletion_requests_reviewed_by_fkey_idx
+  on public.deletion_requests (reviewed_by) where reviewed_by is not null;
 create index if not exists deletion_requests_subject_user_idx
   on public.deletion_requests (subject_user_id)
   where subject_user_id is not null;
@@ -288,6 +294,9 @@ create index if not exists deletion_requests_child_idx
 
 create index if not exists setup_progress_school_status_idx
   on public.setup_progress (school_id, status, step_key);
+
+create index if not exists setup_progress_completed_by_fkey_idx
+  on public.setup_progress (completed_by) where completed_by is not null;
 
 create index if not exists audit_log_school_time_idx
   on public.audit_log (school_id, occurred_at desc);
@@ -301,12 +310,16 @@ create index if not exists rate_limit_events_subject_action_time_idx
   on public.rate_limit_events (subject_hash, action, occurred_at desc);
 create index if not exists rate_limit_events_expiry_idx
   on public.rate_limit_events (expires_at);
+create index if not exists rate_limit_events_school_expiry_idx
+  on public.rate_limit_events (school_id, expires_at) where school_id is not null;
 
 create index if not exists webhook_events_school_status_received_idx
   on public.webhook_events (school_id, processing_status, received_at desc)
   where school_id is not null;
 create index if not exists webhook_events_status_received_idx
   on public.webhook_events (processing_status, received_at desc);
+create index if not exists webhook_events_school_fkey_idx
+  on public.webhook_events (school_id) where school_id is not null;
 create index if not exists webhook_events_payload_hash_idx
   on public.webhook_events (payload_sha256);
 
@@ -353,11 +366,11 @@ revoke all on table
 from public, anon, authenticated, service_role;
 
 grant all privileges on table
-  public.settings, public.consent_records, public.device_tokens,
+  public.settings, public.device_tokens,
   public.deletion_requests, public.setup_progress, public.rate_limit_events, public.webhook_events
 to service_role;
 
-grant select, insert on public.audit_log to service_role;
+grant select, insert on public.consent_records, public.audit_log to service_role;
 revoke update, delete, truncate on public.audit_log from service_role;
 
 grant usage, select on sequence public.audit_log_id_seq, public.rate_limit_events_id_seq to service_role;
