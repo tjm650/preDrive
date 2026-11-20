@@ -1,0 +1,58 @@
+import type {LanguageCode} from "@predrive/shared/types";
+export interface LandingCopy{
+ languageLabel:string;brandLine:string;navHow:string;navSafety:string;navForSchools:string;signIn:string;
+ eyebrow:string;headline:string;headlineAccent:string;intro:string;primaryAction:string;secondaryAction:string;
+ proofOne:string;proofTwo:string;proofThree:string;
+ sectionEyebrow:string;sectionTitle:string;sectionIntro:string;
+ journeyTitle:string;journeyBody:string;handoverTitle:string;handoverBody:string;schoolTitle:string;schoolBody:string;
+ stepsEyebrow:string;stepsTitle:string;stepOneTitle:string;stepOneBody:string;stepTwoTitle:string;stepTwoBody:string;stepThreeTitle:string;stepThreeBody:string;
+ privacyEyebrow:string;privacyTitle:string;privacyBody:string;privacyPointOne:string;privacyPointTwo:string;privacyPointThree:string;
+ localEyebrow:string;localTitle:string;localBody:string;localPointOne:string;localPointTwo:string;localPointThree:string;
+ closingTitle:string;closingBody:string;closingAction:string;footerLine:string;footerSignIn:string;
+}
+const en:LandingCopy={
+ languageLabel:"Language",brandLine:"School transport safety",navHow:"How it works",navSafety:"Safety by design",navForSchools:"For schools",signIn:"School sign in",
+ eyebrow:"A clearer view of every school journey",headline:"Every journey.",headlineAccent:"Every child. Accounted for.",intro:"preDrive helps schools keep transport teams, guardians and school leaders connected — from the first check-in to the final handover.",primaryAction:"Access your school",secondaryAction:"See how it works",
+ proofOne:"Verified child handovers",proofTwo:"Trip-based location sharing",proofThree:"Built for Zimbabwean schools",
+ sectionEyebrow:"One connected journey",sectionTitle:"Confidence at every stage.",sectionIntro:"The right people get the right information, while schools keep a clear record of what happened.",
+ journeyTitle:"Know the journey",journeyBody:"Give guardians a clearer view of active trips, route progress and arrival updates. Bus location is shared only while a trip is active.",
+ handoverTitle:"Know who received each child",handoverBody:"Record children boarding and leaving. At the gate, the receiving adult must be approved and complete the handover PIN check.",
+ schoolTitle:"Keep the school in control",schoolBody:"Bring routes, vehicles, staff, attendance and safety events into one school workspace, with role-specific access.",
+ stepsEyebrow:"A simple routine",stepsTitle:"From departure to handover.",stepOneTitle:"The trip begins",stepOneBody:"A supervisor starts the assigned trip. Location sharing is limited to the active journey.",stepTwoTitle:"Every child is accounted for",stepTwoBody:"The team records boarding and drop-off, with unresolved child checks clearly visible.",stepThreeTitle:"The handover is verified",stepThreeBody:"Only a guardian-approved collector can complete the gate handover using their PIN.",
+ privacyEyebrow:"Safety is not an add-on",privacyTitle:"Privacy and accountability, built into the journey.",privacyBody:"Children's safety information deserves careful handling. preDrive is designed around limited access, clear responsibility and an auditable handover process.",
+ privacyPointOne:"Location sharing is limited to active trips.",privacyPointTwo:"Drivers focus on driving; they do not perform child handovers.",privacyPointThree:"Handover PINs are verified securely and are never displayed as plain text.",
+ localEyebrow:"Made for the way schools work here",localTitle:"Designed for Zimbabwe.",localBody:"A practical school transport workspace that recognises local payment methods, local currencies and the realities of mobile connectivity.",
+ localPointOne:"USD fees with a ZiG equivalent at one configurable indicative rate.",localPointTwo:"EcoCash, CBZ and CABS payment workflows.",localPointThree:"English, Shona and Ndebele language support.",
+ closingTitle:"Make every school journey more accountable.",closingBody:"Bring your school transport operations and guardian communication into one clear process.",closingAction:"Go to school sign in",footerLine:"Built for school transport in Zimbabwe.",footerSignIn:"School sign in"
+};
+const sn:LandingCopy={
+ languageLabel:"Mutauro",brandLine:"Kuchengetedzwa kwevana parwendo rwechikoro",navHow:"Mashandiro acho",navSafety:"Chengetedzo",navForSchools:"Zvezvikoro",signIn:"Kupinda kwechikoro",
+ eyebrow:"Kuona zviri kuitika parwendo rwechikoro",headline:"Rwendo rwese.",headlineAccent:"Mwana wese. Anoverengwa.",intro:"preDrive inobatsira zvikoro kubatanidza vashandi vezvekufambisa, vabereki nevatungamiriri vechikoro — kubva pakukwira bhazi kusvika pakupihwa kwemwana kumunhu akatenderwa.",primaryAction:"Pinda kuchikoro chako",secondaryAction:"Ona mashandiro acho",
+ proofOne:"Kupihwa kwevana kunosimbiswa",proofTwo:"Nzvimbo yebhazi inogoverwa parwendo chete",proofThree:"Yakagadzirirwa zvikoro zveZimbabwe",
+ sectionEyebrow:"Rwendo rwakabatana",sectionTitle:"Kuvimbika padanho rega rega.",sectionIntro:"Vanhu vakakodzera vanowana ruzivo rwavanoda, uye chikoro chinochengeta zvinyorwa zvakajeka zvezvakaitika.",
+ journeyTitle:"Ziva zviri parwendo",journeyBody:"Vabereki vanogona kuona mafambiro erwendo rwuri kuitika uye nguva inofungidzirwa yekusvika. Nzvimbo yebhazi inogoverwa chete kana rwendo rwuchishanda.",
+ handoverTitle:"Ziva akagamuchira mwana",handoverBody:"Nyora vana vanokwira nekuburuka. Pamusuwo, munhu anogamuchira mwana anofanira kunge akatenderwa uye oshandisa PIN yekusimbisa kupihwa kwemwana.",
+ schoolTitle:"Chikoro chinoramba chichitungamira",schoolBody:"Ronga nzira, mabhazi, vashandi, kupinda kwevana nezviitiko zvekuchengetedzwa munzvimbo imwe yechikoro, ine mvumo inoenderana nebasa remunhu.",
+ stepsEyebrow:"Maitiro ari nyore",stepsTitle:"Kubva pakubva kusvika pakupihwa mwana.",stepOneTitle:"Rwendo runotanga",stepOneBody:"Mutariri anotanga rwendo rwakapihwa. Nzvimbo inogoverwa parwendo rwuri kushanda chete.",stepTwoTitle:"Mwana wese anoverengwa",stepTwoBody:"Vashandi vanonyora kukwira nekuburuka kwevana, uye nyaya dzisati dzagadziriswa dzinoonekwa.",stepThreeTitle:"Kupihwa kwemwana kunosimbiswa",stepThreeBody:"Munhu akatenderwa nemubereki chete ndiye anogona kupedza kupihwa kwemwana achishandisa PIN yake.",
+ privacyEyebrow:"Chengetedzo chikamu chehurongwa",privacyTitle:"Kuchengetedza zvakavanzika uye kuzvidavirira parwendo.",privacyBody:"Ruzivo rwekuchengetedzwa kwevana runoda kubatwa zvine hungwaru. preDrive yakagadzirirwa kupa mvumo yakatarwa, mabasa akajeka uye zvinyorwa zvinogona kuongororwa.",
+ privacyPointOne:"Nzvimbo inogoverwa parwendo rwuri kushanda chete.",privacyPointTwo:"Vatyairi vanotarisa pakutyaira; havapi vana kune vanovagamuchira.",privacyPointThree:"PIN yekupihwa mwana inosimbiswa zvakachengeteka uye hairatidzwi semashoko akajeka.",
+ localEyebrow:"Yakagadzirirwa mashandiro ezvikoro zvemuno",localTitle:"Yakagadzirirwa Zimbabwe.",localBody:"Nzvimbo inoshanda yekufambisa vana inoona nezvemari dzemuno, nzira dzekubhadhara uye mamiriro einternet panharembozha.",
+ localPointOne:"Mari yechikoro muUSD ine yakaenzana nayo muZiG pachiyero chimwe chinofungidzirwa.",localPointTwo:"Maitiro ekubhadhara neEcoCash, CBZ neCABS.",localPointThree:"Mutauro weChirungu, Shona neNdebele.",
+ closingTitle:"Ita kuti rwendo rwese rwechikoro ruzvidavirire.",closingBody:"Batanidza mabasa ekufambisa vana nekutaurirana nevabereki nenzira yakajeka.",closingAction:"Enda pakupinda kwechikoro",footerLine:"Yakagadzirirwa kufambisa vana vechikoro muZimbabwe.",footerSignIn:"Kupinda kwechikoro"
+};
+const nd:LandingCopy={
+ languageLabel:"Ulimi",brandLine:"Ukuphepha kwabantwana ohambweni lwesikolo",navHow:"Indlela okusebenza ngayo",navSafety:"Ukuphepha",navForSchools:"Izikolo",signIn:"Ukungena kwesikolo",
+ eyebrow:"Ukubona okucacileyo kohambo ngalunye lwesikolo",headline:"Uhambo ngalunye.",headlineAccent:"Umntwana ngamunye. Uyabalwa.",intro:"i-preDrive incedisa izikolo ukuhlanganisa abasebenzi bezokuthutha, abazali labaphathi besikolo — kusukela ekungeneni ebhasini kuze kufike ekunikezelweni komntwana kumuntu ovunyelweyo.",primaryAction:"Vula indawo yesikolo sakho",secondaryAction:"Bona ukuthi kusebenza njani",
+ proofOne:"Ukunikezelwa kwabantwana okuqinisekisiweyo",proofTwo:"Indawo yebhasi yabiwa ngesikhathi sohambo kuphela",proofThree:"Yakhelwe izikolo zeZimbabwe",
+ sectionEyebrow:"Uhambo olulodwa oluxhumene",sectionTitle:"Ukuthembeka kuzo zonke izigaba.",sectionIntro:"Abantu abafaneleyo bathola ulwazi abaludingayo, kuthi isikolo sigcine umbiko ocacileyo walokho okwenzakeleyo.",
+ journeyTitle:"Yazi ngohambo",journeyBody:"Abazali bathola umbono ocacileyo wohambo oluqhubekayo, indlela lebanga lesikhathi sokufika. Indawo yebhasi yabiwa kuphela nxa uhambo luqhubeka.",
+ handoverTitle:"Yazi ukuthi ngubani owamukele umntwana",handoverBody:"Bhala abantwana abangena labaphumayo ebhasini. Esangweni, umuntu owamukelayo kumele avunywe njalo aqinisekise ukwamukelwa nge-PIN.",
+ schoolTitle:"Isikolo sihlala silawula",schoolBody:"Hlanganisa imizila, amabhasi, abasebenzi, ukubakhona kwabantwana lezehlakalo zokuphepha endaweni eyodwa yesikolo, ngemvumo ehambelana lomsebenzi womuntu.",
+ stepsEyebrow:"Indlela elula",stepsTitle:"Kusukela ekusukeni kuze kufike ekunikezelweni.",stepOneTitle:"Uhambo luyaqala",stepOneBody:"Umqondisi uqala uhambo alunikiweyo. Indawo yabiwa kuphela ngesikhathi sohambo oluqhubekayo.",stepTwoTitle:"Wonke umntwana uyabalwa",stepTwoBody:"Abasebenzi babhala ukungena lokuphuma kwabantwana, njalo okungakaqedwa kuyabonakala.",stepThreeTitle:"Ukunikezelwa kuyaqinisekiswa",stepThreeBody:"Umuntu ovunywe ngumzali kuphela ongaqeda ukwamukela umntwana esangweni esebenzisa i-PIN yakhe.",
+ privacyEyebrow:"Ukuphepha kuyingxenye yomklamo",privacyTitle:"Ubumfihlo lokuziphendulela kukho konke ukuhamba.",privacyBody:"Ulwazi lokuphepha kwabantwana kumele luphathwe ngonanzelelo. i-preDrive yakhelwe phezu kwemvumo elawulwayo, imisebenzi ecacileyo lombiko wokunikezelwa ongahlolwa.",
+ privacyPointOne:"Indawo yabiwa kuphela ngesikhathi sohambo oluqhubekayo.",privacyPointTwo:"Abatshayeli bagxila ekutshayeleni; kabaphathisi abantwana kubamukeli.",privacyPointThree:"I-PIN yokunikezelwa iqinisekiswa ngendlela evikelekileyo njalo ayiboniswa njengombhalo osobala.",
+ localEyebrow:"Yenzelwe indlela izikolo ezisebenza ngayo lapha",localTitle:"Yenzelwe iZimbabwe.",localBody:"Indawo yokulawula ezokuthutha zesikolo ecabangela izindlela zokubhadala zendawo, izimali lendlela amafoni axhumana ngayo ku-inthanethi.",
+ localPointOne:"Imali yesikolo nge-USD kanye lesilinganiso se-ZiG ngesilinganiso esisodwa esiqondisayo.",localPointTwo:"Izindlela zokubhadala ze-EcoCash, CBZ le-CABS.",localPointThree:"Ukusekelwa kwesiNgisi, isiShona lesiNdebele.",
+ closingTitle:"Yenza uhambo ngalunye lwesikolo luziphendulele.",closingBody:"Hlanganisa ukuthuthwa kwabantwana lokukhulumisana labazali ngendlela ecacileyo.",closingAction:"Vula ukungena kwesikolo",footerLine:"Yakhelwe ezokuthutha zesikolo eZimbabwe.",footerSignIn:"Ukungena kwesikolo"
+};
+export function getLandingCopy(language:LanguageCode):LandingCopy{return language==="sn"?sn:language==="nd"?nd:en;}
