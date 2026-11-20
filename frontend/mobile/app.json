@@ -1,0 +1,9 @@
+{
+  "expo":{
+    "name":"preDrive","slug":"predrive","scheme":"predrive","version":"1.0.0",
+    "orientation":"portrait","userInterfaceStyle":"light","newArchEnabled":true,
+    "ios":{"bundleIdentifier":"zw.co.predrive.mobile","supportsTablet":true},
+    "android":{"package":"zw.co.predrive.mobile","edgeToEdgeEnabled":true},
+    "plugins":["expo-router"],"experiments":{"typedRoutes":true}
+  }
+}
