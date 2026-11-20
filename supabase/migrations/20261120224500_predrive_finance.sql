@@ -343,7 +343,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $function$
 begin
   if not exists (
     select 1
@@ -365,7 +365,7 @@ begin
 
   return new;
 end;
-$;
+$function$;
 
 revoke all on function private.assert_invoice_guardian() from public, anon, authenticated, service_role;
 
@@ -380,7 +380,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $function$
 declare
   invoice_currency public.currency_code;
   fee_currency public.currency_code;
@@ -419,7 +419,7 @@ begin
 
   return new;
 end;
-$;
+$function$;
 
 revoke all on function private.assert_invoice_line_currency() from public, anon, authenticated, service_role;
 
