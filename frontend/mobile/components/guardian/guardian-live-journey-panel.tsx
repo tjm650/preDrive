@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { BusPosition, RouteStop, TransportRoute, Trip } from "@predrive/shared/types";
 import { colors } from "@predrive/shared/tokens";
 import { AppCard } from "../ui/app-card";
@@ -68,9 +68,7 @@ export function GuardianLiveJourneyPanel({
         <Text style={styles.body}>Choose when you want to be notified as the bus approaches.</Text>
         <View style={styles.radiusOptions}>
           {RADIUS_OPTIONS.map((radius) => (
-            <Text key={radius} accessibilityRole="button" accessibilityState={{ selected: arrivalRadius === radius, disabled: !onArrivalRadiusChange }} onPress={() => onArrivalRadiusChange?.(radius)} style={[styles.radiusOption, arrivalRadius === radius && styles.radiusSelected, !onArrivalRadiusChange && styles.disabled]}>
-              {radius >= 1000 ? `${radius / 1000} km` : `${radius} m`}
-            </Text>
+            <Pressable key={radius} accessibilityRole="radio" accessibilityState={{ checked: arrivalRadius === radius, disabled: !onArrivalRadiusChange }} disabled={!onArrivalRadiusChange} onPress={() => onArrivalRadiusChange?.(radius)} style={[styles.radiusOption, arrivalRadius === radius && styles.radiusSelected, !onArrivalRadiusChange && styles.disabled]}><Text style={[styles.radiusOptionText, arrivalRadius === radius && styles.radiusSelectedText]}>{radius >= 1000 ? `${radius / 1000} km` : `${radius} m`}</Text></Pressable>
           ))}
         </View>
         {!onArrivalRadiusChange ? <Text style={styles.helper}>Alert preferences will be available when guardian settings are connected.</Text> : null}
@@ -106,8 +104,10 @@ const styles = StyleSheet.create({
   radiusCard: { padding: 16, gap: 12 },
   radiusTitle: { color: colors.ink, fontSize: 17, fontWeight: "800" },
   radiusOptions: { flexDirection: "row", gap: 8 },
-  radiusOption: { flex: 1, minHeight: 44, borderWidth: 1, borderColor: colors.line, borderRadius: 999, alignItems: "center", justifyContent: "center", textAlign: "center", textAlignVertical: "center", overflow: "hidden", color: colors.ink, fontSize: 14, fontWeight: "700", paddingHorizontal: 8, paddingVertical: 10 },
-  radiusSelected: { backgroundColor: colors.ink, borderColor: colors.ink, color: colors.surface },
+  radiusOption: { flex: 1, minHeight: 44, borderWidth: 1, borderColor: colors.line, borderRadius: 999, alignItems: "center", justifyContent: "center", paddingHorizontal: 8, paddingVertical: 10 },
+  radiusSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
+  radiusOptionText: { color: colors.ink, fontSize: 14, fontWeight: "700" },
+  radiusSelectedText: { color: colors.surface },
   disabled: { opacity: 0.8 },
   helper: { color: colors.ink, opacity: 0.65, fontSize: 13, lineHeight: 18 },
   privacy: { color: colors.success, fontSize: 14, fontWeight: "700", textAlign: "center" },
