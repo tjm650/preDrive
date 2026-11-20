@@ -4,7 +4,7 @@
 
 The frontend is a pnpm monorepo with a shared TypeScript package, a Next.js Pages Router school dashboard/marketing site, and an Expo SDK 54 application using Expo Router. The Pages Router is the deliberate implementation choice for this repository, overriding the original brief's App Router reference.
 
-All operational backend work is intentionally deferred. The frontend must not be described as operational until authenticated services, school-scoped data, authorization and real-time integrations have been connected and verified.
+The frontend implementation phase is complete at source level. Backend implementation has started with the identity and school-tenancy foundation; the remaining operational modules, client adapters and end-to-end verification are still outstanding. The frontend must not be described as production-operational until authenticated services, school-scoped data, authorization and real-time integrations have been connected and verified.
 
 ## Frontend package boundaries
 
@@ -14,8 +14,13 @@ All operational backend work is intentionally deferred. The frontend must not be
 - `frontend/shared/lib/offline`: offline child check action models and queue-state transitions. Durable storage, sync transport and server reconciliation are not implemented.
 - `frontend/shared/tokens`: canonical design tokens.
 - `frontend/shared/i18n`: English, Shona and Ndebele resources plus shared i18next provider and language storage contract.
-- `frontend/web`: Pages Router landing, sign-in boundary and school administration workspaces.
-- `frontend/mobile`: Expo Router guardian, supervisor, driver and teacher workspaces.
+- `frontend/web/pages`: Next.js Pages Router entry points; route-level UI is composed from `frontend/web/components`.
+- `frontend/mobile/app`: thin Expo Router route files and role layouts only.
+- `frontend/mobile/screens`: all mobile screen implementations, grouped into public, auth, guardian, supervisor, driver and teacher areas.
+- `frontend/mobile/components`: reusable UI and role-feature components used by screens.
+- `frontend/mobile/src`: application logic such as auth/session boundaries; hooks, state, services and data access belong here as they are implemented.
+
+Expo Router route files should remain thin and re-export the matching screen from `screens/`. Do not put screen implementations in `app/`.
 
 ## API contract surface
 
@@ -29,24 +34,25 @@ The shared `PreDriveApi` contract currently groups:
 - `safety`: alerts, incidents, incident creation and SOS.
 - `finance`: invoices, payment initiation and receipts.
 
-These are typed frontend contracts only. No Supabase adapter, database schema, Edge Function, RPC or real API implementation is delivered in the frontend phase.
+These are typed frontend contracts only. The initial Supabase migrations now provide the identity and school-tenancy database foundation, but no Supabase client adapter, complete operational data schema, Edge Function or real-time service integration has been delivered yet.
 
-## Backend integration requirements
+## Backend integration requirements and progress
 
-1. Implement Supabase Auth and session lifecycle, including secure sign-out, password recovery, expiry handling, school membership switching and role-aware routing.
-2. Add `school_id` to every school-owned table and enforce Row Level Security for every table. Treat client-side permission checks as presentation only.
-3. Implement the API contract behind trusted adapters. Validate all input on the server; never trust client-supplied role, school scope, payment status or handover result.
-4. Implement child check events with unique idempotency keys, server ordering, duplicate protection and conflict reconciliation. Offline events remain visibly pending until server-confirmed.
-5. Verify handover PINs only through a rate-limited server RPC. Store only salted hashes; lock after the agreed failed-attempt threshold. Never log raw PINs.
-6. Limit GPS ingestion and reads to active trips. Enforce guardian/child/route visibility on the server. Stop location sharing when a trip ends.
-7. Implement payment initiation and confirmation with idempotency, provider verification, reconciliation, receipts, refunds and immutable audit events. Never trust a client success callback.
-8. Deliver safety alerts/SOS through a durable server-side event flow with acknowledgement and escalation semantics.
-9. Add audit trails for administrative changes, invitations, child status events, handovers, finance and access-sensitive actions.
-10. Keep service-role credentials, gateway secrets and signing keys exclusively in trusted server/Edge Function environments.
+1. **Identity and tenancy foundation — applied:** schools, profiles, school memberships, staff records and school invitations; Auth profile synchronization; role-aware tenant helper; RLS and explicit grants.
+2. Implement Supabase Auth session lifecycle, including secure sign-out, password recovery, expiry handling, school membership switching and role-aware routing.
+3. Add the remaining school-owned domain tables with `school_id` and Row Level Security. Treat client-side permission checks as presentation only.
+4. Implement the API contract behind trusted adapters. Validate all input on the server; never trust client-supplied role, school scope, payment status or handover result.
+5. Implement child check events with unique idempotency keys, server ordering, duplicate protection and conflict reconciliation. Offline events remain visibly pending until server-confirmed.
+6. Verify handover PINs only through a rate-limited server RPC. Store only salted hashes; lock after three failed attempts. Never log raw PINs.
+7. Limit GPS ingestion and reads to active trips. Enforce guardian/child/route visibility on the server. Stop location sharing when a trip ends.
+8. Implement payment initiation and confirmation with idempotency, provider verification, reconciliation, receipts, refunds and immutable audit events. Never trust a client success callback.
+9. Deliver safety alerts/SOS through a durable server-side event flow with acknowledgement and escalation semantics.
+10. Add audit trails for administrative changes, invitations, child status events, handovers, finance and access-sensitive actions.
+11. Keep service-role credentials, gateway secrets and signing keys exclusively in trusted server/Edge Function environments.
 
 ## Environment configuration
 
-The Expo public variables are documented in the root README. The Supabase URL and publishable key are intentionally inactive until backend integration. Never expose service-role or payment secrets through `EXPO_PUBLIC_*` or any client bundle.
+The Expo public variables are documented in the root README. The Supabase URL and publishable key are not yet wired into the Expo client. Never expose service-role or payment secrets through `EXPO_PUBLIC_*` or any client bundle.
 
 ## Localization status
 
@@ -70,7 +76,7 @@ No fabricated operational records, simulated payments or fake GPS have been adde
 
 ## Verification record
 
-The source changes were committed directly to `main` and selected files were retrieved from GitHub after commits. A local dependency installation, TypeScript check, ESLint run, Next.js production build, Expo export/build, browser test, Android device test, accessibility audit and end-to-end test have not been run in this environment. Do not treat the frontend as release-certified until these checks pass in CI and on supported devices.
+The mobile screen relocation and the first three Supabase database migrations have been committed/applied. Database metadata has been inspected after migration. A local dependency installation, TypeScript check, ESLint run, Next.js production build, Expo export/build, browser test, Android device test, full RLS cross-tenant test and end-to-end test have not yet been run. Do not treat the frontend or backend as release-certified until these checks pass in CI and on supported devices.
 
 ## Recommended release gate
 
