@@ -6,6 +6,7 @@ Fresh-start repository. The previous application implementation has been cleared
 
 - Supabase project reference: `rjsdhgbjvghjnuiilizm`
 - Expo EAS project ID: `6b904474-dcd6-4602-8ee1-b530850e6ded`
+- Vercel project ID: `prj_OuDABc1RfzpQgy71SEpU0DTIYW4c`
 - Mobile application identifier: `zw.co.predrive.mobile`
 
 No credentials or secret values belong in this repository.
