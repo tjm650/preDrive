@@ -1,0 +1,1 @@
+.field{display:grid;gap:8px}.field label{font-size:14px;font-weight:700;color:#0F2A43}.field input{width:100%;min-height:48px;padding:0 14px;border:1px solid #E5E1D6;border-radius:10px;background:#fff;color:#0F2A43;font-size:16px}.field input:focus{outline:3px solid rgba(37,96,168,.2);border-color:#2563A8}.hint{font-size:13px;color:#52677a}.error{font-size:13px;color:#D64545}

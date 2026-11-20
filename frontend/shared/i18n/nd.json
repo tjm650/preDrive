@@ -1,0 +1,10 @@
+{
+ "app":{"name":"preDrive","tagline":"Ukuphepha kwabantwana ohambweni lwesikolo"},
+ "common":{"loading":"Kuyalayishwa","retry":"Zama futhi","cancel":"Khansela","save":"Gcina","close":"Vala","search":"Dinga","back":"Emuva","unknownError":"Kube lephutha. Zama futhi."},
+ "navigation":{"home":"Ekhaya","journeys":"Uhambo","children":"Abantwana","fees":"Imali yesikolo","route":"Indlela","vehicle":"Imota","safety":"Ukuphepha","settings":"Izilungiselelo","signOut":"Phuma"},
+ "auth":{"signIn":"Ngena","welcome":"Siyakwamukela futhi","email":"Ikheli le-imeyili","password":"Iphasiwedi","forgotPassword":"Ukhohlwe iphasiwedi?","resetPassword":"Lungisa kabusha iphasiwedi yakho","sendReset":"Thumela imiyalelo yokulungisa","backToSignIn":"Buyela ekungeneni","showPassword":"Veza iphasiwedi","hidePassword":"Fihla iphasiwedi","authenticationUnavailable":"Ukungena okuphephile akukaxhunywa. Imininingwane yakho ayithunyelwanga."},
+ "status":{"pending":"Kulindelwe ukuqinisekiswa","confirmed":"Kuqinisekisiwe","failed":"Kwehlulekile","offline":"Akula-inthanethi","online":"Kule-inthanethi"},
+ "connectivity":{"offlineTitle":"Awukho ku-inthanethi","offlineDescription":"Olunye ulwazi lungabe lungasavuselelwanga. Ukuhlolwa kwabantwana okulindele ukuqinisekiswa kuzaboniswa ngokucacileyo."},
+ "safety":{"urgent":"Kuyaphuthuma","warning":"Isixwayiso","information":"Ulwazi","sos":"Isaziso sesimo esiphuthumayo"},
+ "finance":{"usd":"US$","zig":"ZiG","indicativeRate":"isilinganiso esiqondisayo","pendingPayment":"Inkokhelo ilindile"}
+}

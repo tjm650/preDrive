@@ -1,0 +1,2 @@
+import {WorkspaceStateScreen} from "../../components/workspace/workspace-state-screen";
+export default function SupervisorTrip(){return <WorkspaceStateScreen title="Trip operations" subtitle="Manage boarding, route progress and handovers." stateTitle="No active trip loaded" stateDescription="Trip controls will become available when the trip service is connected and an authorised assignment is loaded."/>;}
