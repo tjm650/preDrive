@@ -79,11 +79,11 @@ erDiagram
     uuid school_id FK
   }
   bus_positions {
-    uuid id PK
+    uuid trip_id PK, FK
     uuid school_id FK
   }
   bus_position_history {
-    uuid id PK
+    bigint id PK
     uuid school_id FK
   }
   vehicle_checks {
