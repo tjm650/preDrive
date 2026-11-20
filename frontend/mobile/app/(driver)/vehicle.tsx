@@ -1,2 +1,5 @@
-import {WorkspaceStateScreen} from "../../components/workspace/workspace-state-screen";
-export default function DriverVehicle(){return <WorkspaceStateScreen title="Vehicle checks" subtitle="Complete the required safety inspection." stateTitle="Vehicle check service not connected" stateDescription="A vehicle inspection must be recorded by the assigned driver before a trip can begin."/>;}
+import { AppScreen, FeedbackState, ScreenHeading } from "../../components/ui";
+import { VehicleInspectionForm } from "../../components/driver";
+export default function DriverVehicle() {
+  return <AppScreen><ScreenHeading title="Vehicle inspection" subtitle="Complete each safety check before departure."/><FeedbackState title="Vehicle assignment unavailable" description="A vehicle must be assigned to your account before an inspection can be recorded."/><VehicleInspectionForm/></AppScreen>;
+}

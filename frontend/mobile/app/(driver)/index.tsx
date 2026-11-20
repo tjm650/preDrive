@@ -1,2 +1,5 @@
-import {WorkspaceStateScreen} from "../../components/workspace/workspace-state-screen";
-export default function DriverHome(){return <WorkspaceStateScreen title="Driver" subtitle="Your assigned vehicle and route." stateTitle="Driver workspace not connected" stateDescription="Your assigned bus, route and trip information will load after secure sign-in is connected."/>;}
+import { AppScreen, ScreenHeading } from "../../components/ui";
+import { DriverRouteOverview } from "../../components/driver";
+export default function DriverHome() {
+  return <AppScreen><ScreenHeading eyebrow="Driver workspace" title="Today's assignment" subtitle="Your assigned vehicle, route and trip status."/><DriverRouteOverview route={null} trip={null}/></AppScreen>;
+}

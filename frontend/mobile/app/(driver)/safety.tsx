@@ -1,2 +1,5 @@
-import {WorkspaceStateScreen} from "../../components/workspace/workspace-state-screen";
-export default function DriverSafety(){return <WorkspaceStateScreen title="Safety" subtitle="Report delays, incidents or an emergency." stateTitle="Safety service not connected" stateDescription="Delay reporting and SOS actions will be enabled when the safety service is connected."/>;}
+import { AppScreen, ScreenHeading } from "../../components/ui";
+import { DelayReportForm, DriverSosPanel } from "../../components/driver";
+export default function DriverSafety() {
+  return <AppScreen><ScreenHeading title="Safety" subtitle="Report a delay or request urgent assistance."/><DelayReportForm/><DriverSosPanel/></AppScreen>;
+}
