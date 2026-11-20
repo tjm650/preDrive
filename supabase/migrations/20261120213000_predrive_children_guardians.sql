@@ -110,7 +110,137 @@ create table if not exists public.approved_collectors (
   child_id uuid not null,
   full_name text not null check (char_length(btrim(full_name)) between 2 and 160),
   relationship public.collector_relationship not null,
-  phone text not null check (phone ~ '^\\+263[0-9]{9}$'),
+  phone text not null check (phone ~ '^[+]263[0-9]{9}),
+  pin_hash text not null check (char_length(pin_hash) between 40 and 100),
+  active boolean not null default true,
+  pin_failed_attempts smallint not null default 0
+    check (pin_failed_attempts between 0 and 3),
+  pin_locked_until timestamptz,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint approved_collectors_id_school_key unique (id, school_id),
+  constraint approved_collectors_child_school_fkey
+    foreign key (child_id, school_id)
+    references public.children (id, school_id)
+    on delete cascade,
+  constraint approved_collectors_lock_state_check check (
+    (pin_failed_attempts < 3 and pin_locked_until is null)
+    or pin_failed_attempts = 3
+  )
+);
+
+comment on column public.approved_collectors.pin_hash is
+  'One-way pgcrypto crypt() hash only. Never store or log the raw handover PIN.';
+
+comment on column public.approved_collectors.pin_locked_until is
+  'Set by the handover verification RPC after three failed PIN attempts.';
+
+-- A guardian link must point to an active guardian membership in the same school.
+-- This trigger supplements the composite FK, which enforces tenant consistency.
+create or replace function private.assert_guardian_membership()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not exists (
+    select 1
+    from public.school_memberships as membership
+    where membership.school_id = new.school_id
+      and membership.user_id = new.guardian_user_id
+      and membership.role = 'guardian'::public.user_role
+      and membership.active = true
+  ) then
+    raise exception using
+      errcode = '23503',
+      message = 'GUARDIAN_MEMBERSHIP_REQUIRED';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function private.assert_guardian_membership() from public, anon, authenticated, service_role;
+
+drop trigger if exists guardian_children_assert_guardian_membership
+  on public.guardian_children;
+
+create trigger guardian_children_assert_guardian_membership
+before insert or update of school_id, guardian_user_id
+on public.guardian_children
+for each row execute function private.assert_guardian_membership();
+
+-- Keep updated_at consistent with the existing identity/tenancy foundation.
+drop trigger if exists class_groups_set_updated_at on public.class_groups;
+create trigger class_groups_set_updated_at
+before update on public.class_groups
+for each row execute function private.set_updated_at();
+
+drop trigger if exists children_set_updated_at on public.children;
+create trigger children_set_updated_at
+before update on public.children
+for each row execute function private.set_updated_at();
+
+drop trigger if exists guardian_children_set_updated_at on public.guardian_children;
+create trigger guardian_children_set_updated_at
+before update on public.guardian_children
+for each row execute function private.set_updated_at();
+
+drop trigger if exists approved_collectors_set_updated_at on public.approved_collectors;
+create trigger approved_collectors_set_updated_at
+before update on public.approved_collectors
+for each row execute function private.set_updated_at();
+
+create index if not exists class_groups_school_active_name_idx
+  on public.class_groups (school_id, active, name);
+
+create index if not exists children_school_status_name_idx
+  on public.children (school_id, status, last_name, first_name);
+
+create index if not exists children_school_class_status_idx
+  on public.children (school_id, class_group_id, status);
+
+create index if not exists children_class_group_fkey_idx
+  on public.children (class_group_id, school_id);
+
+create index if not exists guardian_children_guardian_active_idx
+  on public.guardian_children (school_id, guardian_user_id, active);
+
+create index if not exists guardian_children_child_active_idx
+  on public.guardian_children (school_id, child_id, active);
+
+create index if not exists guardian_children_guardian_membership_fkey_idx
+  on public.guardian_children (school_id, guardian_user_id);
+
+create index if not exists approved_collectors_child_active_idx
+  on public.approved_collectors (school_id, child_id, active, full_name);
+
+create index if not exists approved_collectors_created_by_fkey_idx
+  on public.approved_collectors (created_by)
+  where created_by is not null;
+
+alter table public.class_groups enable row level security;
+alter table public.children enable row level security;
+alter table public.guardian_children enable row level security;
+alter table public.approved_collectors enable row level security;
+
+revoke all on table
+  public.class_groups,
+  public.children,
+  public.guardian_children,
+  public.approved_collectors
+from public, anon, authenticated, service_role;
+
+grant all privileges on table
+  public.class_groups,
+  public.children,
+  public.guardian_children,
+  public.approved_collectors
+to service_role;
+
+),
   pin_hash text not null check (char_length(pin_hash) between 40 and 100),
   active boolean not null default true,
   pin_failed_attempts smallint not null default 0
