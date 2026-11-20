@@ -110,7 +110,7 @@ create table if not exists public.approved_collectors (
   child_id uuid not null,
   full_name text not null check (char_length(btrim(full_name)) between 2 and 160),
   relationship public.collector_relationship not null,
-  phone text not null check (phone ~ '^[+]263[0-9]{9}),
+  phone text not null check (phone ~ '^[+]263[0-9]{9}$'),
   pin_hash text not null check (char_length(pin_hash) between 40 and 100),
   active boolean not null default true,
   pin_failed_attempts smallint not null default 0
