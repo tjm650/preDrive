@@ -68,7 +68,8 @@ create table if not exists public.children (
     profile_image_path is null
     or (
       char_length(profile_image_path) <= 512
-      and profile_image_path !~ '(^/|\\.\\.)'
+      and left(profile_image_path, 1) <> '/'
+      and position('..' in profile_image_path) = 0
     )
   )
 );
