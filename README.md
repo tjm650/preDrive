@@ -32,6 +32,13 @@ preDrive/
 
 Mobile route files in `app/` should only define Expo Router navigation/layout boundaries and re-export the corresponding implementation from `screens/`. Screen implementations must not be placed in `app/`. Shared visual and feature elements belong in `components/`; application logic belongs in `src/`.
 
+## Database migration workflow
+
+- Keep all application schema changes in versioned files under `supabase/migrations/`.
+- Apply application migrations using the `postgres` migration role. Its default privileges for future objects in `public` are now revoked for `anon`, `authenticated` and `service_role`; each migration must explicitly grant only the privileges it needs and enable RLS on every exposed table.
+- Do not create application tables through the Supabase Dashboard Table Editor yet. The existing `supabase_admin` default privileges are still broad, and the connected database role cannot alter that role's defaults. This is a known platform configuration gap; use the committed migration workflow until those defaults are hardened.
+- Never expose service-role credentials to web or mobile clients.
+
 ## Expo environment variables
 
 Configure these variables for the Expo app in the relevant local environment file or in the Expo/EAS environment used by the build profile. Expo inlines variables prefixed with `EXPO_PUBLIC_` into the application bundle. **Treat every `EXPO_PUBLIC_*` value as public: never put passwords, service-role keys, payment secrets or other confidential values in them.**
@@ -82,5 +89,5 @@ Install dependencies from the repository root with `pnpm install`. Start the mob
 - Location is shared only during an active trip.
 - Handover PINs must never be stored or logged in raw form.
 - Offline child check events remain pending until server confirmation. PIN verification and payments are online-only.
-- Every school-owned backend record must be scoped by `school_id` and protected by Row Level Security.
+- Every school-owned backend record must be scoped by `school_id` and protected by Row Level Security. The `schools` row is the tenant root (its `id` is the tenant identifier); user profiles are global identities.
 - The service-role key must never enter client code.

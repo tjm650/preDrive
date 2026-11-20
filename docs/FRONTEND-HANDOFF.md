@@ -50,6 +50,14 @@ These are typed frontend contracts only. The initial Supabase migrations now pro
 10. Add audit trails for administrative changes, invitations, child status events, handovers, finance and access-sensitive actions.
 11. Keep service-role credentials, gateway secrets and signing keys exclusively in trusted server/Edge Function environments.
 
+## Database migration and privilege notes
+
+Five application migrations are recorded in Supabase and committed under `supabase/migrations/`. They create the identity/tenancy foundation, tighten profile and staff visibility, lock down the private helper schema, add foreign-key indexes and revoke all default privileges for future `public` objects created by the `postgres` migration role. Exposed table grants are explicit; authenticated users currently receive read access plus narrowly scoped profile/school updates, while membership, staff and invitation writes remain server-provisioned.
+
+**Known configuration limitation:** the connected database role is not a member of `supabase_admin`, so it cannot change that role's existing default privileges. Those defaults remain broad. Do not create application tables through the Dashboard Table Editor; continue using versioned migrations executed as `postgres` until this role-level default ACL is hardened.
+
+The tenant root `schools` uses its primary key as the tenant identifier; `profiles` are global Auth identities. Every dependent school-owned record carries `school_id`.
+
 ## Environment configuration
 
 The Expo public variables are documented in the root README. The Supabase URL and publishable key are not yet wired into the Expo client. Never expose service-role or payment secrets through `EXPO_PUBLIC_*` or any client bundle.
@@ -76,7 +84,9 @@ No fabricated operational records, simulated payments or fake GPS have been adde
 
 ## Verification record
 
-The mobile screen relocation and the first three Supabase database migrations have been committed/applied. Database metadata has been inspected after migration. A local dependency installation, TypeScript check, ESLint run, Next.js production build, Expo export/build, browser test, Android device test, full RLS cross-tenant test and end-to-end test have not yet been run. Do not treat the frontend or backend as release-certified until these checks pass in CI and on supported devices.
+The mobile screen relocation and five Supabase database migrations have been committed/applied. Database metadata confirms RLS is enabled on all five application tables. Transactional assertions passed for guardian access, school-administrator access and isolation from a separate school tenant; all test records were rolled back, leaving the application tables empty. The security advisor still reports the pre-existing `pg_net` extension in `public`; no new security lint was reported. Performance advice no longer reports unindexed foreign keys; unused-index notices are expected while the new tables have no production workload.
+
+A local dependency installation, TypeScript check, ESLint run, Next.js production build, Expo export/build, browser test, Android device test and full end-to-end test have not yet been run. Do not treat the frontend or backend as release-certified until these checks pass in CI and on supported devices.
 
 ## Recommended release gate
 
