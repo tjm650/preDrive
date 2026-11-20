@@ -84,10 +84,19 @@ Install dependencies from the repository root with `pnpm install`. Start the mob
 
 ## Product and engineering rules
 
-- Production workflows must not rely on demo accounts, fake payments, simulated GPS or hardcoded school records.
-- The only permitted demo dataset is the separately isolated Greenfield Early Learning Centre (Demo) school in the later backend seed.
-- Location is shared only during an active trip.
-- Handover PINs must never be stored or logged in raw form.
-- Offline child check events remain pending until server confirmation. PIN verification and payments are online-only.
-- Every school-owned backend record must be scoped by `school_id` and protected by Row Level Security. The `schools` row is the tenant root (its `id` is the tenant identifier); user profiles are global identities.
-- The service-role key must never enter client code.
+## Product (REVISED: REAL-WORLD USE)
+"preDrive" is a production mobile app and school dashboard for creches and preschools in Zimbabwe. It tracks every school bus trip live with real GPS and keeps a verified record of every child handover. Schools register, set up their routes, staff and children, and use it daily. The only demo content is database records for one separate demo school (is_demo = true), used for sales presentations.
+
+## Engineering rules (REVISED)
+- TypeScript strict, ESLint, Prettier, pnpm. Environments: development, staging, production, each with its own Supabase project.
+- Supabase is the runtime data source. MockAdapter exists only for automated tests and never ships in a production build.
+- No demo accounts, demo controls or simulators in production. A dev-only simulator behind a DEV_TOOLS build flag is allowed.
+- Multi-school from day one: every table has school_id; RLS on every table. Demo school is isolated by school_id and is_demo.
+- The service-role key never appears in client code. Admin actions go through Edge Functions.
+- Real onboarding: school registration, setup wizard, email invites for staff, invite codes for guardians.
+- Trips are generated daily from route schedules by a scheduled backend job.
+- Real GPS from the driver or supervisor device, only while a trip is active, with consent. Background tracking and push require the installed app (EAS build).
+- Handover PINs are hashed (pgcrypto) and verified by an RPC that rate-limits and locks after 3 failures.
+- Payments: real gateway (Paynow-style) for EcoCash and cards, with idempotency and webhooks; CBZ and CABS are bank transfers verified by the admin. Full audit trail for money movement.
+- Privacy: location consent, data-deletion requests, privacy policy and terms, data-protection review for child data under Zimbabwe's Cyber and Data Protection Act.
+- Operations: error reporting, backups, staging environment, production plans for Supabase and Vercel.
