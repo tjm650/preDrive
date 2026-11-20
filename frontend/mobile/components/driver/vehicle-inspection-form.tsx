@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import type { VehicleCheckItem } from "@predrive/shared/types";
 import { colors } from "@predrive/shared/tokens";
 import { ActionButton } from "../ui/action-button";
@@ -27,6 +27,7 @@ export function VehicleInspectionForm({ onSubmit }: Props) {
   const allChecked = CHECKS.every((item) => results[item.key] !== undefined);
   const safeToOperate = useMemo(() => allChecked && CHECKS.every((item) => results[item.key] === true), [allChecked, results]);
   const failedItems = CHECKS.filter((item) => results[item.key] === false);
+
   const submit = async () => {
     if (!onSubmit || !allChecked || submitting) return;
     setSubmitting(true);
@@ -51,23 +52,13 @@ export function VehicleInspectionForm({ onSubmit }: Props) {
             <Text style={styles.checkTitle}>{item.label}</Text>
             <Text style={styles.checkValue}>{results[item.key] === undefined ? "Not checked" : results[item.key] ? "Pass" : "Fail"}</Text>
           </View>
-          <View style={styles.switchGroup}>
-            <Text style={styles.switchLabel}>Pass</Text>
-            <Switch
-              value={results[item.key] === true}
-              onValueChange={(value) => setResults((current) => ({ ...current, [item.key]: value }))}
-              trackColor={{ false: colors.line, true: colors.success }}
-              accessibilityLabel={item.label + " passed"}
-            />
-          </View>
-          <View style={styles.switchGroup}>
-            <Text style={styles.switchLabel}>Fail</Text>
-            <Switch
-              value={results[item.key] === false}
-              onValueChange={(value) => setResults((current) => ({ ...current, [item.key]: !value }))}
-              trackColor={{ false: colors.line, true: colors.danger }}
-              accessibilityLabel={item.label + " failed"}
-            />
+          <View style={styles.resultActions}>
+            <Pressable accessibilityRole="radio" accessibilityState={{ checked: results[item.key] === true }} onPress={() => setResults((current) => ({ ...current, [item.key]: true }))} style={[styles.resultButton, results[item.key] === true && styles.passSelected]}>
+              <Text style={[styles.resultText, results[item.key] === true && styles.selectedText]}>Pass</Text>
+            </Pressable>
+            <Pressable accessibilityRole="radio" accessibilityState={{ checked: results[item.key] === false }} onPress={() => setResults((current) => ({ ...current, [item.key]: false }))} style={[styles.resultButton, results[item.key] === false && styles.failSelected]}>
+              <Text style={[styles.resultText, results[item.key] === false && styles.selectedText]}>Fail</Text>
+            </Pressable>
           </View>
         </View>
       ))}
@@ -89,8 +80,12 @@ const styles = StyleSheet.create({
   checkCopy: { gap: 3 },
   checkTitle: { color: colors.ink, fontSize: 16, fontWeight: "700" },
   checkValue: { color: colors.ink, opacity: 0.7, fontSize: 14 },
-  switchGroup: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 },
-  switchLabel: { color: colors.ink, fontSize: 14, fontWeight: "600" },
+  resultActions: { flexDirection: "row", gap: 8 },
+  resultButton: { minWidth: 76, minHeight: 44, borderWidth: 1, borderColor: colors.line, borderRadius: 999, alignItems: "center", justifyContent: "center" },
+  resultText: { color: colors.ink, fontSize: 14, fontWeight: "700" },
+  passSelected: { backgroundColor: colors.success, borderColor: colors.success },
+  failSelected: { backgroundColor: colors.danger, borderColor: colors.danger },
+  selectedText: { color: colors.surface },
   label: { color: colors.ink, fontSize: 15, fontWeight: "700" },
   input: { minHeight: 88, borderWidth: 1, borderColor: colors.line, borderRadius: 10, padding: 12, color: colors.ink, fontSize: 16 },
   notice: { color: colors.info, fontSize: 14, lineHeight: 20 },
