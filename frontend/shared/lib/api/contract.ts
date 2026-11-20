@@ -1,5 +1,5 @@
 import type {ApiResult,PageRequest,PageResult} from "./types";
-import type {SignInInput,PasswordResetInput,CreateChildInput,CreateBusInput,CreateTransportRouteInput,UpdateBusInput,UpdateTransportRouteInput,StartTripInput,ChildStatusInput,VerifyHandoverInput,InitiatePaymentInput,CreateIncidentInput} from "./inputs";
+import type {SignInInput,PasswordResetInput,UpdateSchoolSettingsInput,CreateChildInput,CreateBusInput,CreateTransportRouteInput,UpdateBusInput,UpdateTransportRouteInput,StartTripInput,ChildStatusInput,VerifyHandoverInput,InitiatePaymentInput,CreateIncidentInput} from "./inputs";
 import type {UserProfile,School,SchoolMembership,Child,StaffMember,Bus,TransportRoute,Trip,Alert,Incident,Invoice,Payment,PaymentReceipt,ApprovedCollector} from "../../types";
 export interface AuthSession {user:UserProfile;memberships:SchoolMembership[];activeSchool:School|null;expiresAt:string;}
 export interface PreDriveApi {
@@ -10,7 +10,7 @@ export interface PreDriveApi {
   requestPasswordReset(input:PasswordResetInput):Promise<ApiResult<void>>;
   switchSchool(schoolId:string):Promise<ApiResult<AuthSession>>;
  };
- school:{getCurrent():Promise<ApiResult<School>>;update(input:Partial<School>):Promise<ApiResult<School>>;};
+ school:{getCurrent():Promise<ApiResult<School>>;update(input:UpdateSchoolSettingsInput):Promise<ApiResult<School>>;};
  children:{
   list(request:PageRequest):Promise<ApiResult<PageResult<Child>>>;
   get(childId:string):Promise<ApiResult<Child>>;

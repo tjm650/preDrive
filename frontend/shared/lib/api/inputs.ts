@@ -1,8 +1,10 @@
 import type {EntityId,Money} from "../../types/common";
 import type {PaymentMethod,IncidentSeverity} from "../../types/safety-finance";
 import type {BusStatus,RouteStatus} from "../../types/transport";
+import type {School} from "../../types/identity";
 export interface SignInInput{email:string;password:string;}
 export interface PasswordResetInput{email:string;}
+export interface UpdateSchoolSettingsInput extends Pick<School,"name"|"address"|"indicativeZigPerUsd">{}
 export interface CreateChildInput{firstName:string;lastName:string;dateOfBirth:string;classGroupId:EntityId;}
 export interface CreateBusInput{registrationNumber:string;make:string;model:string;capacity:number;}
 export interface CreateRouteStopInput{name:string;address:string;order:number;}
