@@ -35,12 +35,12 @@ language sql
 immutable
 strict
 set search_path = ''
-as $
+as $fn$
   select cardinality(p_values) = (
     select count(distinct item)::integer
     from unnest(p_values) as input_values(item)
   );
-$;
+$fn$;
 
 revoke all on function private.is_unique_smallint_array(smallint[]) from public, anon, authenticated, service_role;
 
