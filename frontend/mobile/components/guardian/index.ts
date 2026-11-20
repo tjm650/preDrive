@@ -9,3 +9,4 @@ export * from "./guardian-child-safety-summary";
 export * from "./guardian-payment-method-selector";
 export * from "./guardian-invoice-list";
 export * from "./guardian-payment-receipt-card";
+export * from "./guardian-account-settings";
