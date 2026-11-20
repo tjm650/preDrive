@@ -1,5 +1,5 @@
 import type {ApiResult,PageRequest,PageResult} from "./types";
-import type {SignInInput,PasswordResetInput,CreateChildInput,StartTripInput,ChildStatusInput,VerifyHandoverInput,InitiatePaymentInput,CreateIncidentInput} from "./inputs";
+import type {SignInInput,PasswordResetInput,CreateChildInput,CreateBusInput,CreateTransportRouteInput,UpdateBusInput,UpdateTransportRouteInput,StartTripInput,ChildStatusInput,VerifyHandoverInput,InitiatePaymentInput,CreateIncidentInput} from "./inputs";
 import type {UserProfile,School,SchoolMembership,Child,StaffMember,Bus,TransportRoute,Trip,Alert,Incident,Invoice,Payment,PaymentReceipt,ApprovedCollector} from "../../types";
 export interface AuthSession {user:UserProfile;memberships:SchoolMembership[];activeSchool:School|null;expiresAt:string;}
 export interface PreDriveApi {
@@ -20,7 +20,11 @@ export interface PreDriveApi {
  staff:{list(request:PageRequest):Promise<ApiResult<PageResult<StaffMember>>>;};
  transport:{
   listBuses(request:PageRequest):Promise<ApiResult<PageResult<Bus>>>;
+  createBus(input:CreateBusInput):Promise<ApiResult<Bus>>;
+  updateBus(busId:string,input:UpdateBusInput):Promise<ApiResult<Bus>>;
   listRoutes(request:PageRequest):Promise<ApiResult<PageResult<TransportRoute>>>;
+  createRoute(input:CreateTransportRouteInput):Promise<ApiResult<TransportRoute>>;
+  updateRoute(routeId:string,input:UpdateTransportRouteInput):Promise<ApiResult<TransportRoute>>;
   listTrips(request:PageRequest):Promise<ApiResult<PageResult<Trip>>>;
   startTrip(input:StartTripInput):Promise<ApiResult<Trip>>;
   recordChildStatus(input:ChildStatusInput):Promise<ApiResult<void>>;
