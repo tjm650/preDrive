@@ -1,9 +1,6 @@
-import {useEffect,useState} from "react";
 import type {LanguageCode} from "@predrive/shared/types";
-const KEY="predrive.language";
+import {usePreDriveI18n} from "@predrive/shared/i18n";
 export function useAuthLanguage(){
- const [language,setLanguageState]=useState<LanguageCode>("en");
- useEffect(()=>{try{const value=window.localStorage.getItem(KEY);if(value==="en"||value==="sn"||value==="nd")setLanguageState(value);}catch{/* Storage may be unavailable in restricted browsers. */}},[]);
- const setLanguage=(value:LanguageCode)=>{setLanguageState(value);try{window.localStorage.setItem(KEY,value);}catch{/* Language remains active for this session. */}};
- return {language,setLanguage};
+ const {language,setLanguage}=usePreDriveI18n();
+ return {language,setLanguage:(value:LanguageCode)=>{void setLanguage(value);}};
 }

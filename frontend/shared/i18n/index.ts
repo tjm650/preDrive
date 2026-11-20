@@ -1,4 +1,4 @@
-import i18next,{type i18n, type Resource} from "i18next";
+import i18next,{type i18n,type Resource} from "i18next";
 import en from "./en.json";
 import sn from "./sn.json";
 import nd from "./nd.json";
@@ -11,3 +11,4 @@ export function createPreDriveI18n(language:LanguageCode="en"):i18n{
 }
 export async function changePreDriveLanguage(instance:i18n,language:LanguageCode):Promise<void>{await instance.changeLanguage(language);}
 export {resources};
+export * from "./provider";

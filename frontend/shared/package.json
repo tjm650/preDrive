@@ -4,5 +4,6 @@
   "exports":{".":"./index.ts","./types":"./types/index.ts","./tokens":"./tokens/index.ts","./i18n":"./i18n/index.ts","./api":"./lib/api/index.ts","./offline":"./lib/offline/index.ts","./auth/permissions":"./lib/auth/permissions.ts","./*":"./*"},
   "scripts":{"typecheck":"tsc --noEmit -p tsconfig.json"},
   "dependencies":{"i18next":"^25.5.2"},
+  "peerDependencies":{"react":"^19.0.0"},
   "devDependencies":{"typescript":"~5.9.3"}
 }
