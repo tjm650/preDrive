@@ -29,6 +29,21 @@ $$;
 create unique index if not exists staff_members_id_school_uidx
   on public.staff_members (id, school_id);
 
+create or replace function private.is_unique_smallint_array(p_values smallint[])
+returns boolean
+language sql
+immutable
+strict
+set search_path = ''
+as $
+  select cardinality(p_values) = (
+    select count(distinct item)::integer
+    from unnest(p_values) as input_values(item)
+  );
+$;
+
+revoke all on function private.is_unique_smallint_array(smallint[]) from public, anon, authenticated, service_role;
+
 create table if not exists public.buses (
   id uuid primary key default gen_random_uuid(),
   school_id uuid not null references public.schools(id) on delete restrict,
@@ -59,7 +74,7 @@ create table if not exists public.transport_routes (
   constraint transport_routes_school_code_key unique (school_id, code),
   constraint transport_routes_assigned_bus_school_fkey
     foreign key (assigned_bus_id, school_id)
-    references public.buses (id, school_id) on delete set null
+    references public.buses (id, school_id) on delete restrict
 );
 
 create table if not exists public.route_stops (
@@ -104,7 +119,7 @@ create table if not exists public.route_schedules (
     effective_until is null or effective_until >= effective_from
   ),
   constraint route_schedules_days_unique_check check (
-    cardinality(days_of_week) = cardinality(array(select distinct unnest(days_of_week)))
+    private.is_unique_smallint_array(days_of_week)
   )
 );
 
