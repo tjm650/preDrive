@@ -437,3 +437,8 @@ webhook_events {
 ## Generated types
 
 Generated directly from the connected development database. Source: `frontend/shared/types/database.types.ts`. Regenerate and commit the diff after every schema migration.
+
+
+## Frontend API contract checkpoint
+
+The exact frontend-facing contract is documented in [API-CONTRACT.md](./API-CONTRACT.md). The current `PreDriveApi` contains 30 operations across auth, school, children, staff, transport, safety and finance. This corrects an earlier planning note that counted 29. The contract currently defines no Realtime subscription methods or event payloads; no Realtime publication tables should be enabled until that contract is explicitly extended.
