@@ -23,7 +23,7 @@ This register tracks the backend implementation plan. B0 is planning/audit work 
 - [x] B1.3 Safety and operations — migration `20261121124437`.
 - [x] B1.4 Finance — migration `20261121124444`.
 - [x] B1.5 Settings, privacy, audit and analytics — migration `20261121124451`.
-- [ ] B1.6 Documentation, generated types, schema audit and migration-chain verification — 51 FK indexes added in `20261121124613`; historical reset SQL `20261120112956` recovered from the remote migration ledger and restored to GitHub; repository-only pgcrypto dependency migration `20261121130000` added (not applied remotely). Fresh hosted replay and full acceptance checks remain pending.
+- [ ] B1.6 Documentation, generated types, schema audit and migration-chain verification — 51 FK indexes added in `20261121124613`; historical reset SQL `20261120112956` recovered from the remote migration ledger, restored byte-for-byte to GitHub and verified against `statements[0]`; repository-only pgcrypto dependency migration `20261121130000` added (not applied remotely). Fresh hosted replay and full acceptance checks remain pending.
 
 B1.6 acceptance checkpoint:
 - [ ] Complete full migration replay on a separate empty disposable hosted Supabase project (a preview branch cloned from the populated dev project is not a clean-room replay).
