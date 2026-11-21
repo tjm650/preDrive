@@ -11,7 +11,15 @@ interface Props {
  onStartTrip?:()=>void;
  onEndTrip?:()=>void;
 }
-const statusLabel:Record<Trip["status"],string>={scheduled:"Scheduled",active:"In progress",completed:"Completed",cancelled:"Cancelled",attention_required:"Attention required"};
+
+const statusLabel:Record<Trip["status"],string>={
+ scheduled:"Scheduled",
+ active:"In progress",
+ completed:"Completed",
+ cancelled:"Cancelled",
+ attention_required:"Attention required"
+};
+
 export function TripControlCard({trip,routeLabel,busRegistration,onStartTrip,onEndTrip}:Props){
  if(!trip)return <AppCard style={s.card}><Text style={s.title}>No trip assigned</Text><Text style={s.description}>An authorised trip assignment will appear here when your supervisor account is connected.</Text></AppCard>;
  const active=trip.status==="active";
@@ -28,4 +36,23 @@ export function TripControlCard({trip,routeLabel,busRegistration,onStartTrip,onE
   {active?<Text style={s.privacy}>Vehicle location is shared only while this trip is active.</Text>:null}
  </AppCard>;
 }
-const s=StyleSheet.create({card:{padding:18,gap:14},header:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},eyebrow:{fontSize:12,fontWeight:"800",letterSpacing:.8,color:colors.ink,opacity:.65},badge:{borderRadius:999,paddingHorizontal:10,paddingVertical:6},active:{backgroundColor:"#E6F4ED"},attention:{backgroundColor:"#FCEBE8"},neutral:{backgroundColor:colors.canvas},badgeText:{fontSize:12,fontWeight:"700",color:colors.ink},title:{fontSize:21,fontWeight:"800",color:colors.ink},details:{flexDirection:"row",gap:24},detail:{gap:4},detailLabel:{fontSize:11,fontWeight:"800",letterSpacing:.7,color:colors.ink,opacity:.55},detailValue:{fontSize:16,fontWeight:"700",color:colors.ink},warning:{fontSize:14,lineHeight:20,color:colors.danger},unavailable:{fontSize:14,lineHeight:20,color:colors.ink,opacity:.68},privacy:{fontSize:13,lineHeight:18,color:colors.ink,opacity:.68}});
+
+const s=StyleSheet.create({
+ card:{padding:18,gap:14},
+ header:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},
+ eyebrow:{fontSize:12,fontWeight:"800",letterSpacing:.8,color:colors.ink,opacity:.65},
+ badge:{borderRadius:999,paddingHorizontal:10,paddingVertical:6},
+ active:{backgroundColor:"#E6F4ED"},
+ attention:{backgroundColor:"#FCEBE8"},
+ neutral:{backgroundColor:colors.canvas},
+ badgeText:{fontSize:12,fontWeight:"700",color:colors.ink},
+ title:{fontSize:21,fontWeight:"800",color:colors.ink},
+ description:{fontSize:14,lineHeight:20,color:colors.ink,opacity:.72},
+ details:{flexDirection:"row",gap:24},
+ detail:{gap:4},
+ detailLabel:{fontSize:11,fontWeight:"800",letterSpacing:.7,color:colors.ink,opacity:.55},
+ detailValue:{fontSize:16,fontWeight:"700",color:colors.ink},
+ warning:{fontSize:14,lineHeight:20,color:colors.danger},
+ unavailable:{fontSize:14,lineHeight:20,color:colors.ink,opacity:.68},
+ privacy:{fontSize:13,lineHeight:18,color:colors.ink,opacity:.68}
+});
