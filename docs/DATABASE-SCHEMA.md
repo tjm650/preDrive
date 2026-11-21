@@ -303,12 +303,13 @@ schools ||--o{ webhook_events : "foreign key"
 | 20261121124444 | `20261121124444_predrive_finance.sql` | Fees, invoices, payments, transfers, refunds, credit notes and receipts |
 | 20261121124451 | `20261121124451_predrive_settings_privacy_audit_analytics.sql` | Settings, consent, devices, deletion, setup, audit, rate limits, webhooks and analytics |
 | 20261121124613 | `20261121124613_predrive_foreign_key_indexes.sql` | Covering indexes for 51 foreign-key relationships |
+| — (repository-only; not yet applied) | `20261121130000_predrive_enable_pgcrypto.sql` | Explicitly declares the `pgcrypto` dependency in the `extensions` schema for collector PIN hashing; pending hosted replay and migration application |
 
-The remote ledger currently records all 12 versions above, and all 12 matching SQL files are committed. The recovered reset migration is destructive and must not be rerun against the existing development database. A fresh hosted replay is still required before the chain can be certified.
+The remote ledger currently records 12 applied versions. The repository contains matching SQL for those 12 versions plus the new repository-only `20261121130000_predrive_enable_pgcrypto.sql` dependency migration, which has not been applied to the remote development database. The recovered reset migration is destructive and must not be rerun against the existing development database. A fresh hosted replay is still required before the chain can be certified.
 
 ## Type generation and online verification
 
-- `frontend/shared/types/database.types.ts` has been generated from the connected development schema and committed.
+- `frontend/shared/types/database.types.ts` has been generated from the connected development schema and committed; a fresh generation matched the committed file byte-for-byte before the new extension-only migration was added.
 - That output reflects the current remote development schema; it is not proof that a fresh replay of the committed migration chain produces the same schema.
 - Do not hand-edit generated database types.
 - Do not use the local-only `supabase db reset` workflow for this online project.
