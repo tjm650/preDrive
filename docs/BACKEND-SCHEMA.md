@@ -31,7 +31,14 @@
 
 ## Migration-chain exception
 
-The remote migration ledger contains historical version `20261120112956` (`predrive_full_application_reset`). Its original SQL was recovered read-only from the remote `supabase_migrations.schema_migrations.statements` array and restored to `supabase/migrations/20261120112956_predrive_full_application_reset.sql`. All 12 remote versions have matching committed SQL files; an additional repository-only pgcrypto dependency migration is pending. The recovered migration is a destructive one-time reset: it unschedules cron jobs, deletes Vault secrets and Auth users, drops non-extension objects in `private` and `public`, and clears the migration ledger. It must never be rerun against an existing environment containing data or secrets. The reset SQL assumes `cron.job`, `cron.unschedule(...)` and `vault.secrets` already exist before the application migrations begin. These schemas are present in the current development project, but their presence on a fresh hosted branch is not yet verified. A clean-room replay is still **not yet certified**; validate the restored chain only on a genuinely fresh isolated hosted branch.
+The remote migration ledger contains historical version `20261120112956` (`predrive_full_application_reset`). Its original SQL was recovered read-only from the remote `supabase_migrations.schema_migrations.statements` array and restored to `supabase/migrations/20261120112956_predrive_full_application_reset.sql`. All 12 remote versions have matching committed SQL files; an additional repository-only pgcrypto dependency migration is pending. The recovered migration is a destructive one-time reset: it unschedules every cron job, deletes all Vault secrets and Auth users, drops non-extension functions/relations/types in `public`, drops and recreates `private`, and deletes every row from `supabase_migrations.schema_migrations`. It must never be rerun against an existing environment containing data or secrets. The reset SQL assumes `cron.job`, `cron.unschedule(...)` and `vault.secrets` already exist before the application migrations begin. These schemas are present in the current development project, but their presence on a fresh hosted branch is not yet verified. A clean-room replay is still **not yet certified**; validate the restored chain only on a genuinely fresh isolated hosted branch.
+
+## Static migration security review
+
+- All eight `SECURITY DEFINER` function declarations found across the current application migrations set an empty `search_path` (`SET search_path = ''`).
+- The reviewed function bodies schema-qualify application relations and private helper calls; this reduces object-shadowing risk. The review is static and does not replace executable privilege/RLS tests in B2.
+- The reset migration is intentionally outside this security-function count; it contains anonymous `DO` blocks and destructive DDL.
+- The current schema migrations do not create the B2 tenant authorization helper set or the B3 handover verification RPC. These remain planned work, not missing implementation claimed complete.
 
 ## Current Supabase advisor and generated-type observations
 
