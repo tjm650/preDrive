@@ -1,10 +1,36 @@
 import {StyleSheet,Text,View} from "react-native";
 import {colors} from "@predrive/shared/tokens";
 import {AppCard} from "../ui/app-card";
-export interface GuardianJourneySummary {direction:"to_school"|"from_school";status:"scheduled"|"active"|"completed"|"cancelled";routeName:string;busRegistration:string;etaLabel?:string;nextStopLabel?:string;lastUpdatedLabel?:string;}
+
+export interface GuardianJourneySummary {
+ direction:"to_school"|"from_school";
+ status:"scheduled"|"active"|"completed"|"cancelled";
+ routeName:string;
+ busRegistration:string;
+ etaLabel?:string;
+ nextStopLabel?:string;
+ lastUpdatedLabel?:string;
+}
+
 export function GuardianJourneyCard({journey}:{journey:GuardianJourneySummary|null}){
  if(!journey)return <AppCard style={s.card}><Text style={s.title}>No active journey</Text><Text style={s.body}>There is no active school transport journey to display right now.</Text></AppCard>;
  const active=journey.status==="active";
  return <AppCard style={s.card}><View style={s.header}><Text style={s.eyebrow}>{journey.direction==="to_school"?"TO SCHOOL":"FROM SCHOOL"}</Text><View style={[s.status,active?s.active:s.inactive]}><Text style={s.statusText}>{journey.status.replace("_"," ")}</Text></View></View><Text style={s.route}>{journey.routeName}</Text><Text style={s.body}>Bus {journey.busRegistration}</Text>{journey.etaLabel?<View style={s.eta}><Text style={s.etaValue}>{journey.etaLabel}</Text><Text style={s.body}>Estimated arrival</Text></View>:null}{journey.nextStopLabel?<Text style={s.body}>Next stop: {journey.nextStopLabel}</Text>:null}{journey.lastUpdatedLabel?<Text style={s.updated}>Updated {journey.lastUpdatedLabel}</Text>:null}<Text style={s.privacy}>Vehicle location is shared only during an active trip.</Text></AppCard>;
 }
-const s=StyleSheet.create({card:{padding:18,gap:10},header:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},eyebrow:{fontSize:12,fontWeight:"800",letterSpacing:.8,color:colors.ink,opacity:.65},status:{borderRadius:999,paddingHorizontal:10,paddingVertical:5},active:{backgroundColor:"#E6F4ED"},inactive:{backgroundColor:colors.canvas},statusText:{fontSize:12,fontWeight:"700",color:colors.ink,textTransform:"capitalize"},route:{fontSize:21,fontWeight:"800",color:colors.ink},body:{fontSize:16,lineHeight:22,color:colors.ink,opacity:.76},eta:{marginTop:8,borderTopWidth:1,borderTopColor:colors.line,paddingTop:12},etaValue:{fontSize:30,fontWeight:"800",color:colors.ink},updated:{fontSize:13,color:colors.ink,opacity:.6},privacy:{marginTop:4,fontSize:13,lineHeight:18,color:colors.ink,opacity:.7}});
+
+const s=StyleSheet.create({
+ card:{padding:18,gap:10},
+ header:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},
+ title:{fontSize:16,fontWeight:"700",color:colors.ink},
+ eyebrow:{fontSize:12,fontWeight:"800",letterSpacing:.8,color:colors.ink,opacity:.65},
+ status:{borderRadius:999,paddingHorizontal:10,paddingVertical:5},
+ active:{backgroundColor:"#E6F4ED"},
+ inactive:{backgroundColor:colors.canvas},
+ statusText:{fontSize:12,fontWeight:"700",color:colors.ink,textTransform:"capitalize"},
+ route:{fontSize:21,fontWeight:"800",color:colors.ink},
+ body:{fontSize:16,lineHeight:22,color:colors.ink,opacity:.76},
+ eta:{marginTop:8,borderTopWidth:1,borderTopColor:colors.line,paddingTop:12},
+ etaValue:{fontSize:30,fontWeight:"800",color:colors.ink},
+ updated:{fontSize:13,color:colors.ink,opacity:.6},
+ privacy:{marginTop:4,fontSize:13,lineHeight:18,color:colors.ink,opacity:.7}
+});
