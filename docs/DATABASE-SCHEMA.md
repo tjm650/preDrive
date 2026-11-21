@@ -291,7 +291,7 @@ schools ||--o{ webhook_events : "foreign key"
 
 | Remote version | Repository SQL file | Domain / status |
 |---|---|---|
-| 20261120112956 | **Missing** | Historical `predrive_full_application_reset` entry exists in the remote ledger; original SQL has not been recovered. Do not recreate from guesswork. |
+| 20261120112956 | `20261120112956_predrive_full_application_reset.sql` | Historical one-time reset; original SQL recovered from the remote migration ledger. Destructive: only replay on a fresh isolated branch. |
 | 20261120181614 | `20261120181614_core_identity_tenancy.sql` | Schools, profiles, memberships, staff and invitations |
 | 20261120181637 | `20261120181637_tighten_profile_and_staff_visibility.sql` | Profile and staff visibility hardening |
 | 20261120181707 | `20261120181707_lock_down_private_schema.sql` | Private schema and helper-function grants |
@@ -304,7 +304,7 @@ schools ||--o{ webhook_events : "foreign key"
 | 20261121124451 | `20261121124451_predrive_settings_privacy_audit_analytics.sql` | Settings, consent, devices, deletion, setup, audit, rate limits, webhooks and analytics |
 | 20261121124613 | `20261121124613_predrive_foreign_key_indexes.sql` | Covering indexes for 51 foreign-key relationships |
 
-The remote ledger currently records all 12 versions above. Eleven matching SQL files are committed. The missing historical reset migration prevents certification of a fresh replay until its original SQL is recovered or a deliberate baseline/history replacement is approved and verified.
+The remote ledger currently records all 12 versions above, and all 12 matching SQL files are committed. The recovered reset migration is destructive and must not be rerun against the existing development database. A fresh hosted replay is still required before the chain can be certified.
 
 ## Type generation and online verification
 
