@@ -4,7 +4,7 @@
 
 - Supabase project: `preDrive` (`rjsdhgbjvghjnuiilizm`), region `eu-west-1`.
 - PostgreSQL 17.12.
-- 42 application tables in `public`; all 42 have RLS enabled.
+- 42 application tables in `public`; all 42 have RLS enabled. A static inventory of all 12 applied migration files matches the live catalog exactly for all 42 table names, 23 public enum names and five public view names; no missing or unexpected names were found in those three object classes.
 - 37 tables currently have no RLS policies. This is deliberate deny-by-default staging before B2; client table privileges remain withheld until role policies are implemented.
 - No application rows were inserted by B1.1–B1.6.
 - All 51 foreign keys flagged as unindexed by Supabase Performance Advisor were given covering indexes in migration `20261121124613`. A follow-up advisor run no longer reports unindexed foreign keys.
