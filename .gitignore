@@ -10,3 +10,6 @@ coverage/
 *.log
 .DS_Store
 Thumbs.db
+
+# Firebase Android client configuration is supplied by EAS.
+frontend/mobile/google-services.json
