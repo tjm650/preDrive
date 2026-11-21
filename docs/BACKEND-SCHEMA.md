@@ -446,3 +446,12 @@ Generated directly from the connected development database. Source: `frontend/sh
 ## Frontend API contract checkpoint
 
 The exact frontend-facing contract is documented in [API-CONTRACT.md](./API-CONTRACT.md). The current `PreDriveApi` contains 30 operations across auth, school, children, staff, transport, safety and finance. This corrects an earlier planning note that counted 29. The contract currently defines no Realtime subscription methods or event payloads; no Realtime publication tables should be enabled until that contract is explicitly extended.
+## B1.6 read-only verification refresh — 2026-11-21
+
+The existing development project was rechecked without making database changes. Catalog counts reconfirmed 42 public application tables with RLS enabled, 37 without policies, seven public policies, five public views with `security_invoker=true`, and 12 migration-ledger entries. The required installed extensions (`pgcrypto`, `postgis`, `pg_cron`, `pg_net`, `supabase_vault`) are present.
+
+Type generation was repeated from the live project. The generated output is exactly 93,685 characters and matches `frontend/shared/types/database.types.ts` byte-for-byte.
+
+Latest advisors: Security reports 37 informational `rls_enabled_no_policy` findings and one `extension_in_public` warning for `pg_net`; Performance reports 149 informational `unused_index` findings; Health reports no findings. The RLS notices reflect the deliberate deny-by-default state before B2. The unused-index notices are not grounds for dropping indexes in a database without representative workload. The `pg_net` warning remains unresolved; it is non-relocatable in this project and must not be moved with `ALTER EXTENSION ... SET SCHEMA`.
+
+This is a refresh of the current-development inventory, not a clean-room replay. PostgREST exposed-schema configuration cannot be read from the SQL catalog; verify in Supabase Dashboard → Settings → API → Exposed schemas that `private` and `net` are not exposed. The empty-database migration replay and the `supabase_admin` default-ACL platform exception remain outstanding.
