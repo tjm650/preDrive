@@ -41,7 +41,7 @@ For security-sensitive SQL, review:
 - fully qualified references inside functions using an empty search path;
 - RLS policies and both USING / WITH CHECK conditions;
 - view security, including `security_invoker` where appropriate;
-- grants on tables, columns, sequences, schemas and functions; verify service-role append-only restrictions and never expose service-role credentials;
+- grants on tables, columns, sequences, schemas and functions; verify service-role append-only restrictions and never expose service-role credentials. Also inspect default ACLs for every object owner: the connected `postgres` role's defaults are restricted, but Supabase-managed `supabase_admin` defaults in `public` still grant broad privileges to client roles and cannot be changed by the connected migration role;
 - tenant-scoped foreign keys and supporting indexes;
 - extension placement, relocatability and required platform privileges; do not plan to move a non-relocatable extension such as the currently installed `pg_net` with `ALTER EXTENSION ... SET SCHEMA`.
 
@@ -110,5 +110,6 @@ For accidental data loss, use the environment's supported backup/PITR recovery p
 3. Decide the correct side for each difference before changing the development project or migration history.
 4. Confirm extension placement and baseline requirements for pgcrypto, PostGIS, pg_cron, supabase_vault and pg_net. In the current project, `pg_net` 0.20.4 has extension namespace `public`, its owned objects are in `net`, and PostgreSQL reports `relocatable=false`; do not attempt `ALTER EXTENSION ... SET SCHEMA`. Its `net` schema and HTTP functions currently grant effective access to `anon` and `authenticated` through PUBLIC/default privileges. Verify that `net` is not in Supabase's API exposed-schema list and define least-privilege grants for the trusted roles that need pg_net before B1.6 sign-off; the database catalog alone does not establish PostgREST exposure. Identify a supported Supabase remediation or record an explicitly accepted Security Advisor exception. The reset migration has an earlier dependency on pg_cron and supabase_vault, while the repository migration chain now explicitly enables pgcrypto but does not explicitly enable pg_cron or supabase_vault.
 5. Reconcile the stale claims in `DATABASE-SCHEMA.md` with the verified current schema documentation.
+6. Resolve or explicitly accept the Supabase-managed `supabase_admin` default ACLs in `public`; the connected `postgres` role is not a member of `supabase_admin` and cannot alter them. Existing app tables have restricted grants, but future objects created by `supabase_admin` inherit broad client privileges.
 
 Until these are resolved, B1.6 remains open and B2 must not begin.
