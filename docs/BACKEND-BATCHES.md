@@ -53,7 +53,7 @@ B1.6 acceptance checkpoint:
 7. Finance lifecycle and ledger-safe transitions.
 8. Consent, deletion/export, bulk CSV, route/child reassignment, cancellation and absence operations.
 
-Before implementing RPCs, inspect all 29 methods in the actual `frontend/shared/lib/api` contract. Do not invent method names or payloads.
+Before implementing RPCs, follow the exact 30-method inventory in [`API-CONTRACT.md`](./API-CONTRACT.md), derived from `frontend/shared/lib/api/contract.ts` and its input types. Do not invent method names or payloads.
 
 ## B4 — Edge Functions and automation (8 batches)
 
