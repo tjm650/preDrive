@@ -305,7 +305,7 @@ schools ||--o{ webhook_events : "foreign key"
 | 20261121124613 | `20261121124613_predrive_foreign_key_indexes.sql` | Covering indexes for 51 foreign-key relationships |
 | — (repository-only; not yet applied) | `20261121130000_predrive_enable_pgcrypto.sql` | Explicitly declares the `pgcrypto` dependency in the `extensions` schema for collector PIN hashing; pending hosted replay and migration application |
 
-The remote ledger currently records 12 applied versions. The repository contains matching SQL for those 12 versions plus the new repository-only `20261121130000_predrive_enable_pgcrypto.sql` dependency migration, which has not been applied to the remote development database. The recovered reset migration is destructive and must not be rerun against the existing development database. A fresh hosted replay is still required before the chain can be certified.
+The remote ledger currently records 12 applied versions. All 12 ledger statements were compared read-only with their repository migration files: normalized SQL text matches for every version, with six byte-exact matches and six comment/whitespace-only differences. The repository also contains the new repository-only `20261121130000_predrive_enable_pgcrypto.sql` dependency migration, which has not been applied to the remote development database. The recovered reset migration is destructive and must not be rerun against the existing development database. A fresh hosted replay is still required before the chain can be certified.
 
 ## Type generation and online verification
 
