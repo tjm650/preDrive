@@ -43,13 +43,13 @@ For security-sensitive SQL, review:
 - view security, including `security_invoker` where appropriate;
 - grants on tables, sequences, schemas and functions;
 - tenant-scoped foreign keys and supporting indexes;
-- extension placement and required platform privileges.
+- extension placement, relocatability and required platform privileges; do not plan to move a non-relocatable extension such as the currently installed `pg_net` with `ALTER EXTENSION ... SET SCHEMA`.
 
 ### 3. Verify against an isolated empty hosted project
 
 A Supabase preview branch created from the current development project is **not** a clean-room replay target: branch workflows retain the parent branch's applied migration history and apply only newly introduced migrations. Such a branch can verify incremental changes, but it cannot prove that all 13 repository migrations build the schema from an empty starting point.
 
-For the required full replay, use a separate disposable Supabase project with no pre-existing application schema or application migration history. Connect the matching Git revision and deploy the complete ordered migration directory there. Before replay, verify the platform-provided prerequisites used by the first migration (`cron.job`, `vault.secrets`, and the `supabase_migrations` ledger) and record their initial state. Keep production data and credentials out of this target.
+For the required full replay, use a separate disposable Supabase project with no pre-existing application schema or application migration history. Connect the matching Git revision and deploy the complete ordered migration directory there. Before replay, verify the platform-provided prerequisites used by the first migration (`cron.job`, `cron.unschedule(bigint)`, `vault.secrets`, and the `supabase_migrations` ledger), confirm the migration role has the required SELECT/EXECUTE/DELETE privileges, and record their initial state. These objects and privileges are confirmed in the current development project only; they have not yet been verified on a fresh hosted project. Keep production data and credentials out of this target.
 
 A separate hosted project is the online equivalent of a clean database replay for this project. The local-only `supabase db reset` command is not part of the required workflow. Supabase preview branches remain useful for later incremental migration checks, not as proof of empty-database reproducibility.
 
@@ -108,7 +108,7 @@ For accidental data loss, use the environment's supported backup/PITR recovery p
 1. Validate the restored historical reset migration on a genuinely empty disposable hosted project; a preview branch cloned from the current development database is not a clean-room replay. Do not rerun it against the existing development project.
 2. Complete hosted clean-room replay and report every schema/platform-object difference against the development project.
 3. Decide the correct side for each difference before changing the development project or migration history.
-4. Confirm extension placement and baseline requirements for pgcrypto, PostGIS, pg_cron, supabase_vault and pg_net; the current project has pg_net in the exposed `public` schema. The reset migration has an earlier dependency on pg_cron and supabase_vault, while the repository migration chain now explicitly enables pgcrypto but does not explicitly enable pg_cron or supabase_vault.
+4. Confirm extension placement and baseline requirements for pgcrypto, PostGIS, pg_cron, supabase_vault and pg_net. In the current project, `pg_net` 0.20.4 has extension namespace `public`, its owned objects are in `net`, and PostgreSQL reports `relocatable=false`; do not attempt `ALTER EXTENSION ... SET SCHEMA`. Identify a supported Supabase remediation or record an explicitly accepted Security Advisor exception. The reset migration has an earlier dependency on pg_cron and supabase_vault, while the repository migration chain now explicitly enables pgcrypto but does not explicitly enable pg_cron or supabase_vault.
 5. Reconcile the stale claims in `DATABASE-SCHEMA.md` with the verified current schema documentation.
 
 Until these are resolved, B1.6 remains open and B2 must not begin.
