@@ -113,3 +113,24 @@ For accidental data loss, use the environment's supported backup/PITR recovery p
 5. Resolve or explicitly accept the Supabase-managed `supabase_admin` default ACLs in `public`; the connected `postgres` role is not a member of `supabase_admin` and cannot alter them. Existing application tables, views and sequences are owned by `postgres` and have restricted grants; the concern is future objects created by `supabase_admin`.
 
 Until these are resolved, B1.6 remains open and B2 must not begin.
+## Latest authorized read-only verification — 2026-11-21
+
+The user authorized read-only verification on the existing development project only. No schema, data, migration ledger, settings, branches or projects were changed.
+
+A fresh Supabase read-only check confirmed:
+
+- The project is `ACTIVE_HEALTHY`, PostgreSQL 17.12.
+- The migration API reports the same 12 applied versions listed above.
+- The public catalog reports 42 application tables and RLS enabled on all 42; 37 currently have no policies and remain deny-by-default. Seven policies exist.
+- Five public views exist and all five have `security_invoker=true`.
+- Required installed extensions are present: `pgcrypto`, `postgis`, `pg_cron`, `pg_net` and `supabase_vault`.
+- A new TypeScript generation run returned 93,685 characters and matched the committed `frontend/shared/types/database.types.ts` byte-for-byte.
+- Security Advisor: 37 informational RLS-without-policy findings, plus one warning for `pg_net` in `public`.
+- Performance Advisor: 149 informational unused-index findings; do not remove indexes without representative workload and query-plan evidence.
+- Health Advisor: no findings.
+
+This confirms the current development database inventory and type synchronization only. It does not certify an empty-database migration replay, does not establish the PostgREST exposed-schema allowlist, and does not resolve the `pg_net` warning or Supabase-managed `supabase_admin` default ACL concern. The API exposed-schema setting must be checked in the Supabase Dashboard under **Settings → API → Exposed schemas**; verify that neither `private` nor `net` is exposed.
+
+The repository-only `20261121130000_predrive_enable_pgcrypto.sql` remains unapplied to the development migration ledger. Since `extensions.pgcrypto` is already installed, do not apply it merely to make the ledger appear complete. Its behavior still needs to be verified in a genuinely isolated clean replay.
+
+**B1.6 remains open. B2 must not start until the outstanding migration-replay and security/platform acceptance items are resolved.**
