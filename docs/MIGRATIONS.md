@@ -45,15 +45,15 @@ For security-sensitive SQL, review:
 - tenant-scoped foreign keys and supporting indexes;
 - extension placement and required platform privileges.
 
-### 3. Verify in an isolated hosted branch
+### 3. Verify against an isolated empty hosted project
 
-Use a dedicated Supabase branch connected to the matching Git branch so Supabase deploys the committed migration files to an isolated database. Keep production data excluded.
+A Supabase preview branch created from the current development project is **not** a clean-room replay target: branch workflows retain the parent branch's applied migration history and apply only newly introduced migrations. Such a branch can verify incremental changes, but it cannot prove that all 13 repository migrations build the schema from an empty starting point.
 
-A branch deployment is not automatically proof of an empty-database replay: confirm the branch workflow's Pull and Migrate steps and inspect its migration log. The historical SQL file has been restored. The new pgcrypto dependency migration is repository-only until a hosted replay and approved promotion.
+For the required full replay, use a separate disposable Supabase project with no pre-existing application schema or application migration history. Connect the matching Git revision and deploy the complete ordered migration directory there. Before replay, verify the platform-provided prerequisites used by the first migration (`cron.job`, `vault.secrets`, and the `supabase_migrations` ledger) and record their initial state. Keep production data and credentials out of this target.
 
-For this project, the hosted branch is the online equivalent used for migration-chain verification. The local-only `supabase db reset` command is not part of the required workflow.
+A separate hosted project is the online equivalent of a clean database replay for this project. The local-only `supabase db reset` command is not part of the required workflow. Supabase preview branches remain useful for later incremental migration checks, not as proof of empty-database reproducibility.
 
-Do not create a hosted branch, apply a migration to the existing development database, repair its migration history, or incur branch compute charges without the user's written authorization for that operation.
+Do not create a hosted branch or disposable project, apply a migration to the existing development database, repair migration history, or incur compute charges without the user's written authorization for that operation.
 
 ### 4. Validate before promotion
 
@@ -105,7 +105,7 @@ For accidental data loss, use the environment's supported backup/PITR recovery p
 
 ## Current unresolved decisions
 
-1. Validate the restored historical reset migration on a genuinely fresh isolated hosted branch; do not rerun it against the existing development project.
+1. Validate the restored historical reset migration on a genuinely empty disposable hosted project; a preview branch cloned from the current development database is not a clean-room replay. Do not rerun it against the existing development project.
 2. Complete hosted clean-room replay and report every schema/platform-object difference against the development project.
 3. Decide the correct side for each difference before changing the development project or migration history.
 4. Confirm extension placement and baseline requirements for pgcrypto, PostGIS, pg_cron, supabase_vault and pg_net; the current project has pg_net in the exposed `public` schema. The reset migration has an earlier dependency on pg_cron and supabase_vault, while the repository migration chain now explicitly enables pgcrypto but does not explicitly enable pg_cron or supabase_vault.
