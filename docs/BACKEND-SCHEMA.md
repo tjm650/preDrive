@@ -35,7 +35,7 @@ The remote migration ledger contains historical version `20261120112956` (`predr
 
 ## Static migration security review
 
-- All eight `SECURITY DEFINER` function declarations found across the current application migrations set an empty `search_path` (`SET search_path = ''`).
+- All eight `SECURITY DEFINER` function declarations found across the current application migrations set an empty `search_path` (`SET search_path = ''`). The live development catalog currently contains seven such functions; one historical declaration was replaced/dropped by a later migration. A read-only privilege audit found no `anon` EXECUTE grants, and only the two intended authenticated helper functions are executable by `authenticated`.
 - The reviewed function bodies schema-qualify application relations and private helper calls; this reduces object-shadowing risk. The review is static and does not replace executable privilege/RLS tests in B2.
 - The reset migration is intentionally outside this security-function count; it contains anonymous `DO` blocks and destructive DDL.
 - The current schema migrations do not create the B2 tenant authorization helper set or the B3 handover verification RPC. These remain planned work, not missing implementation claimed complete.
