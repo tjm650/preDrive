@@ -59,7 +59,7 @@ Do not create a hosted branch or disposable project, apply a migration to the ex
 
 A migration batch is not complete until the isolated branch has passed:
 - migration deployment with no failed or skipped migration;
-- complete schema comparison: tables, columns, types, defaults, constraints, indexes, enums, functions, triggers, RLS flags and policies;
+- complete schema comparison: tables, columns, types, defaults, constraints, indexes, enums, functions, triggers, RLS flags and policies; the current static migration-to-catalog name check already matches all 42 tables, 23 enums and five views, but does not replace the full replay comparison;
 - extension inventory and extension schema placement;
 - Realtime publication membership;
 - pg_cron jobs;
