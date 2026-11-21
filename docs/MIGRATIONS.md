@@ -16,7 +16,7 @@ This repository uses an online Supabase workflow. Do not require Docker, a local
 - Historical version `20261120112956` (`predrive_full_application_reset`) was recovered from the remote `supabase_migrations.schema_migrations.statements` array and restored as `supabase/migrations/20261120112956_predrive_full_application_reset.sql`.
 - Do not fabricate that historical SQL file or claim that the migration chain has passed a clean replay.
 - No clean-room migration replay has been certified.
-- The development database has 42 public application tables, all with RLS enabled. Thirty-seven currently have no policies by design; B2 will implement the role and tenant policies.
+- The development database has 42 public application tables, all with RLS enabled. Thirty-seven currently have no policies by design; B2 will implement the role and tenant policies. The live grant audit confirms no `anon` application-table privileges and no authenticated INSERT/DELETE grants; authenticated SELECT is limited to five policy-protected tables, with narrow column-level UPDATE grants on profile and school fields.
 - The existing development database must not be modified until the user authorizes the exact operation in writing.
 
 The complete inventory and current schema observations are maintained in [BACKEND-SCHEMA.md](./BACKEND-SCHEMA.md).
@@ -37,11 +37,11 @@ Review the complete SQL and its dependencies before it is run anywhere. Check th
 
 For security-sensitive SQL, review:
 - schema ownership and search paths;
-- SECURITY DEFINER functions and their execute grants; the migration files contain eight declarations, all with `SET search_path = ''`. The current live development catalog contains seven (one historical declaration was subsequently dropped/replaced). A live privilege audit found no `anon` EXECUTE grants; only the two intended authenticated RLS helpers are executable by `authenticated`;
+- SECURITY DEFINER functions and their execute grants; the migration files contain eight declarations, all with `SET search_path = ''`. The current live development catalog contains seven SECURITY DEFINER routines among 11 private routines (one historical declaration was subsequently dropped/replaced); all 11 live routines have empty search paths. A live privilege audit found no `anon` or `service_role` EXECUTE grants; only the two intended authenticated RLS helpers are executable by `authenticated`;
 - fully qualified references inside functions using an empty search path;
 - RLS policies and both USING / WITH CHECK conditions;
 - view security, including `security_invoker` where appropriate;
-- grants on tables, sequences, schemas and functions;
+- grants on tables, columns, sequences, schemas and functions; verify service-role append-only restrictions and never expose service-role credentials;
 - tenant-scoped foreign keys and supporting indexes;
 - extension placement, relocatability and required platform privileges; do not plan to move a non-relocatable extension such as the currently installed `pg_net` with `ALTER EXTENSION ... SET SCHEMA`.
 
@@ -59,7 +59,7 @@ Do not create a hosted branch or disposable project, apply a migration to the ex
 
 A migration batch is not complete until the isolated branch has passed:
 - migration deployment with no failed or skipped migration;
-- complete schema comparison: tables, columns, types, defaults, constraints, indexes, enums, functions, triggers, RLS flags and policies; the current static migration-to-catalog name check already matches all 42 tables, 23 enums and five views, but does not replace the full replay comparison;
+- complete schema comparison: tables, columns, types, defaults, constraints, indexes, enums, functions, triggers, RLS flags, FORCE RLS flags, policies, grants and default privileges; the current static migration-to-catalog name check already matches all 42 tables, 23 enums and five views, and the live catalog has 36 enabled public application triggers plus one Auth profile-sync trigger, but this does not replace the full replay comparison;
 - extension inventory and extension schema placement;
 - Realtime publication membership;
 - pg_cron jobs;
