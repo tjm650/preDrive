@@ -11,7 +11,7 @@ This repository uses an online Supabase workflow. Do not require Docker, a local
 - Supabase development project: `rjsdhgbjvghjnuiilizm` (`eu-west-1`).
 - PostgreSQL: 17.12.
 - Remote migration ledger contains 12 applied versions.
-- All 12 corresponding SQL files are present in `supabase/migrations/`; the historical reset SQL was recovered from the remote migration ledger and restored to GitHub. A direct comparison of the committed file with the ledger's `statements[0]` now confirms a byte-for-byte match (2,281 bytes).
+- All 12 corresponding SQL files are present in `supabase/migrations/`; the historical reset SQL was recovered from the remote migration ledger and restored to GitHub. A direct comparison confirms the reset file is byte-for-byte identical to its ledger `statements[0]` (2,281 bytes). A read-only comparison of all 12 applied migration records against their repository files confirms normalized SQL text matches for every version; six files are byte-exact and six differ only in comments/whitespace.
 - An additional repository-only migration `20261121130000_predrive_enable_pgcrypto.sql` explicitly declares `pgcrypto` in the `extensions` schema. It is not applied to the remote development database and must be included in the clean hosted replay before it is promoted.
 - Historical version `20261120112956` (`predrive_full_application_reset`) was recovered from the remote `supabase_migrations.schema_migrations.statements` array and restored as `supabase/migrations/20261120112956_predrive_full_application_reset.sql`.
 - Do not fabricate that historical SQL file or claim that the migration chain has passed a clean replay.
