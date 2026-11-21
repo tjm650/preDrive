@@ -33,6 +33,19 @@
 
 The remote migration ledger contains historical version `20261120112956` (`predrive_full_application_reset`). Its original SQL was recovered read-only from the remote `supabase_migrations.schema_migrations.statements` array and restored to `supabase/migrations/20261120112956_predrive_full_application_reset.sql`. All 12 remote versions now have matching committed SQL files. The recovered migration is a destructive one-time reset: it unschedules cron jobs, deletes Vault secrets and Auth users, drops non-extension objects in `private` and `public`, and clears the migration ledger. It must never be rerun against an existing environment containing data or secrets. A clean-room replay is still **not yet certified**; validate the restored chain only on a genuinely fresh isolated hosted branch.
 
+## Current Supabase advisor and generated-type observations
+
+A fresh read-only advisor run on 2026-11-21 returned:
+
+- Security: 37 `rls_enabled_no_policy` informational findings, matching the documented deny-by-default staging state; one warning for `pg_net` installed in `public`.
+- Performance: 149 `unused_index` informational findings. The development schema has not yet received representative application traffic, so these are not evidence that the indexes should be removed. Reassess after realistic workload and query-plan measurement.
+- Health: no findings returned by the Health advisor.
+- The previously reported unindexed-FK performance findings are absent after migration `20261121124613`.
+
+A fresh TypeScript type-generation call against the current development project completed and returned the schema model, including the 42 tables, five views and 23 enums. It reports no exposed `public` RPC functions (`Functions: never`); private-schema functions are not part of the generated public client API. This output was inspected but was not committed as the final generated types because B1.6 requires generation from the verified clean replay, followed by a repository typecheck.
+
+The Supabase branch inventory currently contains only the default `main` branch. No isolated verification branch has been created. Creating one is an explicit remote resource operation and remains outside the read-only work performed for this audit.
+
 ## Non-table and platform-object inventory
 
 The following were checked against the connected development project using read-only catalog queries:
