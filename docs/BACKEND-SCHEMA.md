@@ -5,7 +5,7 @@
 - Supabase project: `preDrive` (`rjsdhgbjvghjnuiilizm`), region `eu-west-1`.
 - PostgreSQL 17.12.
 - 42 application tables in `public`; all 42 have RLS enabled. A static inventory of all 12 applied migration files matches the live catalog exactly for all 42 table names, 23 public enum names and five public view names; no missing or unexpected names were found in those three object classes.
-- 37 tables currently have no RLS policies. This is deliberate deny-by-default staging before B2; client table privileges remain withheld until role policies are implemented.
+- 37 tables currently have no RLS policies. This is deliberate deny-by-default staging before B2. All 42 tables have RLS enabled (none currently uses `FORCE ROW LEVEL SECURITY`). The `anon` role has no privileges on public application tables; `authenticated` has table-level SELECT only on `profiles`, `school_invitations`, `school_memberships`, `schools` and `staff_members`, with narrow column-level UPDATE grants on `profiles` (`full_name`, `language`, `phone`) and `schools` (`address`, `indicative_zig_per_usd`, `name`). The corresponding seven policies restrict those reads/updates. There are no authenticated table-level INSERT, UPDATE or DELETE grants and no client privileges on the other 37 tables.
 - No application rows were inserted by B1.1–B1.6.
 - All 51 foreign keys flagged as unindexed by Supabase Performance Advisor were given covering indexes in migration `20261121124613`. A follow-up advisor run no longer reports unindexed foreign keys.
 - The 149 unused-index notices are expected in an empty development database and must be reassessed after representative workload tests; do not drop indexes merely to silence the advisor.
@@ -35,7 +35,10 @@ The remote migration ledger contains historical version `20261120112956` (`predr
 
 ## Static migration security review
 
-- All eight `SECURITY DEFINER` function declarations found across the current application migrations set an empty `search_path` (`SET search_path = ''`). The live development catalog currently contains seven such functions; one historical declaration was replaced/dropped by a later migration. A read-only privilege audit found no `anon` EXECUTE grants, and only the two intended authenticated helper functions are executable by `authenticated`.
+- The live catalog contains 11 application routines, all in the non-exposed `private` schema; there are no `public` application RPCs. Seven are `SECURITY DEFINER`, and all 11 routines have an empty `search_path`. The migration history contains eight `SECURITY DEFINER` declarations; one historical helper (`private.can_view_profile`) was subsequently dropped/replaced.
+- A read-only privilege audit found no `anon` or `service_role` EXECUTE grants on these 11 routines. Only the two intended authenticated RLS helpers (`private.has_school_role` and `private.can_admin_view_profile`) are executable by `authenticated`. `authenticated` has `USAGE` on `private`; `anon` and `service_role` do not. Trigger helper functions remain callable through their installed triggers and are not granted as client RPCs.
+- There are 36 enabled application triggers on `public` tables and one application-owned profile-sync trigger on `auth.users`. The public set comprises 27 explicit trigger declarations plus nine timestamp triggers created by two migration `DO` loops (four in B1.5 and five in B1.4). The other 11 observed `storage` triggers are Supabase-managed and are not application migrations. All 36 public triggers and the Auth profile-sync trigger are enabled.
+- `service_role` has SELECT and INSERT on all 42 application tables, UPDATE and DELETE on 36; it is deliberately denied UPDATE/DELETE on `audit_log`, `consent_records`, `delay_reports`, `receipts`, `trip_events` and `vehicle_checks`. It remains a trusted server-only role and bypasses RLS; never expose its key to a client.
 - The reviewed function bodies schema-qualify application relations and private helper calls; this reduces object-shadowing risk. The review is static and does not replace executable privilege/RLS tests in B2.
 - The reset migration is intentionally outside this security-function count; it contains anonymous `DO` blocks and destructive DDL.
 - The current schema migrations do not create the B2 tenant authorization helper set or the B3 handover verification RPC. These remain planned work, not missing implementation claimed complete.
@@ -65,7 +68,7 @@ The following were checked against the connected development project using read-
 | pg_cron | Extension installed; zero scheduled jobs | Add jobs in B4 only after their functions and operational requirements are defined. |
 | Storage | Zero application buckets and zero application Storage policies | Configure buckets and policies in B2. |
 | Auth integration | Supabase-managed `auth` schema and an application-owned profile-sync trigger on `auth.users` | Preserve managed Auth objects; verify only the application-owned trigger/function integration. |
-| Application policies | Seven policies across five tables; 37 RLS-enabled tables have no policies | Current deny-by-default staging. Implement the approved role/tenant matrix in B2. |
+| Application policies and grants | Seven policies across five tables; `anon` has no application-table privileges; `authenticated` has SELECT on five tables and narrow column-level UPDATE on profile/school fields; no client INSERT/DELETE | Current deny-by-default staging. Implement the approved role/tenant matrix in B2; review all future grants alongside policies. |
 
 The view security check used `pg_class.reloptions`; all five returned `security_invoker=true`. This supersedes any earlier preliminary concern that the analytics views might be running with owner privileges.
 
