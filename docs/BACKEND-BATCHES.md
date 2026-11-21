@@ -27,10 +27,10 @@ This register tracks the backend implementation plan. B0 is planning/audit work 
 
 B1.6 acceptance checkpoint:
 - [ ] Complete full migration replay on a separate empty disposable hosted Supabase project (a preview branch cloned from the populated dev project is not a clean-room replay).
-- [ ] All 42 application tables have RLS enabled and the tenant-column audit passes.
+- [ ] All 42 application tables have RLS enabled and the tenant-column audit passes. Current live state: 42 enabled, none FORCE RLS; 37 have no policies by deliberate deny-by-default staging.
 - [ ] Remote-vs-replay comparison covers columns, types, defaults, constraints, indexes, enums, functions, triggers, RLS/policies, extensions, publications, cron, Storage and Auth integration objects.
-- [ ] Database lint/advisor review passes or every exception is documented and accepted.
-- [ ] Generated database types are regenerated from the verified schema and typecheck.
+- [ ] Database lint/advisor review passes or every exception is documented and accepted; current review still has an unresolved `pg_net` placement/privilege warning and unused-index notices.
+- [ ] Function, trigger, RLS policy, table/column grant and default-privilege inventories reconcile against the clean replay; current live state is documented in `BACKEND-SCHEMA.md`.
 - [ ] `docs/MIGRATIONS.md` and schema documentation reflect the verified workflow and state.
 
 ## B2 — Security and RLS (6 batches)
