@@ -11,8 +11,8 @@ This repository uses an online Supabase workflow. Do not require Docker, a local
 - Supabase development project: `rjsdhgbjvghjnuiilizm` (`eu-west-1`).
 - PostgreSQL: 17.12.
 - Remote migration ledger contains 12 versions.
-- Eleven corresponding SQL files are present in `supabase/migrations/`.
-- Historical version `20261120112956` (`predrive_full_application_reset`) exists in the remote ledger, but its original SQL file has not been recovered from the repository or the branches inspected so far.
+- All 12 corresponding SQL files are now present in `supabase/migrations/`; the historical reset SQL was recovered from the remote migration ledger and restored to GitHub.
+- Historical version `20261120112956` (`predrive_full_application_reset`) was recovered from the remote `supabase_migrations.schema_migrations.statements` array and restored as `supabase/migrations/20261120112956_predrive_full_application_reset.sql`.
 - Do not fabricate that historical SQL file or claim that the migration chain has passed a clean replay.
 - No clean-room migration replay has been certified.
 - The development database has 42 public application tables, all with RLS enabled. Thirty-seven currently have no policies by design; B2 will implement the role and tenant policies.
@@ -95,7 +95,7 @@ For accidental data loss, use the environment's supported backup/PITR recovery p
 ## Migration-history reconciliation rules
 
 - The remote migration ledger is evidence of what the remote environment records as applied; it does not replace the SQL source files.
-- The missing `20261120112956_predrive_full_application_reset` file must not be reconstructed from guesswork.
+- The original `20261120112956_predrive_full_application_reset` SQL has been restored from the remote migration ledger. Preserve its exact one-time reset semantics; do not rewrite it as a routine baseline.
 - Do not mark a migration applied or reverted merely to make the ledger look consistent.
 - Consider `supabase migration repair` only after the clean-room result and schema comparison establish the exact intended history transition. Document its precise effect and obtain written authorization before running it against any shared remote project.
 - A new baseline must represent the complete approved application schema and required non-public/platform configuration. It must not simply duplicate objects on top of an existing populated schema.
@@ -103,10 +103,10 @@ For accidental data loss, use the environment's supported backup/PITR recovery p
 
 ## Current unresolved decisions
 
-1. Recover the exact historical reset SQL, or approve a deliberate replacement baseline/history strategy.
+1. Validate the restored historical reset migration on a genuinely fresh isolated hosted branch; do not rerun it against the existing development project.
 2. Complete hosted clean-room replay and report every schema/platform-object difference against the development project.
 3. Decide the correct side for each difference before changing the development project or migration history.
-4. Confirm the extension placement and baseline requirements for pgcrypto, PostGIS, pg_cron and pg_net.
+4. Confirm extension placement and baseline requirements for pgcrypto, PostGIS, pg_cron and pg_net; the current project has pg_net in the exposed `public` schema.
 5. Reconcile the stale claims in `DATABASE-SCHEMA.md` with the verified current schema documentation.
 
 Until these are resolved, B1.6 remains open and B2 must not begin.
