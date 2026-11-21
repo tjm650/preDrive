@@ -16,6 +16,7 @@ This repository uses an online Supabase workflow. Do not require Docker, a local
 - Historical version `20261120112956` (`predrive_full_application_reset`) was recovered from the remote `supabase_migrations.schema_migrations.statements` array and restored as `supabase/migrations/20261120112956_predrive_full_application_reset.sql`.
 - Do not fabricate that historical SQL file or claim that the migration chain has passed a clean replay.
 - No clean-room migration replay has been certified.
+- Database types were regenerated against the current development project and match `frontend/shared/types/database.types.ts` byte-for-byte (93,685 bytes). The repository's TypeScript typecheck has not been run in this audit and must still pass against the verified clean replay.
 - The development database has 42 public application tables, all with RLS enabled. Thirty-seven currently have no policies by design; B2 will implement the role and tenant policies. The live grant audit confirms no `anon` application-table privileges and no authenticated INSERT/DELETE grants; authenticated SELECT is limited to five policy-protected tables, with narrow column-level UPDATE grants on profile and school fields.
 - The existing development database must not be modified until the user authorizes the exact operation in writing.
 
