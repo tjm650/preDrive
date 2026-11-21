@@ -29,6 +29,10 @@
 | 20261121124451 | predrive_settings_privacy_audit_analytics |
 | 20261121124613 | predrive_foreign_key_indexes |
 
+## Migration-chain exception
+
+The remote migration ledger also contains historical version `20261120112956` (`predrive_full_application_reset`), but no matching SQL file exists in the current GitHub `main` tree. Its SQL was not recoverable from the repository path/history lookup, so no placeholder or guessed migration has been created. The 11 remaining remote versions have matching committed migration files. A clean-room replay from an empty Supabase project is therefore **not yet certified** until the original reset SQL is recovered or a deliberate new baseline/bootstrap strategy is approved and tested.
+
 ## Entity relationship diagram
 
 Every application table and every database foreign-key relationship is represented below. Key columns are shown; the generated type definition contains all columns.
