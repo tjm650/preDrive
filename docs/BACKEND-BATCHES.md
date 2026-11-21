@@ -23,7 +23,7 @@ This register tracks the backend implementation plan. B0 is planning/audit work 
 - [x] B1.3 Safety and operations — migration `20261121124437`.
 - [x] B1.4 Finance — migration `20261121124444`.
 - [x] B1.5 Settings, privacy, audit and analytics — migration `20261121124451`.
-- [ ] B1.6 Documentation, generated types, schema audit and migration-chain verification — 51 FK indexes added in `20261121124613`; missing historical migration `20261120112956` and clean-room replay remain unresolved.
+- [ ] B1.6 Documentation, generated types, schema audit and migration-chain verification — 51 FK indexes added in `20261121124613`; historical reset SQL `20261120112956` recovered from the remote migration ledger and restored to GitHub. Fresh hosted replay and full acceptance checks remain pending.
 
 B1.6 acceptance checkpoint:
 - [ ] Complete clean-room hosted migration replay passes.
