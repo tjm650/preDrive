@@ -33,6 +33,22 @@
 
 The remote migration ledger also contains historical version `20261120112956` (`predrive_full_application_reset`), but no matching SQL file exists in the current GitHub `main` tree. Its SQL was not recoverable from the repository path/history lookup, so no placeholder or guessed migration has been created. The 11 remaining remote versions have matching committed migration files. A clean-room replay from an empty Supabase project is therefore **not yet certified** until the original reset SQL is recovered or a deliberate new baseline/bootstrap strategy is approved and tested.
 
+## Non-table and platform-object inventory
+
+The following were checked against the connected development project using read-only catalog queries:
+
+| Object area | Observed state | B1.6 treatment |
+|---|---|---|
+| Extensions | `pg_cron` 1.6.4 in `pg_catalog`; `pg_net` 0.20.4 in `public`; `pg_stat_statements` 1.11, `pgcrypto` 1.3, `postgis` 3.3.7 and `uuid-ossp` 1.1 in `extensions`; `plpgsql` 1.0 in `pg_catalog`; `supabase_vault` 0.3.2 in `vault` | Preserve platform-managed extensions; verify each required extension and schema in the clean replay. `pg_net` in exposed `public` remains a Security Advisor finding to assess separately. |
+| Analytics views | Five public views; all five have `reloptions = {security_invoker=true}` | RLS-invoker behavior is verified on the current database. Do not report these views as default owner-security views. |
+| Realtime publication | `supabase_realtime` exists with no application tables currently published | Keep empty until the explicit Realtime contract and required tables are approved. |
+| pg_cron | Extension installed; zero scheduled jobs | Add jobs in B4 only after their functions and operational requirements are defined. |
+| Storage | Zero application buckets and zero application Storage policies | Configure buckets and policies in B2. |
+| Auth integration | Supabase-managed `auth` schema and an application-owned profile-sync trigger on `auth.users` | Preserve managed Auth objects; verify only the application-owned trigger/function integration. |
+| Application policies | Seven policies across five tables; 37 RLS-enabled tables have no policies | Current deny-by-default staging. Implement the approved role/tenant matrix in B2. |
+
+The view security check used `pg_class.reloptions`; all five returned `security_invoker=true`. This supersedes any earlier preliminary concern that the analytics views might be running with owner privileges.
+
 ## Entity relationship diagram
 
 Every application table and every database foreign-key relationship is represented below. Key columns are shown; the generated type definition contains all columns.
