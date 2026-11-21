@@ -30,7 +30,7 @@ B1.6 acceptance checkpoint:
 - [ ] All 42 application tables have RLS enabled and the tenant-column audit passes. Current live state: 42 enabled, none FORCE RLS; 37 have no policies by deliberate deny-by-default staging.
 - [ ] Remote-vs-replay comparison covers columns, types, defaults, constraints, indexes, enums, functions, triggers, RLS/policies, extensions, publications, cron, Storage and Auth integration objects.
 - [ ] Database lint/advisor review passes or every exception is documented and accepted; current review still has an unresolved `pg_net` placement/privilege warning and unused-index notices.
-- [ ] Function, trigger, RLS policy, table/column grant and default-privilege inventories reconcile against the clean replay; current live state is documented in `BACKEND-SCHEMA.md`.
+- [ ] Function, trigger, RLS policy, table/column grant, index and default-privilege inventories reconcile against the clean replay; current live state is documented in `BACKEND-SCHEMA.md`.
 - [ ] `docs/MIGRATIONS.md` and schema documentation reflect the verified workflow and state.
 
 ## B2 — Security and RLS (6 batches)
