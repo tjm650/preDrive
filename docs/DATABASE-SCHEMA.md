@@ -309,11 +309,11 @@ The remote ledger currently records 12 applied versions. All 12 ledger statement
 
 ## Type generation and online verification
 
-- `frontend/shared/types/database.types.ts` has been generated from the connected development schema and committed; a fresh generation matched the committed file byte-for-byte before the new extension-only migration was added.
+- `frontend/shared/types/database.types.ts` has been generated from the connected development schema and committed; the latest fresh generation matched the committed file byte-for-byte (93,685 bytes). The repository-only pgcrypto migration has no public type surface and is not applied to the connected database.
 - That output reflects the current remote development schema; it is not proof that a fresh replay of the committed migration chain produces the same schema.
 - Do not hand-edit generated database types.
 - Do not use the local-only `supabase db reset` workflow for this online project.
-- Regenerate types from the isolated hosted verification branch only after its migration replay succeeds and the full schema/platform-object comparison is accepted.
-- Type generation and TypeScript checks are part of the B1.6 acceptance gate; B1.6 is not complete until they pass against the verified replay.
+- Regenerate types from the separate empty disposable hosted project only after the complete migration replay succeeds and the full schema/platform-object comparison is accepted. A preview branch cloned from the populated development project is not a clean-room replay target.
+- Type generation and TypeScript checks are part of the B1.6 acceptance gate; the development-schema generation currently matches, but the workspace typecheck has not yet been run and B1.6 is not complete until both pass against the verified replay.
 
 See [MIGRATIONS.md](./MIGRATIONS.md) for the online migration, promotion and rollback procedure.
