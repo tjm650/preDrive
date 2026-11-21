@@ -106,7 +106,7 @@ For accidental data loss, use the environment's supported backup/PITR recovery p
 1. Validate the restored historical reset migration on a genuinely fresh isolated hosted branch; do not rerun it against the existing development project.
 2. Complete hosted clean-room replay and report every schema/platform-object difference against the development project.
 3. Decide the correct side for each difference before changing the development project or migration history.
-4. Confirm extension placement and baseline requirements for pgcrypto, PostGIS, pg_cron and pg_net; the current project has pg_net in the exposed `public` schema.
+4. Confirm extension placement and baseline requirements for pgcrypto, PostGIS, pg_cron, supabase_vault and pg_net; the current project has pg_net in the exposed `public` schema. The reset migration has an earlier dependency on pg_cron and supabase_vault, while the current SQL chain does not explicitly enable them.
 5. Reconcile the stale claims in `DATABASE-SCHEMA.md` with the verified current schema documentation.
 
 Until these are resolved, B1.6 remains open and B2 must not begin.
