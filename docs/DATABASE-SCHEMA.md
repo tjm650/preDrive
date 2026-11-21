@@ -291,7 +291,7 @@ schools ||--o{ webhook_events : "foreign key"
 
 | Remote version | Repository SQL file | Domain / status |
 |---|---|---|
-| 20261120112956 | `20261120112956_predrive_full_application_reset.sql` | Historical one-time reset; original SQL recovered from the remote migration ledger. Destructive: only replay on a fresh isolated branch. |
+| 20261120112956 | `20261120112956_predrive_full_application_reset.sql` | Historical one-time reset; original SQL recovered from the remote migration ledger. Destructive: only replay on a separate, empty disposable hosted project, not a preview branch cloned from the populated development project. |
 | 20261120181614 | `20261120181614_core_identity_tenancy.sql` | Schools, profiles, memberships, staff and invitations |
 | 20261120181637 | `20261120181637_tighten_profile_and_staff_visibility.sql` | Profile and staff visibility hardening |
 | 20261120181707 | `20261120181707_lock_down_private_schema.sql` | Private schema and helper-function grants |
