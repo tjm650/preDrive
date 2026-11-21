@@ -1,6 +1,6 @@
 # preDrive database schema reference
 
-This document describes the version-controlled schema represented by the six application migrations listed below. It is a schema-design reference, not proof that every migration has been applied to a database.
+This document describes the intended application schema. The current connected-development inventory, migration status and outstanding drift checks are recorded in [BACKEND-SCHEMA.md](./BACKEND-SCHEMA.md). The migration lifecycle and online verification process are documented in [MIGRATIONS.md](./MIGRATIONS.md). The SQL files in `supabase/migrations/` remain authoritative; this ERD is a navigation aid, not a substitute for the DDL.
 
 ## Tenant model
 
@@ -289,34 +289,30 @@ schools ||--o{ webhook_events : "foreign key"
 
 ## Migration inventory
 
-| Migration | Domain |
-|---|---|
-| `20261120181614_core_identity_tenancy.sql` | Schools, profiles, memberships, staff and school invitations |
-| `20261120213000_predrive_children_guardians.sql` | Classes, children, guardians and approved collectors |
-| `20261120214500_predrive_transport_trips_gps.sql` | Fleet, routes, schedules, trips, manifests, events and GPS |
-| `20261120221500_predrive_safety_operations.sql` | Vehicle checks, delays, incidents, alerts, SOS and broadcasts |
-| `20261120224500_predrive_finance.sql` | Fees, invoices, payments, attempts, transfers, refunds, credit notes and receipts |
-| `20261120231500_predrive_settings_privacy_audit_analytics.sql` | Settings, consent, devices, deletion, setup, audit, rate limits, webhooks and analytics |
+| Remote version | Repository SQL file | Domain / status |
+|---|---|---|
+| 20261120112956 | **Missing** | Historical `predrive_full_application_reset` entry exists in the remote ledger; original SQL has not been recovered. Do not recreate from guesswork. |
+| 20261120181614 | `20261120181614_core_identity_tenancy.sql` | Schools, profiles, memberships, staff and invitations |
+| 20261120181637 | `20261120181637_tighten_profile_and_staff_visibility.sql` | Profile and staff visibility hardening |
+| 20261120181707 | `20261120181707_lock_down_private_schema.sql` | Private schema and helper-function grants |
+| 20261120181850 | `20261120181850_index_membership_foreign_keys.sql` | Membership and invitation FK indexes |
+| 20261120181937 | `20261120181937_revoke_all_public_default_privileges.sql` | Restrictive default privileges |
+| 20261121124422 | `20261121124422_predrive_children_guardians.sql` | Classes, children, guardians and approved collectors |
+| 20261121124429 | `20261121124429_predrive_transport_trips_gps.sql` | Fleet, routes, schedules, trips, manifests, events and GPS |
+| 20261121124437 | `20261121124437_predrive_safety_operations.sql` | Vehicle checks, delays, incidents, alerts, SOS and broadcasts |
+| 20261121124444 | `20261121124444_predrive_finance.sql` | Fees, invoices, payments, transfers, refunds, credit notes and receipts |
+| 20261121124451 | `20261121124451_predrive_settings_privacy_audit_analytics.sql` | Settings, consent, devices, deletion, setup, audit, rate limits, webhooks and analytics |
+| 20261121124613 | `20261121124613_predrive_foreign_key_indexes.sql` | Covering indexes for 51 foreign-key relationships |
 
-## Type generation
+The remote ledger currently records all 12 versions above. Eleven matching SQL files are committed. The missing historical reset migration prevents certification of a fresh replay until its original SQL is recovered or a deliberate baseline/history replacement is approved and verified.
 
-The connected Supabase project currently has only the five identity/tenancy tables applied. The other five domain migrations are committed but have only been executed inside rollback transactions. Generating types against that remote project would therefore create a misleading, incomplete file.
+## Type generation and online verification
 
-Generate the complete types only after all migrations have been applied to a local development database:
+- `frontend/shared/types/database.types.ts` has been generated from the connected development schema and committed.
+- That output reflects the current remote development schema; it is not proof that a fresh replay of the committed migration chain produces the same schema.
+- Do not hand-edit generated database types.
+- Do not use the local-only `supabase db reset` workflow for this online project.
+- Regenerate types from the isolated hosted verification branch only after its migration replay succeeds and the full schema/platform-object comparison is accepted.
+- Type generation and TypeScript checks are part of the B1.6 acceptance gate; B1.6 is not complete until they pass against the verified replay.
 
-```bash
-pnpm install --frozen-lockfile
-pnpm dlx supabase --version
-pnpm dlx supabase start
-pnpm dlx supabase db reset
-pnpm dlx supabase gen types --lang typescript --local --schema public > frontend/shared/types/database.types.ts
-```
-
-Then verify the generated file includes all 42 tables, the five analytics views, public enums and RPCs before committing it. Do not generate the final shared types from the connected remote project until the full migration chain has been applied and verified in the intended development environment.
-
-## Current generation status
-
-- A remote type-generation request succeeded, but it describes only the currently applied identity/tenancy schema.
-- That partial output is deliberately not committed as `frontend/shared/types/database.types.ts`.
-- Full type generation is blocked pending a successful local migration reset (or explicit authorization to apply the migration chain to a designated development Supabase project).
-- The SQL migration chain remains the source of truth; never hand-edit generated database types.
+See [MIGRATIONS.md](./MIGRATIONS.md) for the online migration, promotion and rollback procedure.
