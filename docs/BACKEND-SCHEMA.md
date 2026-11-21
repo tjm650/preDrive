@@ -39,7 +39,7 @@ The following were checked against the connected development project using read-
 
 | Object area | Observed state | B1.6 treatment |
 |---|---|---|
-| Extensions | `pg_cron` 1.6.4 in `pg_catalog`; `pg_net` 0.20.4 in `public`; `pg_stat_statements` 1.11, `pgcrypto` 1.3, `postgis` 3.3.7 and `uuid-ossp` 1.1 in `extensions`; `plpgsql` 1.0 in `pg_catalog`; `supabase_vault` 0.3.2 in `vault` | Preserve platform-managed extensions; verify each required extension and schema in the clean replay. `pg_net` in exposed `public` remains a Security Advisor finding to assess separately. |
+| Extensions | `pg_cron` 1.6.4 in `pg_catalog`; `pg_net` 0.20.4 in `public`; `pg_stat_statements` 1.11, `pgcrypto` 1.3, `postgis` 3.3.7 and `uuid-ossp` 1.1 in `extensions`; `plpgsql` 1.0 in `pg_catalog`; `supabase_vault` 0.3.2 in `vault` | Preserve platform-managed extensions; verify each required extension and schema in the clean replay. `pg_net` in exposed `public` remains a Security Advisor finding to assess separately. The reset migration calls `cron` and `vault` before any repository migration explicitly enables `pg_cron` or `supabase_vault`; this is a clean-replay prerequisite to verify. |
 | Analytics views | Five public views; all five have `reloptions = {security_invoker=true}` | RLS-invoker behavior is verified on the current database. Do not report these views as default owner-security views. |
 | Realtime publication | `supabase_realtime` exists with no application tables currently published | Keep empty until the explicit Realtime contract and required tables are approved. |
 | pg_cron | Extension installed; zero scheduled jobs | Add jobs in B4 only after their functions and operational requirements are defined. |
