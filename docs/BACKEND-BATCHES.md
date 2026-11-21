@@ -26,7 +26,7 @@ This register tracks the backend implementation plan. B0 is planning/audit work 
 - [ ] B1.6 Documentation, generated types, schema audit and migration-chain verification — 51 FK indexes added in `20261121124613`; historical reset SQL `20261120112956` recovered from the remote migration ledger and restored to GitHub; repository-only pgcrypto dependency migration `20261121130000` added (not applied remotely). Fresh hosted replay and full acceptance checks remain pending.
 
 B1.6 acceptance checkpoint:
-- [ ] Complete clean-room hosted migration replay passes.
+- [ ] Complete full migration replay on a separate empty disposable hosted Supabase project (a preview branch cloned from the populated dev project is not a clean-room replay).
 - [ ] All 42 application tables have RLS enabled and the tenant-column audit passes.
 - [ ] Remote-vs-replay comparison covers columns, types, defaults, constraints, indexes, enums, functions, triggers, RLS/policies, extensions, publications, cron, Storage and Auth integration objects.
 - [ ] Database lint/advisor review passes or every exception is documented and accepted.
