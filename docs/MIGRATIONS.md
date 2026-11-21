@@ -10,8 +10,9 @@ This repository uses an online Supabase workflow. Do not require Docker, a local
 
 - Supabase development project: `rjsdhgbjvghjnuiilizm` (`eu-west-1`).
 - PostgreSQL: 17.12.
-- Remote migration ledger contains 12 versions.
-- All 12 corresponding SQL files are now present in `supabase/migrations/`; the historical reset SQL was recovered from the remote migration ledger and restored to GitHub.
+- Remote migration ledger contains 12 applied versions.
+- All 12 corresponding SQL files are present in `supabase/migrations/`; the historical reset SQL was recovered from the remote migration ledger and restored to GitHub.
+- An additional repository-only migration `20261121130000_predrive_enable_pgcrypto.sql` explicitly declares `pgcrypto` in the `extensions` schema. It is not applied to the remote development database and must be included in the clean hosted replay before it is promoted.
 - Historical version `20261120112956` (`predrive_full_application_reset`) was recovered from the remote `supabase_migrations.schema_migrations.statements` array and restored as `supabase/migrations/20261120112956_predrive_full_application_reset.sql`.
 - Do not fabricate that historical SQL file or claim that the migration chain has passed a clean replay.
 - No clean-room migration replay has been certified.
@@ -47,7 +48,7 @@ For security-sensitive SQL, review:
 
 Use a dedicated Supabase branch connected to the matching Git branch so Supabase deploys the committed migration files to an isolated database. Keep production data excluded.
 
-A branch deployment is not automatically proof of an empty-database replay: confirm the branch workflow's Pull and Migrate steps and inspect its migration log. The known missing historical SQL file must be resolved by an explicit baseline/history strategy before the chain can be certified.
+A branch deployment is not automatically proof of an empty-database replay: confirm the branch workflow's Pull and Migrate steps and inspect its migration log. The historical SQL file has been restored. The new pgcrypto dependency migration is repository-only until a hosted replay and approved promotion.
 
 For this project, the hosted branch is the online equivalent used for migration-chain verification. The local-only `supabase db reset` command is not part of the required workflow.
 
@@ -106,7 +107,7 @@ For accidental data loss, use the environment's supported backup/PITR recovery p
 1. Validate the restored historical reset migration on a genuinely fresh isolated hosted branch; do not rerun it against the existing development project.
 2. Complete hosted clean-room replay and report every schema/platform-object difference against the development project.
 3. Decide the correct side for each difference before changing the development project or migration history.
-4. Confirm extension placement and baseline requirements for pgcrypto, PostGIS, pg_cron, supabase_vault and pg_net; the current project has pg_net in the exposed `public` schema. The reset migration has an earlier dependency on pg_cron and supabase_vault, while the current SQL chain does not explicitly enable them.
+4. Confirm extension placement and baseline requirements for pgcrypto, PostGIS, pg_cron, supabase_vault and pg_net; the current project has pg_net in the exposed `public` schema. The reset migration has an earlier dependency on pg_cron and supabase_vault, while the repository migration chain now explicitly enables pgcrypto but does not explicitly enable pg_cron or supabase_vault.
 5. Reconcile the stale claims in `DATABASE-SCHEMA.md` with the verified current schema documentation.
 
 Until these are resolved, B1.6 remains open and B2 must not begin.
