@@ -37,7 +37,8 @@ Review the complete SQL and its dependencies before it is run anywhere. Check th
 
 For security-sensitive SQL, review:
 - schema ownership and search paths;
-- SECURITY DEFINER functions and their execute grants;
+- SECURITY DEFINER functions and their execute grants; the current migration review found eight such functions, all with `SET search_path = ''`;
+- fully qualified references inside functions using an empty search path;
 - RLS policies and both USING / WITH CHECK conditions;
 - view security, including `security_invoker` where appropriate;
 - grants on tables, sequences, schemas and functions;
@@ -96,7 +97,7 @@ For accidental data loss, use the environment's supported backup/PITR recovery p
 ## Migration-history reconciliation rules
 
 - The remote migration ledger is evidence of what the remote environment records as applied; it does not replace the SQL source files.
-- The original `20261120112956_predrive_full_application_reset` SQL has been restored from the remote migration ledger. Preserve its exact one-time reset semantics; do not rewrite it as a routine baseline.
+- The original `20261120112956_predrive_full_application_reset` SQL has been restored from the remote migration ledger. Preserve its exact one-time reset semantics; do not rewrite it as a routine baseline. It unschedules all cron jobs, deletes all Vault secrets and Auth users, drops non-extension public objects, recreates `private`, and clears the migration ledger. Its `cron` and `vault` prerequisites must exist before replay begins.
 - Do not mark a migration applied or reverted merely to make the ledger look consistent.
 - Consider `supabase migration repair` only after the clean-room result and schema comparison establish the exact intended history transition. Document its precise effect and obtain written authorization before running it against any shared remote project.
 - A new baseline must represent the complete approved application schema and required non-public/platform configuration. It must not simply duplicate objects on top of an existing populated schema.
