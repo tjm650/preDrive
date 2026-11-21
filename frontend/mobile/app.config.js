@@ -1,6 +1,7 @@
 // Firebase Android configuration is supplied by EAS as a file-type
 // environment variable. No local credentials fallback is permitted.
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { expo } = require("./app.json");
 
 const googleServicesFile = process.env.GOOGLE_SERVICES_JSON;
