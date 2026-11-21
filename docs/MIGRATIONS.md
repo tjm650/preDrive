@@ -37,7 +37,7 @@ Review the complete SQL and its dependencies before it is run anywhere. Check th
 
 For security-sensitive SQL, review:
 - schema ownership and search paths;
-- SECURITY DEFINER functions and their execute grants; the current migration review found eight such functions, all with `SET search_path = ''`;
+- SECURITY DEFINER functions and their execute grants; the migration files contain eight declarations, all with `SET search_path = ''`. The current live development catalog contains seven (one historical declaration was subsequently dropped/replaced). A live privilege audit found no `anon` EXECUTE grants; only the two intended authenticated RLS helpers are executable by `authenticated`;
 - fully qualified references inside functions using an empty search path;
 - RLS policies and both USING / WITH CHECK conditions;
 - view security, including `security_invoker` where appropriate;
