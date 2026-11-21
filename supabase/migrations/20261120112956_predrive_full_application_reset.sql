@@ -1,5 +1,5 @@
-begin;
 
+begin;
 do $$
 declare r record;
 begin
@@ -85,5 +85,4 @@ begin
 end $$;
 
 delete from supabase_migrations.schema_migrations;
-
 commit;
