@@ -31,7 +31,7 @@
 
 ## Migration-chain exception
 
-The remote migration ledger also contains historical version `20261120112956` (`predrive_full_application_reset`), but no matching SQL file exists in the current GitHub `main` tree. Its SQL was not recoverable from the repository path/history lookup, so no placeholder or guessed migration has been created. The 11 remaining remote versions have matching committed migration files. A clean-room replay from an empty Supabase project is therefore **not yet certified** until the original reset SQL is recovered or a deliberate new baseline/bootstrap strategy is approved and tested.
+The remote migration ledger contains historical version `20261120112956` (`predrive_full_application_reset`). Its original SQL was recovered read-only from the remote `supabase_migrations.schema_migrations.statements` array and restored to `supabase/migrations/20261120112956_predrive_full_application_reset.sql`. All 12 remote versions now have matching committed SQL files. The recovered migration is a destructive one-time reset: it unschedules cron jobs, deletes Vault secrets and Auth users, drops non-extension objects in `private` and `public`, and clears the migration ledger. It must never be rerun against an existing environment containing data or secrets. A clean-room replay is still **not yet certified**; validate the restored chain only on a genuinely fresh isolated hosted branch.
 
 ## Non-table and platform-object inventory
 
