@@ -500,3 +500,19 @@ Repository-only migration `20261122163000_predrive_guardian_child_rls.sql` has b
 The migration reuses the existing, already-applied `private.has_school_role(uuid, public.user_role[])` helper and does not depend on B2.1. The existing class-group CRUD grants/policies from B2.2 remain in place; the guardian class-group SELECT policy is additive.
 
 No child, guardian, membership, school or class data is changed. The migration has been committed but **not applied** to the populated development database. Before remote application, validate policy composition and query plans with authenticated test identities for at least two schools, two guardians, one school admin, one teacher and one supervisor. Also verify that guardian reads cannot reveal unrelated children or links even when a client supplies another child's UUID.
+
+
+## B2.4 transport, trip and GPS access migration — 2026-11-22
+
+Repository-only migration `20261122170000_predrive_transport_trip_access_rls.sql` has been committed. It enables/retains RLS on fleet, route, trip, GPS and operational tables and defines read access as follows:
+
+- School admins and supervisors can read school-scoped buses, routes, route stops/schedules, trips, trip-child operational records, current bus positions, vehicle checks and delay reports.
+- Drivers can read fleet/route context only where a trip assigns that driver; trip visibility is limited to trips whose `driver_id` maps to their active `staff_members` record.
+- Guardians can read an active trip and its current bus position only when an active guardian-child link places their child on that trip. They can read only their own child's trip-child rows.
+- Drivers receive no direct `trip_children` access and therefore cannot perform or inspect gate handovers through table reads.
+- Authenticated users receive no direct read access to `trip_events`, `approved_collectors` or `bus_position_history`. Collector PIN hashes and detailed event payloads remain behind trusted workflows.
+- Authenticated receives SELECT only on the operational tables explicitly listed in the migration. No direct authenticated writes are granted.
+
+The policies use the already-applied `private.has_school_role(uuid, public.user_role[])` helper and exact live enum labels (`active`, `school_admin`, `supervisor`, `driver`, `guardian`). The trip/child/guardian policy dependency is intentionally acyclic: trip-child visibility does not query trips, while trip visibility may safely consult the filtered trip-child rows.
+
+The migration does not delete or modify data, does not publish Realtime tables, and does not grant access to GPS history. It is committed but **not applied** to the development database. Before remote application, validate with separate guardian, driver, supervisor and school-admin identities across at least two schools; explicitly test that an unrelated guardian cannot query a trip ID or bus position and that a driver cannot select trip-child, trip-event or collector records. Confirm that completed/cancelled trips return no current GPS rows.
