@@ -38,7 +38,7 @@ type QueryBuilder<T> = PromiseLike<SupabaseResult<T>> & {
   select(columns: string): QueryBuilder<T>;
   eq(column: string, value: string | boolean): QueryBuilder<T>;
   in(column: string, values: string[]): QueryBuilder<T>;
-  maybeSingle(): Promise<SupabaseResult<T | null>>;
+  maybeSingle(): PromiseLike<SupabaseResult<T | null>>;
 };
 
 export interface SupabaseAuthClient {
