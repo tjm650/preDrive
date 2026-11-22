@@ -106,7 +106,11 @@ const LANGUAGES: readonly LanguageCode[] = ["en", "sn", "nd"];
 
 function mapSupabaseError(error: SupabaseErrorLike): AuthPortError {
   if (error.status === 429) {
-    return new AuthPortError("UNAVAILABLE", "Too many requests. Please try again shortly.", true);
+    return new AuthPortError("RATE_LIMITED", "Too many requests. Please try again shortly.", true);
+  }
+
+  if (error.status === undefined && /network|fetch|timeout|connection/i.test(error.message)) {
+    return new AuthPortError("NETWORK", "Check your connection and try again.", true);
   }
 
   if (error.status === 400 || error.status === 401 || error.status === 403) {
@@ -194,11 +198,21 @@ function mapSchool(row: SchoolRow): School {
  * the database's RLS policies.
  */
 export class SupabaseAuthPort implements AuthPort {
+  private activeSchoolId: string | null = null;
+
   constructor(
     private readonly client: SupabaseAuthClient,
     private readonly passwordResetRedirectTo?: string,
     private readonly now: () => number = Date.now,
   ) {}
+
+  setActiveSchool(schoolId: string): void {
+    this.activeSchoolId = schoolId;
+  }
+
+  getActiveSchoolId(): string | null {
+    return this.activeSchoolId;
+  }
 
   async signIn(input: { email: string; password: string }): Promise<AuthIdentity> {
     const { data, error } = await this.client.auth.signInWithPassword({
