@@ -28,10 +28,13 @@ export interface AuthPort {
   requestPasswordReset(input: PasswordResetInput): Promise<void>;
   getProfile(userId: string): Promise<UserProfile | null>;
   listMemberships(userId: string): Promise<AuthMembership[]>;
+  setActiveSchool?(schoolId: string): void | Promise<void>;
+  getActiveSchoolId?(): string | null;
 }
 
 export type AuthPortErrorCode =
   | "UNAUTHENTICATED"
+  | "RATE_LIMITED"
   | "VALIDATION"
   | "NETWORK"
   | "UNAVAILABLE"
@@ -204,6 +207,8 @@ export class AuthSessionService {
         return { ok: false, error: errors.forbidden() };
       }
 
+      await this.port.setActiveSchool?.(schoolId);
+
       return {
         ok: true,
         data: {
@@ -236,7 +241,10 @@ export class AuthSessionService {
       .filter((item) => isUsableMembership(item, identity.userId))
       .map((item) => item.membership);
 
-    const activeSchoolId = memberships[0]?.schoolId ?? null;
+    const preferredSchoolId = this.port.getActiveSchoolId?.() ?? null;
+    const activeSchoolId = memberships.some((item) => item.schoolId === preferredSchoolId)
+      ? preferredSchoolId
+      : memberships[0]?.schoolId ?? null;
     const activeSchool =
       membershipRows.find(
         (item) =>
