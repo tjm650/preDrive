@@ -10,15 +10,32 @@ This repository uses an online Supabase workflow. Do not require Docker, a local
 
 - Supabase development project: `rjsdhgbjvghjnuiilizm` (`eu-west-1`).
 - PostgreSQL: 17.12.
-- Remote migration ledger contains 12 applied versions.
-- All 12 corresponding SQL files are present in `supabase/migrations/`; the historical reset SQL was recovered from the remote migration ledger and restored to GitHub. A direct comparison confirms the reset file is byte-for-byte identical to its ledger `statements[0]` (2,281 bytes). A read-only comparison of all 12 applied migration records against their repository files confirms normalized SQL text matches for every version; six files are byte-exact and six differ only in comments/whitespace.
+- Remote migration ledger contains 18 applied versions: the original 12 B1 versions and six B2 versions applied on 2026-11-22.
+- All 12 original B1 SQL files are present in `supabase/migrations/`; the historical reset SQL was recovered from the remote migration ledger and restored to GitHub. A direct comparison confirms the reset file is byte-for-byte identical to its ledger `statements[0]` (2,281 bytes). A read-only comparison of all 12 applied migration records against their repository files confirms normalized SQL text matches for every version; six files are byte-exact and six differ only in comments/whitespace.
 - An additional repository-only migration `20261121124410_predrive_enable_pgcrypto.sql` explicitly declares `pgcrypto` in the `extensions` schema. Its timestamp places it before `20261121124422_predrive_children_guardians.sql`, the first migration that calls `crypt()` and `gen_salt()` for handover PIN hashing. It is not applied to the remote development database and must be included in the clean hosted replay before it is promoted.
 - Historical version `20261120112956` (`predrive_full_application_reset`) was recovered from the remote `supabase_migrations.schema_migrations.statements` array and restored as `supabase/migrations/20261120112956_predrive_full_application_reset.sql`.
 - Do not fabricate that historical SQL file or claim that the migration chain has passed a clean replay.
 - No clean-room migration replay has been certified.
 - Database types were regenerated against the current development project and match `frontend/shared/types/database.types.ts` byte-for-byte (93,685 bytes). Workspace TypeScript checks passed for shared, mobile and web on commit `1bc1ae2de67da2bcdb83ff8ba0dfb94f35baceea` ([GitHub Actions run](https://github.com/tjm650/preDrive/actions/runs/44921668805)); repeat type generation and typecheck against the verified clean replay before sign-off.
-- The development database has 42 public application tables, all with RLS enabled. Thirty-seven currently have no policies by design; B2 will implement the role and tenant policies. The live grant audit confirms no `anon` application-table privileges and no authenticated INSERT/DELETE grants; authenticated SELECT is limited to five policy-protected tables, with narrow column-level UPDATE grants on profile and school fields.
-- The existing development database must not be modified until the user authorizes the exact operation in writing.
+- The development database has 42 public application tables, all with RLS enabled. After B2, 19 remain without policies by design and continue to deny authenticated direct access pending their dedicated workflows. The live grant audit confirms no `anon` application-table privileges and no authenticated INSERT/DELETE grants; authenticated SELECT is limited to five policy-protected tables, with narrow column-level UPDATE grants on profile and school fields.
+- The six B2 migrations were applied only after the user's explicit written authorization for that exact operation; future remote mutations still require their own written authorization.
+
+## B2 remote application record — 2026-11-22
+
+The user explicitly authorized applying the six reviewed B2 migrations to the existing development project. All six applied successfully in order. The hosted migration runner assigned these remote versions, and the repository files now use matching version prefixes:
+
+| Remote version | Migration |
+|---|---|
+| 20261122204630 | `predrive_security_helpers` |
+| 20261122204634 | `predrive_admin_staff_rls` |
+| 20261122204639 | `predrive_guardian_child_rls` |
+| 20261122204644 | `predrive_transport_trip_access_rls` |
+| 20261122204649 | `predrive_storage_buckets_rls` |
+| 20261122204654 | `predrive_atomic_rate_limiting` |
+
+The committed SQL acceptance suite `supabase/tests/security/b2_security_acceptance.sql` executed against the remote project without a SQL error. It contains 63 checks, including two service-role calls through the public rate-limit RPC. The test transaction rolled back its temporary rate-limit events. A subsequent read-only check confirmed all six helpers, all five private buckets, RLS on all 42 public application tables, and the intended service-role-only public rate-limit RPC grant.
+
+The checks do not replace seeded multi-tenant runtime tests. B5 must exercise real guardian, driver, supervisor, teacher and school-admin identities across at least two schools. Storage upload/download and signed URL flows also remain to be exercised end-to-end. The clean-room migration replay remains deferred; incremental B2 application is not proof of clean replay.
 
 The complete inventory and current schema observations are maintained in [BACKEND-SCHEMA.md](./BACKEND-SCHEMA.md).
 
