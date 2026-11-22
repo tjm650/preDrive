@@ -36,14 +36,7 @@ using (
     where trip.school_id = buses.school_id
       and trip.bus_id = buses.id
       and (
-        exists (
-          select 1 from public.staff_members as assigned_driver
-          where assigned_driver.id = trip.driver_id
-            and assigned_driver.school_id = trip.school_id
-            and assigned_driver.user_id = (select auth.uid())
-            and assigned_driver.role = 'driver'::public.user_role
-            and assigned_driver.active = true
-        )
+        private.is_assigned_to_trip(trip.id)
         or (
           trip.status = 'active'::public.trip_status
           and exists (
@@ -79,14 +72,7 @@ using (
     where trip.school_id = transport_routes.school_id
       and trip.route_id = transport_routes.id
       and (
-        exists (
-          select 1 from public.staff_members as assigned_driver
-          where assigned_driver.id = trip.driver_id
-            and assigned_driver.school_id = trip.school_id
-            and assigned_driver.user_id = (select auth.uid())
-            and assigned_driver.role = 'driver'::public.user_role
-            and assigned_driver.active = true
-        )
+        private.is_assigned_to_trip(trip.id)
         or (
           trip.status = 'active'::public.trip_status
           and exists (
@@ -122,14 +108,7 @@ using (
     where trip.school_id = route_stops.school_id
       and trip.route_id = route_stops.route_id
       and (
-        exists (
-          select 1 from public.staff_members as assigned_driver
-          where assigned_driver.id = trip.driver_id
-            and assigned_driver.school_id = trip.school_id
-            and assigned_driver.user_id = (select auth.uid())
-            and assigned_driver.role = 'driver'::public.user_role
-            and assigned_driver.active = true
-        )
+        private.is_assigned_to_trip(trip.id)
         or (
           trip.status = 'active'::public.trip_status
           and exists (
@@ -165,14 +144,7 @@ using (
     where trip.school_id = route_schedules.school_id
       and trip.schedule_id = route_schedules.id
       and (
-        exists (
-          select 1 from public.staff_members as assigned_driver
-          where assigned_driver.id = trip.driver_id
-            and assigned_driver.school_id = trip.school_id
-            and assigned_driver.user_id = (select auth.uid())
-            and assigned_driver.role = 'driver'::public.user_role
-            and assigned_driver.active = true
-        )
+        private.is_assigned_to_trip(trip.id)
         or (
           trip.status = 'active'::public.trip_status
           and exists (
@@ -205,14 +177,7 @@ for select
 to authenticated
 using (
   private.has_school_role(school_id, array['school_admin','supervisor']::public.user_role[])
-  or exists (
-    select 1 from public.staff_members as assigned_driver
-    where assigned_driver.id = trips.driver_id
-      and assigned_driver.school_id = trips.school_id
-      and assigned_driver.user_id = (select auth.uid())
-      and assigned_driver.role = 'driver'::public.user_role
-      and assigned_driver.active = true
-  )
+  or private.is_assigned_to_trip(trips.id)
   or (
     status = 'active'::public.trip_status
     and exists (
@@ -276,14 +241,7 @@ using (
           trip.school_id,
           array['school_admin','supervisor']::public.user_role[]
         )
-        or exists (
-          select 1 from public.staff_members as assigned_driver
-          where assigned_driver.id = trip.driver_id
-            and assigned_driver.school_id = trip.school_id
-            and assigned_driver.user_id = (select auth.uid())
-            and assigned_driver.role = 'driver'::public.user_role
-            and assigned_driver.active = true
-        )
+        or private.is_assigned_to_trip(trip.id)
         or exists (
           select 1
           from public.trip_children as trip_child
