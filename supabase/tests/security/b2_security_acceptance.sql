@@ -18,6 +18,8 @@ declare
   v_hash text := pg_catalog.repeat('a', 64);
   v_other_hash text := pg_catalog.repeat('b', 64);
   v_definition text;
+  v_policy record;
+  v_policy_count integer := 0;
 begin
   -- B2.1 authorization helper inventory, SECURITY DEFINER configuration and grants.
   -- Keep the signatures explicit so an overload cannot silently satisfy a check.
@@ -57,6 +59,33 @@ begin
 
     v_tests := v_tests + 1;
   end loop;
+
+  -- Every driver-facing transport/GPS policy must use the complete active
+  -- assignment helper, which also checks active membership and school status.
+  for v_policy in
+    select tablename, policyname, qual
+    from pg_policies
+    where schemaname = 'public'
+      and policyname in (
+        'buses_select_operational_relationship',
+        'transport_routes_select_operational_relationship',
+        'route_stops_select_operational_relationship',
+        'route_schedules_select_operational_relationship',
+        'trips_select_assigned_or_linked',
+        'bus_positions_select_active_trip_relationship'
+      )
+  loop
+    if v_policy.qual is null
+       or pg_catalog.strpos(v_policy.qual, 'is_assigned_to_trip') = 0 then
+      raise exception 'B2 security policy % is missing the active assignment helper', v_policy.policyname;
+    end if;
+    v_policy_count := v_policy_count + 1;
+    v_tests := v_tests + 1;
+  end loop;
+
+  if v_policy_count <> 6 then
+    raise exception 'B2 security policy coverage mismatch: expected 6 driver assignment policies, got %', v_policy_count;
+  end if;
 
   -- Child and guardian policy inventory.
   select c.relrowsecurity into v_ok
@@ -335,8 +364,8 @@ begin
     v_tests := v_tests + 1;
   end;
 
-  if v_tests <> 55 then
-    raise exception 'B2 security test count mismatch: expected 55, got %', v_tests;
+  if v_tests <> 61 then
+    raise exception 'B2 security test count mismatch: expected 61, got %', v_tests;
   end if;
 
   raise notice 'preDrive B2 security catalog and rate-limit tests passed: % cases', v_tests;
