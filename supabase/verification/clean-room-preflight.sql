@@ -8,6 +8,29 @@ declare
   v_count bigint;
   v_missing text[] := array[]::text[];
 begin
+  -- Supabase roles referenced directly by the ordered migration chain.
+  -- In particular, the Auth profile-sync trigger grants execution to
+  -- supabase_auth_admin, while the foundation migrations alter defaults for
+  -- postgres and grant/revoke privileges for the API roles.
+  select array_agg(required.role_name order by required.role_name)
+    into v_missing
+    from (values
+      ('anon'),
+      ('authenticated'),
+      ('postgres'),
+      ('service_role'),
+      ('supabase_auth_admin')
+    ) as required(role_name)
+   where not exists (
+     select 1 from pg_roles r where r.rolname = required.role_name
+   );
+
+  if cardinality(v_missing) > 0 then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: required Supabase roles are missing: %',
+      array_to_string(v_missing, ', ');
+  end if;
+
   -- Platform objects referenced by the historical one-time reset migration.
   if to_regclass('cron.job') is null then
     v_missing := array_append(v_missing, 'cron.job');
