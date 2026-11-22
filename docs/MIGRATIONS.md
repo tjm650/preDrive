@@ -12,7 +12,7 @@ This repository uses an online Supabase workflow. Do not require Docker, a local
 - PostgreSQL: 17.12.
 - Remote migration ledger contains 12 applied versions.
 - All 12 corresponding SQL files are present in `supabase/migrations/`; the historical reset SQL was recovered from the remote migration ledger and restored to GitHub. A direct comparison confirms the reset file is byte-for-byte identical to its ledger `statements[0]` (2,281 bytes). A read-only comparison of all 12 applied migration records against their repository files confirms normalized SQL text matches for every version; six files are byte-exact and six differ only in comments/whitespace.
-- An additional repository-only migration `20261121130000_predrive_enable_pgcrypto.sql` explicitly declares `pgcrypto` in the `extensions` schema. It is not applied to the remote development database and must be included in the clean hosted replay before it is promoted.
+- An additional repository-only migration `20261121124410_predrive_enable_pgcrypto.sql` explicitly declares `pgcrypto` in the `extensions` schema. Its timestamp places it before `20261121124422_predrive_children_guardians.sql`, the first migration that calls `crypt()` and `gen_salt()` for handover PIN hashing. It is not applied to the remote development database and must be included in the clean hosted replay before it is promoted.
 - Historical version `20261120112956` (`predrive_full_application_reset`) was recovered from the remote `supabase_migrations.schema_migrations.statements` array and restored as `supabase/migrations/20261120112956_predrive_full_application_reset.sql`.
 - Do not fabricate that historical SQL file or claim that the migration chain has passed a clean replay.
 - No clean-room migration replay has been certified.
@@ -150,6 +150,6 @@ A fresh Supabase read-only check confirmed:
 
 This confirms the current development database inventory and type synchronization only. It does not certify an empty-database migration replay or establish the PostgREST exposed-schema allowlist. The `supabase_admin` default ACL issue has been dispositioned as a documented platform exception under the postgres-owner invariant. The `pg_net` placement warning remains a platform exception; verify the API exposed-schema setting in Supabase Dashboard under **Settings → API → Exposed schemas** and confirm neither `private` nor `net` is exposed.
 
-The repository-only `20261121130000_predrive_enable_pgcrypto.sql` remains unapplied to the development migration ledger. Since `extensions.pgcrypto` is already installed, do not apply it merely to make the ledger appear complete. Its behavior still needs to be verified in a genuinely isolated clean replay.
+The repository-only `20261121124410_predrive_enable_pgcrypto.sql` remains unapplied to the development migration ledger. Since `extensions.pgcrypto` is already installed, do not apply it merely to make the ledger appear complete. Its behavior still needs to be verified in a genuinely isolated clean replay.
 
 **B1.6 remains open. B2 must not start until the outstanding migration-replay and security/platform acceptance items are resolved.**
