@@ -54,6 +54,10 @@ For the required full replay, use a separate disposable Supabase project with no
 
 A separate hosted project is the online equivalent of a clean database replay for this project. The local-only `supabase db reset` command is not part of the required workflow. Supabase preview branches remain useful for later incremental migration checks, not as proof of empty-database reproducibility.
 
+The historical reset migration intentionally deletes rows from `supabase_migrations.schema_migrations` as part of its one-time cleanup. Supabase CLI documents that `db push` inserts a migration-history row after each migration succeeds. Therefore, during a clean-room `db push`, the reset migration's own version is expected to be recorded after its SQL completes; subsequent migrations then continue through the ordered migration set. This is a documented runner behavior, not evidence that the reset is safe to rerun against a populated project. Do not manually pre-populate or repair the ledger to work around this migration. Confirm the resulting ledger contains every expected version after the replay.
+
+Run `supabase/verification/clean-room-preflight.sql` using the same database connection identity that will execute the migration deployment. Its privilege and ownership checks evaluate `current_user`; running it as a different role does not certify the migration runner's authority. Record the connection role used for both the preflight and deployment.
+
 Do not create a hosted branch or disposable project, apply a migration to the existing development database, repair migration history, or incur compute charges without the user's written authorization for that operation.
 
 ### 4. Validate before promotion
