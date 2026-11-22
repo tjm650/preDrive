@@ -161,6 +161,28 @@ begin
       v_count;
   end if;
 
+  -- Check every object directly owned by the private schema, not only
+  -- relations, routines, and types. DROP SCHEMA ... CASCADE can also remove
+  -- operators, casts, collations, text-search objects, and other namespace
+  -- objects. A clean replay target must not contain any of them.
+  select count(*)
+    into v_count
+    from pg_depend d
+   where d.refclassid = 'pg_namespace'::regclass
+     and d.refobjid = (
+       select n.oid
+         from pg_namespace n
+        where n.nspname = 'private'
+     )
+     and d.deptype = 'n'
+     and d.classid <> 'pg_namespace'::regclass;
+
+  if v_count <> 0 then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: private contains % namespace-owned objects that DROP SCHEMA ... CASCADE could remove',
+      v_count;
+  end if;
+
   -- Check the reset migration's effective permissions before declaring
   -- the target ready. The final SELECT below remains as an auditable report.
   if not has_table_privilege(current_user, 'cron.job', 'SELECT')
