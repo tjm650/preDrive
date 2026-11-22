@@ -27,7 +27,7 @@ This register tracks the backend implementation plan. B0 is planning/audit work 
 
 B1.6 acceptance checkpoint:
 - [ ] Complete full migration replay on a separate empty disposable hosted Supabase project (a preview branch cloned from the populated dev project is not a clean-room replay).
-- [x] Add read-only clean-room preflight at `supabase/verification/clean-room-preflight.sql`; it checks required platform objects, empty cron/Vault/Auth/migration-ledger state, absence of existing non-extension application relations/functions/custom types in `public` and `private`, and reports the reset migration's required privileges. It has not been executed against a clean hosted project.
+- [x] Add read-only clean-room preflight at `supabase/verification/clean-room-preflight.sql`; it checks required platform objects, empty cron/Vault/Auth/migration-ledger state, absence of existing non-extension application relations/functions/custom types in `public` and `private`, absence of namespace-owned objects in `private` that `DROP SCHEMA ... CASCADE` could remove, and the reset migration's required privileges. It has not been executed against a clean hosted project.
 - [ ] All 42 application tables have RLS enabled and the tenant-column audit passes. Current live state: 42 enabled, none FORCE RLS; 37 have no policies by deliberate deny-by-default staging.
 - [ ] Remote-vs-replay comparison covers columns, types, defaults, constraints, indexes, enums, functions, triggers, RLS/policies, extensions, publications, cron, Storage and Auth integration objects.
 - [ ] Database lint/advisor review passes or every exception is documented and accepted; current review still has an unresolved `pg_net` placement/privilege warning and unused-index notices.
