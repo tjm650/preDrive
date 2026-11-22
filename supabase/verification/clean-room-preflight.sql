@@ -121,6 +121,46 @@ begin
       v_count;
   end if;
 
+  -- The historical reset drops private with CASCADE, unlike public where
+  -- extension-owned objects are explicitly preserved. Refuse a target that
+  -- has any extension-owned relation, routine, or type in private.
+  select count(*)
+    into v_count
+    from (
+      select d.classid, d.objid
+        from pg_depend d
+        join pg_class c
+          on d.classid = 'pg_class'::regclass
+         and c.oid = d.objid
+        join pg_namespace n on n.oid = c.relnamespace
+       where n.nspname = 'private'
+         and d.deptype = 'e'
+      union all
+      select d.classid, d.objid
+        from pg_depend d
+        join pg_proc p
+          on d.classid = 'pg_proc'::regclass
+         and p.oid = d.objid
+        join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'private'
+         and d.deptype = 'e'
+      union all
+      select d.classid, d.objid
+        from pg_depend d
+        join pg_type t
+          on d.classid = 'pg_type'::regclass
+         and t.oid = d.objid
+        join pg_namespace n on n.oid = t.typnamespace
+       where n.nspname = 'private'
+         and d.deptype = 'e'
+    ) extension_objects;
+
+  if v_count <> 0 then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: private contains % extension-owned relations, functions, or types that the reset migration could drop',
+      v_count;
+  end if;
+
   -- Check the reset migration's effective permissions before declaring
   -- the target ready. The final SELECT below remains as an auditable report.
   if not has_table_privilege(current_user, 'cron.job', 'SELECT')
