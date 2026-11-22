@@ -202,14 +202,19 @@ begin
       v_count;
   end if;
 
-  -- The reset migration also drops custom public types. Check both schemas
-  -- so a supposedly empty target cannot silently lose pre-existing types.
+  -- The historical reset migration drops enums, composites, domains,
+  -- ranges and multiranges in public, but does not remove user-defined base
+  -- or pseudo types. Refuse every non-extension custom type in either
+  -- application schema so an incomplete reset cannot leave objects behind.
+  -- Exclude automatically generated array types (typelem <> 0) and table row
+  -- types, which are represented by pg_class.reltype and caught above.
   select count(*)
     into v_count
     from pg_type t
     join pg_namespace n on n.oid = t.typnamespace
    where n.nspname in ('public', 'private')
-     and t.typtype in ('e', 'c', 'd', 'r', 'm')
+     and t.typtype in ('b', 'e', 'c', 'd', 'r', 'm', 'p')
+     and t.typelem = 0
      and not exists (
        select 1
          from pg_depend d
@@ -225,7 +230,7 @@ begin
 
   if v_count <> 0 then
     raise exception
-      'CLEAN-ROOM PREFLIGHT FAILED: public/private contain % non-extension custom types',
+      'CLEAN-ROOM PREFLIGHT FAILED: public/private contain % non-extension custom types (including base or pseudo types)',
       v_count;
   end if;
 
