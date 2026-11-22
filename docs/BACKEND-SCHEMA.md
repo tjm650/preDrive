@@ -4,10 +4,10 @@
 
 - Supabase project: `preDrive` (`rjsdhgbjvghjnuiilizm`), region `eu-west-1`.
 - PostgreSQL 17.12.
-- 42 application tables in `public`; all 42 have RLS enabled. A static inventory of all 12 applied migration files matches the live catalog exactly for all 42 table names, 23 public enum names and five public view names; no missing or unexpected names were found in those three object classes.
-- 37 tables currently have no RLS policies. This is deliberate deny-by-default staging before B2. All 42 tables have RLS enabled (none currently uses `FORCE ROW LEVEL SECURITY`). The `anon` role has no privileges on public application tables; `authenticated` has table-level SELECT only on `profiles`, `school_invitations`, `school_memberships`, `schools` and `staff_members`, with narrow column-level UPDATE grants on `profiles` (`full_name`, `language`, `phone`) and `schools` (`address`, `indicative_zig_per_usd`, `name`). The corresponding seven policies restrict those reads/updates. There are no authenticated table-level INSERT, UPDATE or DELETE grants and no client privileges on the other 37 tables.
+- 42 application tables in `public`; all 42 have RLS enabled. A static inventory of the B1 application migrations matches the live catalog for all 42 table names, 23 public enum names and five public view names; B2 adds policies, helper functions, Storage buckets and the rate-limit RPC without changing those counts.
+- 19 tables currently have no RLS policies after B2. These remain deliberately deny-by-default pending their dedicated business workflows and access policies. All 42 tables have RLS enabled (none currently uses `FORCE ROW LEVEL SECURITY`). The `anon` role has no privileges on public application tables; `authenticated` has table-level SELECT only on `profiles`, `school_invitations`, `school_memberships`, `schools` and `staff_members`, with narrow column-level UPDATE grants on `profiles` (`full_name`, `language`, `phone`) and `schools` (`address`, `indicative_zig_per_usd`, `name`). The corresponding seven policies restrict those reads/updates. There are no authenticated table-level INSERT, UPDATE or DELETE grants and no client privileges on the other 37 tables.
 - No application rows were inserted by B1.1–B1.6.
-- All 51 foreign keys flagged as unindexed by Supabase Performance Advisor were given covering indexes in migration `20261121124613`. A follow-up advisor run no longer reports unindexed foreign keys. A static inventory finds 160 explicit `CREATE INDEX` declarations across the 13 repository migrations; every one exists in the live `public` catalog. The catalog contains 257 public indexes in total, with the remaining 97 created for primary-key/unique/constraint enforcement. The live catalog reports 384 public constraints.
+- All 51 foreign keys flagged as unindexed by Supabase Performance Advisor were given covering indexes in migration `20261121124613`. A follow-up advisor run no longer reports unindexed foreign keys. A static inventory finds 160 explicit `CREATE INDEX` declarations across the 19 repository migrations; every one exists in the live `public` catalog. The catalog contains 257 public indexes in total, with the remaining 97 created for primary-key/unique/constraint enforcement. The live catalog reports 384 public constraints.
 - The 149 unused-index notices are expected in an empty development database and must be reassessed after representative workload tests; do not drop indexes merely to silence the advisor.
 - Security Advisor still reports `pg_net` installed in `public`. A fresh read-only catalog audit on 2026-11-22 confirms `pg_net` 0.20.4 is owned by `supabase_admin`, has extension namespace `public`, is non-relocatable, and owns objects in the `net` schema. Do not propose `ALTER EXTENSION pg_net SET SCHEMA ...` or a relocation migration. The ACL expansion confirms `supabase_admin` is the grantor of `USAGE` on `net` to `PUBLIC` and the platform roles; `PUBLIC` has all privileges on `net.http_request_queue` and `net._http_response`, sequence privileges, and `EXECUTE` on the extension routines. Effective `EXECUTE` is true for `anon`, `authenticated` and `service_role`. This is a Supabase platform-owned ACL, not a grant created by the application migration role. Supabase's KB (updated 2026-11-04) explicitly states that per-project `GRANT`/`REVOKE` on these extension objects has no effect because `supabase_admin` owns the grants; dropping/recreating the extension reapplies them. Do not attempt ACL revokes, ownership changes, extension relocation, or drop/recreate as a workaround. Preserve pg_net because B4 may use it for scheduled Edge Function invocation; do not assume it is already used by application jobs. The current project has zero cron jobs and no application database webhook use was established in this audit. `anon` and `authenticated` are not LOGIN roles; the catalog lists only Supabase/platform login roles. Any direct database login role must be treated as trusted because pg_net queue rows include request URLs, headers and bodies, and the worker sends queued requests. Do not create direct-login roles for app users or expose database credentials to clients. Supabase documents that Data API reachability depends on whether `net` is in the exposed-schema allowlist; SQL privileges alone do not establish this. The current SQL catalog and repository `supabase/config.toml` do not establish the live allowlist. Verify in the project's Dashboard → Settings → API → Exposed schemas (and, if necessary, the Management API `GET /v1/projects/{ref}/postgrest`) that `net` and `private` are not exposed. If `net` is absent, retain the platform-owned grants as a documented exception; if it is exposed, stop and resolve the exposure before proceeding. Do not attempt to revoke pg_net grants from the connected `postgres` role.
 - An on-time performance view is not defined yet: the schema does not yet establish an authoritative actual-arrival timestamp and lateness threshold. Do not fabricate an on-time metric. Resolve it against the API contract before adding it.
@@ -456,93 +456,50 @@ Latest advisors: Security reports 37 informational `rls_enabled_no_policy` findi
 
 This is a refresh of the current-development inventory, not a clean-room replay. PostgREST exposed-schema configuration cannot be read from the SQL catalog; verify in Supabase Dashboard → Settings → API → Exposed schemas that `private` and `net` are not exposed. The `supabase_admin` default-ACL issue is now dispositioned as a documented platform exception under the migration-owner invariant; clean-room replay and live API exposed-schema verification remain outstanding.
 
-## B2.1 helper migration — 2026-11-22
+## B2 remote application and runtime verification — 2026-11-22
 
-Repository-only migration `20261122153000_predrive_security_helpers.sql` has been committed. It defines six private, `SECURITY DEFINER`, `STABLE` SQL helpers with an empty `search_path` and fully schema-qualified references:
+All six B2 migrations were applied sequentially to the existing development project `rjsdhgbjvghjnuiilizm`. The remote ledger versions and matching repository filenames are:
 
-- `private.current_school_ids()` — returns only the caller's active memberships in non-suspended schools.
-- `private.is_school_member(uuid)` — checks the caller's active membership in the specified non-suspended school.
-- `private.has_role(uuid, public.user_role)` — checks the caller's active membership and exact role in the specified non-suspended school.
-- `private.is_guardian_of(uuid)` — checks the caller's active guardian-child link and guardian membership.
-- `private.is_assigned_to_trip(uuid)` — checks whether the caller is the active assigned driver or supervisor for the specified trip.
-- `private.is_demo_school(uuid)` — returns true only when the caller has an active membership in the specified non-suspended demo school.
+| Remote version | Repository migration |
+|---|---|
+| 20261122204630 | `20261122204630_predrive_security_helpers.sql` |
+| 20261122204634 | `20261122204634_predrive_admin_staff_rls.sql` |
+| 20261122204639 | `20261122204639_predrive_guardian_child_rls.sql` |
+| 20261122204644 | `20261122204644_predrive_transport_trip_access_rls.sql` |
+| 20261122204649 | `20261122204649_predrive_storage_buckets_rls.sql` |
+| 20261122204654 | `20261122204654_predrive_atomic_rate_limiting.sql` |
 
-All six functions revoke execution from `PUBLIC`, `anon` and the default authenticated grant before granting `EXECUTE` only to `authenticated`. They do not add table grants, RLS policies, data, triggers, or Realtime publication entries. The migration has **not** been applied to the existing development database; its remote effects require a separate explicit approval after review. Existing `private.has_school_role(uuid, public.user_role[])` and `private.can_admin_view_profile(uuid)` are unchanged.
+The repository filenames were aligned to the versions assigned by the hosted migration runner. The six migrations all returned successful application results, and the remote ledger now contains the 12 B1 versions plus these six B2 versions.
 
-The six helpers are intended as the shared authorization primitives for B2.2–B2.4. The helper migration is additive and does not execute the historical reset migration. The clean-room migration replay remains deferred and B1.6 is not certified complete.
+### Applied security surface
 
+- Six private tenant/relationship helpers exist with `SECURITY DEFINER`, `STABLE` and an empty `search_path`; their execution is granted only to authenticated callers.
+- School-admin/staff policies are active for class groups, fee items, settings and setup progress.
+- Guardian/child policies restrict direct reads to active guardian links and school-scoped staff relationships; direct child and guardian-link writes are admin-only.
+- Fleet/trip/GPS policies use active staff assignment and guardian-child relationships. Authenticated direct reads remain denied for trip events, approved collectors and historical GPS.
+- Five private Storage buckets exist: `incident-photos`, `payment-proofs`, `avatars`, `receipts` and `exports`. All five are private and retain the migration's configured size and MIME constraints.
+- `private.consume_rate_limit` remains unexposed. `public.consume_rate_limit` is a SECURITY DEFINER wrapper with an empty search path and EXECUTE granted only to `service_role`.
 
-## B2.2 school administration and staff RLS migration — 2026-11-22
+### Runtime checks
 
-Repository-only migration `20261122160000_predrive_admin_staff_rls.sql` has been committed. It is additive and idempotent at the policy level:
+The committed `supabase/tests/security/b2_security_acceptance.sql` suite executed against the remote database without a SQL error. It contains 63 checks: 61 catalog, grants, policy, helper and rate-limit assertions, followed by two calls to the public RPC under `service_role` to verify threshold behavior. The suite's transaction rolled back its temporary rate-limit events.
 
-- `class_groups`: active school admins can select/insert/update/delete; teachers and supervisors can select class metadata.
-- `fee_items`: active school admins can select/insert/update/delete.
-- `settings`: active school admins can select/insert/update/delete.
-- `setup_progress`: active school admins can select/insert/update/delete.
+A subsequent read-only verification confirmed:
+- 6 of 6 expected helpers have the required security configuration.
+- 5 of 5 expected buckets exist and are private.
+- The public rate-limit RPC exists and is executable by `service_role`.
+- `anon` and `authenticated` cannot execute the public rate-limit RPC.
+- `service_role` cannot execute the private rate-limit implementation.
+- All 42 public application tables still have RLS enabled.
+- No rate-limit test rows remain after rollback.
 
-The migration explicitly enables RLS on these four tables, removes direct `anon` and `authenticated` table grants, then grants authenticated users the CRUD privileges needed for Postgres to evaluate the corresponding RLS policies. It leaves `service_role` privileges unchanged. Every policy checks the authenticated user's active membership and role through the already-applied `private.has_school_role(uuid, public.user_role[])` function; no client-supplied school or user ID is trusted.
+### Remaining verification gates and advisor findings
 
-This migration does not change children, guardian links, approved collectors, staff records, fleet, trips, GPS, safety, payment records, audit data, or any existing rows. It does not depend on B2.1's new helper functions. The file is committed but has **not** been applied to the development database; live policy and grant verification must follow explicit approval and application.
+- The SQL suite is primarily catalog/permission testing; it does not yet prove real row visibility using seeded identities across two schools. B5 must add multi-tenant guardian, school-admin, teacher, supervisor and driver fixtures and test cross-school denial.
+- Storage upload/download and signed-URL behavior were not exercised end-to-end. Validate those flows with authenticated test identities and trusted Edge Function credentials before release.
+- Security Advisor reports 19 public tables with RLS enabled but no policies. These remain deny-by-default; do not grant broad access to silence the notices. It also reports the existing Supabase-owned `pg_net` extension in `public`.
+- Performance Advisor reports one multiple-permissive-policy warning on `public.class_groups` SELECT because school-staff and linked-guardian policies are separate permissive policies. PostgreSQL OR-combines them; consolidate only through a reviewed migration if query-plan measurements justify it.
+- Performance Advisor reports 148 unused-index notices in this low-traffic/empty development environment. Do not drop indexes based only on these notices.
+- Health Advisor returned no findings.
+- B1.6 clean-room replay remains deferred and is not certified by these incremental B2 migrations.
 
-
-## B2.3 guardian/child isolation migration — 2026-11-22
-
-Repository-only migration `20261122163000_predrive_guardian_child_rls.sql` has been committed. It enables RLS on `children` and `guardian_children` and adds relationship-aware policies:
-
-- Guardians can select only their own active guardian-child links, after their active `guardian` school membership is verified.
-- Guardians can select only child rows connected to one of those active links.
-- Guardians can select the class-group row associated with their linked child, not unrelated class groups.
-- School admins, teachers and supervisors can select child and guardian-link rows only in schools where they hold an active matching membership.
-- Only school admins can directly insert, update or delete child and guardian-link rows.
-- Authenticated receives SELECT only on `children` and `guardian_children`; no direct authenticated write grants are introduced by this migration.
-
-The migration reuses the existing, already-applied `private.has_school_role(uuid, public.user_role[])` helper and does not depend on B2.1. The existing class-group CRUD grants/policies from B2.2 remain in place; the guardian class-group SELECT policy is additive.
-
-No child, guardian, membership, school or class data is changed. The migration has been committed but **not applied** to the populated development database. Before remote application, validate policy composition and query plans with authenticated test identities for at least two schools, two guardians, one school admin, one teacher and one supervisor. Also verify that guardian reads cannot reveal unrelated children or links even when a client supplies another child's UUID.
-
-
-## B2.4 transport, trip and GPS access migration — 2026-11-22
-
-Repository-only migration `20261122170000_predrive_transport_trip_access_rls.sql` has been committed. It enables/retains RLS on fleet, route, trip, GPS and operational tables and defines read access as follows:
-
-- School admins and supervisors can read school-scoped buses, routes, route stops/schedules, trips, trip-child operational records, current bus positions, vehicle checks and delay reports.
-- Drivers can read fleet/route context only where a trip assigns that driver; all six driver-facing fleet/trip/GPS policies use `private.is_assigned_to_trip(uuid)`, which requires the matching active driver staff record, active school membership and a non-suspended school.
-- Guardians can read an active trip and its current bus position only when an active guardian-child link places their child on that trip. They can read only their own child's trip-child rows.
-- Drivers receive no direct `trip_children` access and therefore cannot perform or inspect gate handovers through table reads.
-- Authenticated users receive no direct read access to `trip_events`, `approved_collectors` or `bus_position_history`. Collector PIN hashes and detailed event payloads remain behind trusted workflows.
-- Authenticated receives SELECT only on the operational tables explicitly listed in the migration. No direct authenticated writes are granted.
-
-The policies use the already-applied `private.has_school_role(uuid, public.user_role[])` helper and exact live enum labels (`active`, `school_admin`, `supervisor`, `driver`, `guardian`). The trip/child/guardian policy dependency is intentionally acyclic: trip-child visibility does not query trips, while trip visibility may safely consult the filtered trip-child rows.
-
-The migration does not delete or modify data, does not publish Realtime tables, and does not grant access to GPS history. It is committed but **not applied** to the development database. Before remote application, validate with separate guardian, driver, supervisor and school-admin identities across at least two schools; explicitly test that an unrelated guardian cannot query a trip ID or bus position and that a driver cannot select trip-child, trip-event or collector records. Confirm that completed/cancelled trips return no current GPS rows.
-
-
-## B2.5 private Storage migration — 2026-11-22
-
-Repository-only migration `20261122173000_predrive_storage_buckets_rls.sql` has been committed. The five buckets are private and use explicit limits:
-
-| Bucket | Maximum size | Allowed MIME types |
-|---|---:|---|
-| `incident-photos` | 10 MiB | JPEG, PNG, WebP |
-| `payment-proofs` | 10 MiB | JPEG, PNG, WebP, PDF |
-| `avatars` | 2 MiB | JPEG, PNG, WebP |
-| `receipts` | 10 MiB | PDF |
-| `exports` | 25 MiB | CSV, PDF, XLSX |
-
-Object path conventions are encoded in the migration and policies. Incident evidence is school-scoped and uploader-scoped; guardians can upload/read only their own payment-proof path; avatars are user-owned; receipts are readable by the owning guardian or school admin; exports are readable only by the school admin whose user ID is in the path. Receipt and export generation/deletion are reserved for trusted Edge Functions. Incident evidence management is limited to authorized school staff. The migration creates buckets only if absent and fails closed if an existing bucket has different privacy, size or MIME configuration; it never silently overwrites an existing bucket.
-
-A small immutable parser, `private.storage_school_id(text)`, safely returns the first path segment as a UUID or NULL for malformed paths. Its execution is revoked from PUBLIC/anon and granted to authenticated so Storage policies can evaluate school membership without unsafe casts.
-
-Live read-only inspection confirmed the current Storage schema has the required `storage.buckets` columns and defaults, and there are currently zero Storage buckets and zero Storage object policies. The migration has **not** been applied to the development project. After explicit approval and application, test every bucket for unauthenticated denial, cross-school denial, cross-user denial, allowed MIME/size limits, correct upload paths, signed URL access, and service-role Edge Function behavior.
-
-
-## B2.6 atomic rate limiting and SQL security suite — 2026-11-22
-
-Repository-only migration `20261122180000_predrive_atomic_rate_limiting.sql` adds `private.consume_rate_limit(uuid,text,text,integer,integer)`. It is a `SECURITY DEFINER` function with an empty `search_path`, callable only by `service_role`. It validates the action name, lowercase SHA-256 subject digest, threshold (1–1000) and window (1–86,400 seconds). It obtains a transaction-scoped advisory lock per school/action/subject key, removes expired events for that key, counts attempts in the active window, returns false when the threshold is reached, and inserts accepted attempts. Callers must hash identifying material before passing it; raw PINs, email addresses and IP addresses must not be persisted in `subject_hash`.
-
-The function does not add direct authenticated table access. Existing `rate_limit_events` remains deny-by-default under RLS; the function's owner performs the atomic table operations. Scheduled global cleanup/retention is deferred to B4 automation.
-
-The committed suite `supabase/tests/security/b2_security_acceptance.sql` contains 49 SQL assertions covering policy inventory, RLS enablement, driver/guardian separation, GPS and collector denial, authenticated table grants, private Storage bucket configuration, Storage policy presence, helper execution grants, safe path parsing and rate-limit threshold/validation/isolation behavior. It wraps rate-limit inserts in a transaction and rolls them back. The suite is intended to run after the B2 migrations are applied.
-
-**Coverage limitation:** the 49 checks verify database catalog and rate-limiter behavior but do not yet simulate actual authenticated users across two schools. Seeded row-visibility tests must be added/run with the B5 demo identities before production acceptance. No B2 migration has been applied to the populated development database.
