@@ -455,3 +455,18 @@ Type generation was repeated from the live project. The generated output is exac
 Latest advisors: Security reports 37 informational `rls_enabled_no_policy` findings and one `extension_in_public` warning for `pg_net`; Performance reports 149 informational `unused_index` findings; Health reports no findings. The RLS notices reflect the deliberate deny-by-default state before B2. The unused-index notices are not grounds for dropping indexes in a database without representative workload. The `pg_net` warning remains unresolved; it is non-relocatable in this project and must not be moved with `ALTER EXTENSION ... SET SCHEMA`.
 
 This is a refresh of the current-development inventory, not a clean-room replay. PostgREST exposed-schema configuration cannot be read from the SQL catalog; verify in Supabase Dashboard → Settings → API → Exposed schemas that `private` and `net` are not exposed. The `supabase_admin` default-ACL issue is now dispositioned as a documented platform exception under the migration-owner invariant; clean-room replay and live API exposed-schema verification remain outstanding.
+
+## B2.1 helper migration — 2026-11-22
+
+Repository-only migration `20261122153000_predrive_security_helpers.sql` has been committed. It defines six private, `SECURITY DEFINER`, `STABLE` SQL helpers with an empty `search_path` and fully schema-qualified references:
+
+- `private.current_school_ids()` — returns only the caller's active memberships in non-suspended schools.
+- `private.is_school_member(uuid)` — checks the caller's active membership in the specified non-suspended school.
+- `private.has_role(uuid, public.user_role)` — checks the caller's active membership and exact role in the specified non-suspended school.
+- `private.is_guardian_of(uuid)` — checks the caller's active guardian-child link and guardian membership.
+- `private.is_assigned_to_trip(uuid)` — checks whether the caller is the active assigned driver or supervisor for the specified trip.
+- `private.is_demo_school(uuid)` — returns true only when the caller has an active membership in the specified non-suspended demo school.
+
+All six functions revoke execution from `PUBLIC`, `anon` and the default authenticated grant before granting `EXECUTE` only to `authenticated`. They do not add table grants, RLS policies, data, triggers, or Realtime publication entries. The migration has **not** been applied to the existing development database; its remote effects require a separate explicit approval after review. Existing `private.has_school_role(uuid, public.user_role[])` and `private.can_admin_view_profile(uuid)` are unchanged.
+
+The six helpers are intended as the shared authorization primitives for B2.2–B2.4. The helper migration is additive and does not execute the historical reset migration. The clean-room migration replay remains deferred and B1.6 is not certified complete.
