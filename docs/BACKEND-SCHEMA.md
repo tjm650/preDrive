@@ -507,7 +507,7 @@ No child, guardian, membership, school or class data is changed. The migration h
 Repository-only migration `20261122170000_predrive_transport_trip_access_rls.sql` has been committed. It enables/retains RLS on fleet, route, trip, GPS and operational tables and defines read access as follows:
 
 - School admins and supervisors can read school-scoped buses, routes, route stops/schedules, trips, trip-child operational records, current bus positions, vehicle checks and delay reports.
-- Drivers can read fleet/route context only where a trip assigns that driver; trip visibility is limited to trips whose `driver_id` maps to their active `staff_members` record.
+- Drivers can read fleet/route context only where a trip assigns that driver; all six driver-facing fleet/trip/GPS policies use `private.is_assigned_to_trip(uuid)`, which requires the matching active driver staff record, active school membership and a non-suspended school.
 - Guardians can read an active trip and its current bus position only when an active guardian-child link places their child on that trip. They can read only their own child's trip-child rows.
 - Drivers receive no direct `trip_children` access and therefore cannot perform or inspect gate handovers through table reads.
 - Authenticated users receive no direct read access to `trip_events`, `approved_collectors` or `bus_position_history`. Collector PIN hashes and detailed event payloads remain behind trusted workflows.
