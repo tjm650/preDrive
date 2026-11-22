@@ -1,6 +1,6 @@
 # preDrive backend batch register
 
-This register tracks the backend implementation plan. B0 is planning/audit work and is not counted as an implementation batch. B1.1–B1.5 are complete. B1.6 remains open; later phases must not begin until B1.6's migration baseline checkpoint is passed.
+This register tracks the backend implementation plan. B0 is planning/audit work and is not counted as an implementation batch. B1.1–B1.5 are complete. B1.6 remains open and is explicitly deferred by the user; on 2026-11-22 the user authorized proceeding with B2 against the existing development project using reviewed incremental migrations only. This is an exception to the original phase gate, not a claim that the clean-room replay passed.
 
 ## Status summary
 
@@ -23,7 +23,7 @@ This register tracks the backend implementation plan. B0 is planning/audit work 
 - [x] B1.3 Safety and operations — migration `20261121124437`.
 - [x] B1.4 Finance — migration `20261121124444`.
 - [x] B1.5 Settings, privacy, audit and analytics — migration `20261121124451`.
-- [ ] B1.6 Documentation, generated types, schema audit and migration-chain verification — 51 FK indexes added in `20261121124613`; historical reset SQL `20261120112956` recovered from the remote migration ledger and verified byte-for-byte; repository-only pgcrypto dependency migration `20261121130000` added (not applied remotely); all 12 applied ledger statements reconciled against repository SQL; current dev types regenerated and match the committed 93,685-byte file exactly; fresh read-only verification reconfirmed 42/42 RLS-enabled tables, 7 policies, 5 security-invoker views, required extensions, 12 ledger entries, Security Advisor findings (37 informational deny-by-default notices and one pg_net warning), 149 informational unused-index notices, and no Health Advisor findings. Verification is documented in `MIGRATIONS.md`; clean hosted replay and live exposed-schema confirmation remain pending. The `supabase_admin` default ACL decision is dispositioned as an accepted platform exception under the `postgres` ownership invariant; the pg_net warning remains a documented platform exception pending the live `net`/`private` exposure check.
+- [ ] B1.6 Documentation, generated types, schema audit and migration-chain verification — implementation inventory and current-development checks are documented; clean hosted replay and live exposed-schema confirmation remain pending. The user explicitly deferred the clean-room replay and authorized B2 to proceed on the existing development project with incremental, reviewed migrations only. B1.6 is not passed and must remain open until its deferred acceptance checks are completed.
 
 B1.6 security decision update (2026-11-22): the pg_net ACL/ownership audit is complete. The extension is Supabase-owned and its PUBLIC grants cannot be changed by the project migration role; preserve it for planned B4 use and do not attempt revoke, relocation or drop/recreate workarounds. The `supabase_admin` default ACL audit is also complete: Supabase documents that these defaults apply only to objects created by that role and cannot be changed by project roles. Current development has zero `supabase_admin`-owned public relations/routines; all 50 public relations are owned by `postgres`, whose defaults are restricted. This is accepted as a documented platform exception under the invariant that migrations and application objects are owned by `postgres`; the clean-room preflight enforces the migration identity. The live API exposed-schema allowlist has not been verified, so the `net`/`private` exposure gate remains open. A fresh Security Advisor run still reports 37 informational deny-by-default RLS notices and one `extension_in_public` warning for pg_net.
 
@@ -40,12 +40,17 @@ B1.6 acceptance checkpoint:
 
 ## B2 — Security and RLS (6 batches)
 
-1. Security-definer helper functions with locked search paths and narrowly scoped grants.
-2. School admin and staff RLS policies.
-3. Guardian/child relationship isolation.
-4. Driver, supervisor, trip and GPS access policies; protect medical notes and collector data.
-5. Storage buckets, object paths, MIME/size limits and Storage policies.
-6. Database rate limiting and at least 30 SQL security cases, including cross-tenant isolation.
+- [ ] B2.1 Security-definer helper functions with locked search paths and narrowly scoped grants — migration `20261122153000_predrive_security_helpers.sql` is committed to `main`; it defines six authenticated-caller-scoped tenant/relationship helpers. Remote application and SQL verification are pending explicit approval after the exact effects are reviewed.
+
+Remaining B2 sub-batches:
+
+1. B2.2 School admin and staff RLS policies.
+2. B2.3 Guardian/child relationship isolation.
+3. B2.4 Driver, supervisor, trip and GPS access policies; protect medical notes and collector data.
+4. B2.5 Storage buckets, object paths, MIME/size limits and Storage policies.
+5. B2.6 Database rate limiting and at least 30 SQL security cases, including cross-tenant isolation.
+
+
 
 ## B3 — Database business logic (8 batches)
 
@@ -107,4 +112,4 @@ The current API contract has no Realtime subscription methods or payloads. Do no
 - Do not modify a shared remote database or its migration history without the user's written authorization for the exact operation.
 - Explain every command that the user is expected to run before asking them to run it.
 - Migration files are the intended schema design; compare remote state against a clean replay rather than copying drift into migrations.
-- Do not start B2 until B1.6 passes its acceptance checkpoint.
+- B1.6 clean-room replay is deferred by explicit user decision. Continue B2 only through additive, reviewed migrations on the existing development project; never run the destructive historical reset migration against it. B1.6 remains open.
