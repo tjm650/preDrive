@@ -1,4 +1,4 @@
-export { default as WelcomeScreen } from "./public/welcome-screen";
+// export { default as WelcomeScreen } from "./public/welcome-screen";
 export { default as SignInScreen } from "./auth/sign-in-screen";
 export { default as ForgotPasswordScreen } from "./auth/forgot-password-screen";
 export { default as AccessDeniedScreen } from "./auth/access-denied-screen";

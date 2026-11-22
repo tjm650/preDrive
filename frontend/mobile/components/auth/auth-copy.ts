@@ -1,10 +1,113 @@
 import type { LanguageCode } from "@predrive/shared/types";
 export interface MobileAuthCopy {
- signInTitle:string;signInDescription:string;emailLabel:string;emailPlaceholder:string;passwordLabel:string;passwordPlaceholder:string;showPassword:string;hidePassword:string;signInAction:string;forgotPassword:string;resetTitle:string;resetDescription:string;sendResetLink:string;backToSignIn:string;emailRequired:string;emailInvalid:string;passwordRequired:string;serviceUnavailableTitle:string;serviceUnavailableDescription:string;resetUnavailableTitle:string;resetUnavailableDescription:string;brandDescription:string;languageLabel:string;
+  signInTitle: string;
+  signInDescription: string;
+  emailLabel: string;
+  emailPlaceholder: string;
+  passwordLabel: string;
+  passwordPlaceholder: string;
+  showPassword: string;
+  hidePassword: string;
+  signInAction: string;
+  forgotPassword: string;
+  resetTitle: string;
+  resetDescription: string;
+  sendResetLink: string;
+  backToSignIn: string;
+  emailRequired: string;
+  emailInvalid: string;
+  passwordRequired: string;
+  serviceUnavailableTitle: string;
+  serviceUnavailableDescription: string;
+  resetUnavailableTitle: string;
+  resetUnavailableDescription: string;
+  brandDescription: string;
+  languageLabel: string;
 }
-const copy:Record<LanguageCode,MobileAuthCopy>={
- en:{signInTitle:"Welcome back",signInDescription:"Sign in to your preDrive account.",emailLabel:"Email address",emailPlaceholder:"you@example.com",passwordLabel:"Password",passwordPlaceholder:"Enter your password",showPassword:"Show",hidePassword:"Hide",signInAction:"Sign in",forgotPassword:"Forgot password?",resetTitle:"Reset your password",resetDescription:"Enter the email address linked to your preDrive account.",sendResetLink:"Send reset instructions",backToSignIn:"Back to sign in",emailRequired:"Enter your email address.",emailInvalid:"Enter a valid email address.",passwordRequired:"Enter your password.",serviceUnavailableTitle:"Sign-in is not connected",serviceUnavailableDescription:"Your details have not been sent. Secure sign-in will be enabled when the authentication service is connected.",resetUnavailableTitle:"Password recovery is not connected",resetUnavailableDescription:"No reset email has been sent. Password recovery will be enabled when the authentication service is connected.",brandDescription:"School transport safety",languageLabel:"Language"},
- sn:{signInTitle:"Tinokugamuchirai zvakare",signInDescription:"Pinda muakaundi yako ye preDrive.",emailLabel:"Kero yeemail",emailPlaceholder:"you@example.com",passwordLabel:"Pasiwedhi",passwordPlaceholder:"Nyora pasiwedhi yako",showPassword:"Ratidza",hidePassword:"Viga",signInAction:"Pinda",forgotPassword:"Wakanganwa pasiwedhi?",resetTitle:"Chinja pasiwedhi yako",resetDescription:"Nyora kero yeemail yakanyoreswa muakaundi yako ye preDrive.",sendResetLink:"Tumira mirayiridzo yekuchinja",backToSignIn:"Dzokera pakupinda",emailRequired:"Nyora kero yeemail yako.",emailInvalid:"Nyora kero yeemail yakarurama.",passwordRequired:"Nyora pasiwedhi yako.",serviceUnavailableTitle:"Kupinda hakusati kwavepo",serviceUnavailableDescription:"Mashoko ako haana kutumirwa. Kupinda kwakachengeteka kuchavhurwa kana sevhisi yekusimbisa maakaundi yabatanidzwa.",resetUnavailableTitle:"Kuchinja pasiwedhi hakusati kwavepo",resetUnavailableDescription:"Hapana email yekuchinja pasiwedhi yatumirwa. Sevhisi iyi ichavhurwa kana yabatanidzwa.",brandDescription:"Kuchengetedzwa kwevana parwendo rwechikoro",languageLabel:"Mutauro"},
- nd:{signInTitle:"Siyakwamukela futhi",signInDescription:"Ngena ku-akhawunti yakho ye preDrive.",emailLabel:"Ikheli le-imeyili",emailPlaceholder:"you@example.com",passwordLabel:"Iphasiwedi",passwordPlaceholder:"Faka iphasiwedi yakho",showPassword:"Veza",hidePassword:"Fihla",signInAction:"Ngena",forgotPassword:"Ukhohlwe iphasiwedi?",resetTitle:"Lungisa kabusha iphasiwedi yakho",resetDescription:"Faka ikheli le-imeyili elixhunywe ku-akhawunti yakho ye preDrive.",sendResetLink:"Thumela imiyalelo yokulungisa",backToSignIn:"Buyela ekungeneni",emailRequired:"Faka ikheli lakho le-imeyili.",emailInvalid:"Faka ikheli le-imeyili elisebenzayo.",passwordRequired:"Faka iphasiwedi yakho.",serviceUnavailableTitle:"Ukungena akukaxhunywa",serviceUnavailableDescription:"Imininingwane yakho ayithunyelwanga. Ukungena okuphephile kuzavulwa nxa isevisi yokuqinisekisa ama-akhawunti isixhunyiwe.",resetUnavailableTitle:"Ukulungisa iphasiwedi akukaxhunywa",resetUnavailableDescription:"Akukho imeyili yokulungisa iphasiwedi ethunyelweyo. Isevisi le izavulwa nxa isixhunyiwe.",brandDescription:"Ukuphepha kwabantwana ohambweni lwesikolo",languageLabel:"Ulimi"}
+const copy: Record<LanguageCode, MobileAuthCopy> = {
+  en: {
+    signInTitle: "Welcome back",
+    signInDescription: "Sign in to your preDrive account.",
+    emailLabel: "Email address",
+    emailPlaceholder: "you@example.com",
+    passwordLabel: "Password",
+    passwordPlaceholder: "Enter your password",
+    showPassword: "Show",
+    hidePassword: "Hide",
+    signInAction: "Sign in",
+    forgotPassword: "Forgot password?",
+    resetTitle: "Reset your password",
+    resetDescription: "Enter the email address linked to your preDrive account.",
+    sendResetLink: "Send reset instructions",
+    backToSignIn: "Back to sign in",
+    emailRequired: "Enter your email address.",
+    emailInvalid: "Enter a valid email address.",
+    passwordRequired: "Enter your password.",
+    serviceUnavailableTitle: "Sign-in is not connected",
+    serviceUnavailableDescription:
+      "Your details have not been sent. Secure sign-in will be enabled when the authentication service is connected.",
+    resetUnavailableTitle: "Password recovery is not connected",
+    resetUnavailableDescription:
+      "No reset email has been sent. Password recovery will be enabled when the authentication service is connected.",
+    brandDescription: "School transport safety",
+    languageLabel: "Language",
+  },
+  sn: {
+    signInTitle: "Tinokugamuchirai zvakare",
+    signInDescription: "Pinda muakaundi yako ye preDrive.",
+    emailLabel: "Kero yeemail",
+    emailPlaceholder: "you@example.com",
+    passwordLabel: "Pasiwedhi",
+    passwordPlaceholder: "Nyora pasiwedhi yako",
+    showPassword: "Ratidza",
+    hidePassword: "Viga",
+    signInAction: "Pinda",
+    forgotPassword: "Wakanganwa pasiwedhi?",
+    resetTitle: "Chinja pasiwedhi yako",
+    resetDescription: "Nyora kero yeemail yakanyoreswa muakaundi yako ye preDrive.",
+    sendResetLink: "Tumira mirayiridzo yekuchinja",
+    backToSignIn: "Dzokera pakupinda",
+    emailRequired: "Nyora kero yeemail yako.",
+    emailInvalid: "Nyora kero yeemail yakarurama.",
+    passwordRequired: "Nyora pasiwedhi yako.",
+    serviceUnavailableTitle: "Kupinda hakusati kwavepo",
+    serviceUnavailableDescription:
+      "Mashoko ako haana kutumirwa. Kupinda kwakachengeteka kuchavhurwa kana sevhisi yekusimbisa maakaundi yabatanidzwa.",
+    resetUnavailableTitle: "Kuchinja pasiwedhi hakusati kwavepo",
+    resetUnavailableDescription:
+      "Hapana email yekuchinja pasiwedhi yatumirwa. Sevhisi iyi ichavhurwa kana yabatanidzwa.",
+    brandDescription: "Kuchengetedzwa kwevana parwendo rwechikoro",
+    languageLabel: "Mutauro",
+  },
+  nd: {
+    signInTitle: "Siyakwamukela futhi",
+    signInDescription: "Ngena ku-akhawunti yakho ye preDrive.",
+    emailLabel: "Ikheli le-imeyili",
+    emailPlaceholder: "you@example.com",
+    passwordLabel: "Iphasiwedi",
+    passwordPlaceholder: "Faka iphasiwedi yakho",
+    showPassword: "Veza",
+    hidePassword: "Fihla",
+    signInAction: "Ngena",
+    forgotPassword: "Ukhohlwe iphasiwedi?",
+    resetTitle: "Lungisa kabusha iphasiwedi yakho",
+    resetDescription:
+      "Faka ikheli le-imeyili elixhunywe ku-akhawunti yakho ye preDrive.",
+    sendResetLink: "Thumela imiyalelo yokulungisa",
+    backToSignIn: "Buyela ekungeneni",
+    emailRequired: "Faka ikheli lakho le-imeyili.",
+    emailInvalid: "Faka ikheli le-imeyili elisebenzayo.",
+    passwordRequired: "Faka iphasiwedi yakho.",
+    serviceUnavailableTitle: "Ukungena akukaxhunywa",
+    serviceUnavailableDescription:
+      "Imininingwane yakho ayithunyelwanga. Ukungena okuphephile kuzavulwa nxa isevisi yokuqinisekisa ama-akhawunti isixhunyiwe.",
+    resetUnavailableTitle: "Ukulungisa iphasiwedi akukaxhunywa",
+    resetUnavailableDescription:
+      "Akukho imeyili yokulungisa iphasiwedi ethunyelweyo. Isevisi le izavulwa nxa isixhunyiwe.",
+    brandDescription: "Ukuphepha kwabantwana ohambweni lwesikolo",
+    languageLabel: "Ulimi",
+  },
 };
-export function getMobileAuthCopy(language:LanguageCode="en"):MobileAuthCopy{return copy[language]??copy.en;}
+export function getMobileAuthCopy(language: LanguageCode = "en"): MobileAuthCopy {
+  return copy[language] ?? copy.en;
+}
