@@ -183,6 +183,36 @@ begin
       v_count;
   end if;
 
+  -- Public is not dropped wholesale, but DROP ... CASCADE on a public
+  -- function, relation, or type can remove dependent namespace objects such
+  -- as operators, casts, and text-search objects. Fail closed if any
+  -- non-extension object is directly owned by public; extension-owned
+  -- objects are preserved by the historical reset migration.
+  select count(*)
+    into v_count
+    from pg_depend d
+   where d.refclassid = 'pg_namespace'::regclass
+     and d.refobjid = (
+       select n.oid
+         from pg_namespace n
+        where n.nspname = 'public'
+     )
+     and d.deptype = 'n'
+     and d.classid <> 'pg_namespace'::regclass
+     and not exists (
+       select 1
+         from pg_depend extension_membership
+        where extension_membership.classid = d.classid
+          and extension_membership.objid = d.objid
+          and extension_membership.deptype = 'e'
+     );
+
+  if v_count <> 0 then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: public contains % non-extension namespace-owned objects that cascading drops could remove',
+      v_count;
+  end if;
+
   -- Check the reset migration's effective permissions before declaring
   -- the target ready. The final SELECT below remains as an auditable report.
   if not has_table_privilege(current_user, 'cron.job', 'SELECT')
