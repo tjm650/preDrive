@@ -98,11 +98,42 @@ begin
 end;
 $$;
 
+-- Keep the implementation private. The Edge Function reaches it through a
+-- narrowly granted public-schema RPC because private is intentionally not an
+-- exposed Data API schema and service_role has no USAGE on private.
 revoke all on function private.consume_rate_limit(uuid, text, text, integer, integer)
 from public, anon, authenticated, service_role;
 
-grant execute on function private.consume_rate_limit(uuid, text, text, integer, integer)
+create or replace function public.consume_rate_limit(
+  p_school_id uuid,
+  p_action text,
+  p_subject_hash text,
+  p_limit integer,
+  p_window_seconds integer
+)
+returns boolean
+language sql
+volatile
+security definer
+set search_path = ''
+as $
+  select private.consume_rate_limit(
+    p_school_id,
+    p_action,
+    p_subject_hash,
+    p_limit,
+    p_window_seconds
+  );
+$;
+
+revoke all on function public.consume_rate_limit(uuid, text, text, integer, integer)
+from public, anon, authenticated, service_role;
+
+grant execute on function public.consume_rate_limit(uuid, text, text, integer, integer)
 to service_role;
 
 comment on function private.consume_rate_limit(uuid, text, text, integer, integer) is
-  'Atomic per-school/action/subject rate limiter for trusted Edge Functions. Subject input must be a lowercase SHA-256 digest; returns true when the attempt is accepted and false when the threshold is reached.';
+  'Private atomic per-school/action/subject rate-limit implementation. Subject input must be a lowercase SHA-256 digest; returns true when the attempt is accepted and false when the threshold is reached.';
+
+comment on function public.consume_rate_limit(uuid, text, text, integer, integer) is
+  'Service-role-only PostgREST entry point for the private atomic rate limiter; invoke only from trusted Edge Functions.';
