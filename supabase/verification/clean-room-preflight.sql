@@ -133,6 +133,19 @@ begin
     v_missing := array_append(v_missing, 'supabase_migrations.schema_migrations');
   end if;
 
+  -- Verify the platform extensions themselves, not merely lookalike
+  -- schemas/tables/functions with the expected names.
+  if not exists (
+    select 1 from pg_extension where extname = 'pg_cron'
+  ) then
+    v_missing := array_append(v_missing, 'extension pg_cron');
+  end if;
+  if not exists (
+    select 1 from pg_extension where extname = 'supabase_vault'
+  ) then
+    v_missing := array_append(v_missing, 'extension supabase_vault');
+  end if;
+
   if cardinality(v_missing) > 0 then
     raise exception
       'CLEAN-ROOM PREFLIGHT FAILED: required Supabase platform objects are missing: %',
