@@ -225,6 +225,7 @@ export class SupabaseAuthPort implements AuthPort {
       throw new AuthPortError("UNAUTHENTICATED", "The sign-in response did not contain a valid session.");
     }
 
+    this.activeSchoolId = null;
     return this.identityFromSession(data.session);
   }
 
@@ -249,6 +250,7 @@ export class SupabaseAuthPort implements AuthPort {
   async signOut(): Promise<void> {
     const { error } = await this.client.auth.signOut();
     assertNoError(error);
+    this.activeSchoolId = null;
   }
 
   async requestPasswordReset(input: { email: string }): Promise<void> {
