@@ -386,4 +386,39 @@ begin
 end;
 $$;
 
+-- Exercise the actual PostgREST entry point under service_role. This proves
+-- the wrapper can reach the private implementation without granting service_role
+-- USAGE on the private schema or EXECUTE on the private function.
+set local role service_role;
+
+do $$
+declare
+  v_hash text := pg_catalog.repeat('c', 64);
+begin
+  if public.consume_rate_limit(
+    null,
+    'security_test_public_rpc',
+    v_hash,
+    1,
+    60
+  ) is distinct from true then
+    raise exception 'B2 security test 62 failed: service_role public RPC first attempt must pass';
+  end if;
+
+  if public.consume_rate_limit(
+    null,
+    'security_test_public_rpc',
+    v_hash,
+    1,
+    60
+  ) is distinct from false then
+    raise exception 'B2 security test 63 failed: service_role public RPC must enforce the threshold';
+  end if;
+
+  raise notice 'preDrive B2 service-role RPC tests passed: 2 cases';
+end;
+$$;
+
+reset role;
+
 rollback;

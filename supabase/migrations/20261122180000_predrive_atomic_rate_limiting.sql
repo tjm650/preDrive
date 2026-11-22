@@ -116,7 +116,7 @@ language sql
 volatile
 security definer
 set search_path = ''
-as $
+as $$
   select private.consume_rate_limit(
     p_school_id,
     p_action,
@@ -124,7 +124,7 @@ as $
     p_limit,
     p_window_seconds
   );
-$;
+$$;
 
 revoke all on function public.consume_rate_limit(uuid, text, text, integer, integer)
 from public, anon, authenticated, service_role;
