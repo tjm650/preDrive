@@ -121,15 +121,26 @@ begin
       v_count;
   end if;
 
+  -- Check the reset migration's effective permissions before declaring
+  -- the target ready. The final SELECT below remains as an auditable report.
+  if not has_table_privilege(current_user, 'cron.job', 'SELECT')
+     or not has_function_privilege(current_user, 'cron.unschedule(bigint)', 'EXECUTE')
+     or not has_table_privilege(current_user, 'vault.secrets', 'DELETE')
+     or not has_table_privilege(current_user, 'auth.users', 'DELETE')
+     or not has_table_privilege(current_user, 'supabase_migrations.schema_migrations', 'DELETE')
+  then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: migration role % lacks one or more privileges required by the historical reset migration',
+      current_user;
+  end if;
+
   raise notice
-    'CLEAN-ROOM PREFLIGHT PASSED: required platform objects exist; cron, Vault, Auth, migration ledger, and application schemas are empty. Current role: %',
+    'CLEAN-ROOM PREFLIGHT PASSED: required platform objects exist; cron, Vault, Auth, migration ledger, application schemas and custom types are empty; required reset privileges are present. Current role: %',
     current_user;
 end
 $preflight$;
 
--- Permission checks are reported separately so the operator can inspect
--- them before deploying. The historical reset migration requires the
--- corresponding read/delete/execute operations.
+-- Retain an explicit privilege report in the query output for the replay log.
 select
   current_user as migration_role,
   has_table_privilege(current_user, 'cron.job', 'SELECT') as can_read_cron_jobs,
