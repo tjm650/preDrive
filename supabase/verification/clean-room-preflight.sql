@@ -63,6 +63,43 @@ begin
       current_user;
   end if;
 
+  -- Later migrations create a trigger on auth.users and install PostGIS
+  -- and pgcrypto into extensions. Verify these platform capabilities before
+  -- the ordered chain is attempted.
+  if not has_schema_privilege(current_user, 'auth', 'USAGE')
+     or not has_table_privilege(current_user, 'auth.users', 'TRIGGER')
+  then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: migration role % lacks auth schema usage or TRIGGER privilege on auth.users',
+      current_user;
+  end if;
+
+  if to_regnamespace('extensions') is not null
+     and not has_schema_privilege(current_user, 'extensions', 'CREATE')
+  then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: migration role % cannot create extensions in schema extensions',
+      current_user;
+  end if;
+
+  if not exists (select 1 from pg_available_extensions where name = 'postgis')
+     or not exists (select 1 from pg_available_extensions where name = 'pgcrypto')
+  then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: required PostGIS or pgcrypto extension is unavailable';
+  end if;
+
+  if exists (
+    select 1
+      from pg_extension e
+      join pg_namespace n on n.oid = e.extnamespace
+     where e.extname in ('postgis', 'pgcrypto')
+       and n.nspname <> 'extensions'
+  ) then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: PostGIS or pgcrypto is already installed outside schema extensions; CREATE EXTENSION IF NOT EXISTS will not relocate it';
+  end if;
+
   -- Platform objects referenced by the historical one-time reset migration.
   if to_regclass('cron.job') is null then
     v_missing := array_append(v_missing, 'cron.job');
