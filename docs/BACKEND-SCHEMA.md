@@ -535,3 +535,14 @@ Object path conventions are encoded in the migration and policies. Incident evid
 A small immutable parser, `private.storage_school_id(text)`, safely returns the first path segment as a UUID or NULL for malformed paths. Its execution is revoked from PUBLIC/anon and granted to authenticated so Storage policies can evaluate school membership without unsafe casts.
 
 Live read-only inspection confirmed the current Storage schema has the required `storage.buckets` columns and defaults, and there are currently zero Storage buckets and zero Storage object policies. The migration has **not** been applied to the development project. After explicit approval and application, test every bucket for unauthenticated denial, cross-school denial, cross-user denial, allowed MIME/size limits, correct upload paths, signed URL access, and service-role Edge Function behavior.
+
+
+## B2.6 atomic rate limiting and SQL security suite — 2026-11-22
+
+Repository-only migration `20261122180000_predrive_atomic_rate_limiting.sql` adds `private.consume_rate_limit(uuid,text,text,integer,integer)`. It is a `SECURITY DEFINER` function with an empty `search_path`, callable only by `service_role`. It validates the action name, lowercase SHA-256 subject digest, threshold (1–1000) and window (1–86,400 seconds). It obtains a transaction-scoped advisory lock per school/action/subject key, removes expired events for that key, counts attempts in the active window, returns false when the threshold is reached, and inserts accepted attempts. Callers must hash identifying material before passing it; raw PINs, email addresses and IP addresses must not be persisted in `subject_hash`.
+
+The function does not add direct authenticated table access. Existing `rate_limit_events` remains deny-by-default under RLS; the function's owner performs the atomic table operations. Scheduled global cleanup/retention is deferred to B4 automation.
+
+The committed suite `supabase/tests/security/b2_security_acceptance.sql` contains 49 SQL assertions covering policy inventory, RLS enablement, driver/guardian separation, GPS and collector denial, authenticated table grants, private Storage bucket configuration, Storage policy presence, helper execution grants, safe path parsing and rate-limit threshold/validation/isolation behavior. It wraps rate-limit inserts in a transaction and rolls them back. The suite is intended to run after the B2 migrations are applied.
+
+**Coverage limitation:** the 49 checks verify database catalog and rate-limiter behavior but do not yet simulate actual authenticated users across two schools. Seeded row-visibility tests must be added/run with the B5 demo identities before production acceptance. No B2 migration has been applied to the populated development database.
