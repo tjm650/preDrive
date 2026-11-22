@@ -284,8 +284,21 @@ begin
   end if;
   v_tests := v_tests + 1;
 
-  if not has_function_privilege('service_role','private.consume_rate_limit(uuid,text,text,integer,integer)','EXECUTE') then
-    raise exception 'B2 security test 37 failed: service_role cannot execute rate limiter';
+  if has_function_privilege('service_role','private.consume_rate_limit(uuid,text,text,integer,integer)','EXECUTE')
+     or not has_function_privilege('service_role','public.consume_rate_limit(uuid,text,text,integer,integer)','EXECUTE')
+     or has_function_privilege('authenticated','public.consume_rate_limit(uuid,text,text,integer,integer)','EXECUTE')
+     or has_function_privilege('anon','public.consume_rate_limit(uuid,text,text,integer,integer)','EXECUTE')
+     or not exists (
+       select 1
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public'
+         and p.proname = 'consume_rate_limit'
+         and p.prosecdef = true
+         and p.proconfig @> array['search_path=""']::text[]
+     )
+  then
+    raise exception 'B2 security test 37 failed: public rate-limit RPC must be SECURITY DEFINER, service_role-only, and keep its implementation private';
   end if;
   v_tests := v_tests + 1;
 
