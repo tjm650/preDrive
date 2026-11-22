@@ -19,6 +19,7 @@ begin
       ('authenticated'),
       ('postgres'),
       ('service_role'),
+      ('supabase_admin'),
       ('supabase_auth_admin')
     ) as required(role_name)
    where not exists (
