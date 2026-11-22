@@ -63,6 +63,22 @@ begin
       current_user;
   end if;
 
+  -- A schema can itself be an extension member. DROP SCHEMA ... CASCADE
+  -- must not be allowed to tear down an extension-owned namespace.
+  if exists (
+    select 1
+      from pg_namespace n
+      join pg_depend d
+        on d.refclassid = 'pg_namespace'::regclass
+       and d.refobjid = n.oid
+       and d.classid = 'pg_extension'::regclass
+      join pg_extension e on e.oid = d.objid
+     where n.nspname = 'private'
+  ) then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: schema private is owned by an extension and cannot be reset safely';
+  end if;
+
   -- Later migrations create a trigger on auth.users and install PostGIS
   -- and pgcrypto into extensions. Verify these platform capabilities before
   -- the ordered chain is attempted.
