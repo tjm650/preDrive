@@ -19,6 +19,45 @@ declare
   v_other_hash text := pg_catalog.repeat('b', 64);
   v_definition text;
 begin
+  -- B2.1 authorization helper inventory, SECURITY DEFINER configuration and grants.
+  -- Keep the signatures explicit so an overload cannot silently satisfy a check.
+  for v_definition in
+    select unnest(array[
+      'private.current_school_ids()',
+      'private.is_school_member(uuid)',
+      'private.has_role(uuid,public.user_role)',
+      'private.is_guardian_of(uuid)',
+      'private.is_assigned_to_trip(uuid)',
+      'private.is_demo_school(uuid)'
+    ])
+  loop
+    if to_regprocedure(v_definition) is null then
+      raise exception 'B2 security helper missing: %', v_definition;
+    end if;
+
+    if not exists (
+      select 1
+      from pg_proc as p
+      where p.oid = to_regprocedure(v_definition)
+        and p.prosecdef = true
+        and p.provolatile = 's'
+        and p.proconfig @> array['search_path=""']::text[]
+    ) then
+      raise exception 'B2 security helper configuration invalid: %', v_definition;
+    end if;
+
+    if not has_function_privilege('authenticated', v_definition, 'EXECUTE') then
+      raise exception 'B2 security helper unavailable to authenticated: %', v_definition;
+    end if;
+
+    if has_function_privilege('anon', v_definition, 'EXECUTE')
+       or has_function_privilege('service_role', v_definition, 'EXECUTE') then
+      raise exception 'B2 security helper has an unexpected role grant: %', v_definition;
+    end if;
+
+    v_tests := v_tests + 1;
+  end loop;
+
   -- Child and guardian policy inventory.
   select c.relrowsecurity into v_ok
   from pg_class c join pg_namespace n on n.oid=c.relnamespace
@@ -296,8 +335,8 @@ begin
     v_tests := v_tests + 1;
   end;
 
-  if v_tests <> 49 then
-    raise exception 'B2 security test count mismatch: expected 49, got %', v_tests;
+  if v_tests <> 55 then
+    raise exception 'B2 security test count mismatch: expected 55, got %', v_tests;
   end if;
 
   raise notice 'preDrive B2 security catalog and rate-limit tests passed: % cases', v_tests;
