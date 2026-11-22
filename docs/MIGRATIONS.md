@@ -60,6 +60,21 @@ Run `supabase/verification/clean-room-preflight.sql` using the same database con
 
 Do not create a hosted branch or disposable project, apply a migration to the existing development database, repair migration history, or incur compute charges without the user's written authorization for that operation.
 
+### Hosted Supabase platform prerequisites and current CLI behaviour
+
+The historical first migration calls `cron.unschedule(bigint)` and deletes from `vault.secrets`. These are platform dependencies, not application objects created by this migration chain. Supabase documents enabling `pg_cron` through Database → Extensions (or the Cron integration) and Vault through its database extension/UI. The clean-room preflight now requires both the actual `pg_cron` and `supabase_vault` extension entries in `pg_extension`, in addition to the expected platform relations and routine. A schema/table/function with a matching name is not sufficient evidence that the platform extension is installed.
+
+On the current development project, a read-only extension catalog query confirms:
+- `pg_cron` 1.6.4 in `pg_catalog`;
+- `supabase_vault` 0.3.2 in `vault`;
+- `postgis` 3.3.7 and `pgcrypto` 1.3 in `extensions`.
+
+This confirms only the current development project. A new disposable project must independently enable/verify the platform prerequisites before preflight. Do not copy any Vault secrets into the disposable project; the preflight requires its Vault secret table to be empty.
+
+Supabase CLI v3 changed hosted-target safety defaults: database commands now target the local stack unless `--remote` is specified, and hosted mutations require explicit confirmation (or `--yes` in unattended execution). Any future CLI deployment procedure must pin/record the CLI major version, explicitly target the intended hosted project, and never rely on an implicit linked/local target. `--yes` is an automation acknowledgement, not user authorization; it must only be used after the target, backup, preflight result and exact migration operation have been approved. The CLI v3 migration guide is documented at https://supabase.com/docs/guides/local-development/cli/migrating-to-v3.
+
+Supabase also changed Data API exposure defaults: as of 2026-10-30, new public-schema tables are not automatically exposed to the Data API. Before frontend integration, verify the disposable project's **Settings → API → Exposed schemas** and Data API exposure settings. Keep `private` and `net` unexposed. Expose only the application schema(s) intentionally used by the Supabase adapter, and separately grant the minimum required role privileges with RLS policies. Schema exposure is not a substitute for grants or RLS. Do not change the existing development project's API settings as part of this audit.
+
 ### 4. Validate before promotion
 
 A migration batch is not complete until the isolated branch has passed:
