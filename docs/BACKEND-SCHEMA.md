@@ -470,3 +470,17 @@ Repository-only migration `20261122153000_predrive_security_helpers.sql` has bee
 All six functions revoke execution from `PUBLIC`, `anon` and the default authenticated grant before granting `EXECUTE` only to `authenticated`. They do not add table grants, RLS policies, data, triggers, or Realtime publication entries. The migration has **not** been applied to the existing development database; its remote effects require a separate explicit approval after review. Existing `private.has_school_role(uuid, public.user_role[])` and `private.can_admin_view_profile(uuid)` are unchanged.
 
 The six helpers are intended as the shared authorization primitives for B2.2–B2.4. The helper migration is additive and does not execute the historical reset migration. The clean-room migration replay remains deferred and B1.6 is not certified complete.
+
+
+## B2.2 school administration and staff RLS migration — 2026-11-22
+
+Repository-only migration `20261122160000_predrive_admin_staff_rls.sql` has been committed. It is additive and idempotent at the policy level:
+
+- `class_groups`: active school admins can select/insert/update/delete; teachers and supervisors can select class metadata.
+- `fee_items`: active school admins can select/insert/update/delete.
+- `settings`: active school admins can select/insert/update/delete.
+- `setup_progress`: active school admins can select/insert/update/delete.
+
+The migration explicitly enables RLS on these four tables, removes direct `anon` and `authenticated` table grants, then grants authenticated users the CRUD privileges needed for Postgres to evaluate the corresponding RLS policies. It leaves `service_role` privileges unchanged. Every policy checks the authenticated user's active membership and role through the already-applied `private.has_school_role(uuid, public.user_role[])` function; no client-supplied school or user ID is trusted.
+
+This migration does not change children, guardian links, approved collectors, staff records, fleet, trips, GPS, safety, payment records, audit data, or any existing rows. It does not depend on B2.1's new helper functions. The file is committed but has **not** been applied to the development database; live policy and grant verification must follow explicit approval and application.
