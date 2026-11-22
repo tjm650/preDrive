@@ -44,7 +44,7 @@ B1.6 acceptance checkpoint:
 
 Remaining B2 sub-batches:
 
-1. B2.2 School admin and staff RLS policies.
+1. B2.2 School admin and staff RLS policies — migration `20261122160000_predrive_admin_staff_rls.sql` is committed. It scopes class-group read access to admins, teachers and supervisors; restricts fee catalogue, settings and setup-progress CRUD to school admins; and grants authenticated table privileges only on those four tables. It uses the already-applied `private.has_school_role` helper, so it does not depend on B2.1. Remote application is pending explicit approval.
 2. B2.3 Guardian/child relationship isolation.
 3. B2.4 Driver, supervisor, trip and GPS access policies; protect medical notes and collector data.
 4. B2.5 Storage buckets, object paths, MIME/size limits and Storage policies.
