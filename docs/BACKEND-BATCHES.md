@@ -8,13 +8,13 @@ This register tracks the backend implementation plan. B0 is planning/audit work 
 |---|---|---:|---:|---:|
 | B0 | Architecture and initial audit (planning only) | — | Complete | 0 |
 | B1 | Database foundation and schema | 6 | 5 | 1 |
-| B2 | Security and RLS | 6 | 0 | 6 |
+| B2 | Security and RLS | 6 | 6 | 0 |
 | B3 | Database business logic | 8 | 0 | 8 |
 | B4 | Edge Functions and automation | 8 | 0 | 8 |
 | B5 | Demo data and seed scripts | 4 | 0 | 4 |
 | B6 | Frontend integration | 6 | 0 | 6 |
 | B7 | QA, deployment and release | 8 | 0 | 8 |
-| **Total** | | **46** | **5** | **41** |
+| **Total** | | **46** | **11** | **35** |
 
 ## B1 — Database foundation and schema
 
@@ -40,19 +40,29 @@ B1.6 acceptance checkpoint:
 
 ## B2 — Security and RLS (6 batches)
 
-Repository implementation is complete for all six sub-batches and committed to `main`. The status table above intentionally counts B2 as 0/6 complete until the migrations are explicitly approved, applied to the existing development project, and verified. No B2 migration has been applied remotely.
+<badge>All six migrations applied to the existing development project on 2026-11-22.</badge>
 
-- [x] B2.1 Security-definer helper functions with locked search paths and narrowly scoped grants — migration `20261122153000_predrive_security_helpers.sql` defines six authenticated-caller-scoped tenant/relationship helpers. Remote application and SQL verification are pending explicit approval.
+The six B2 migrations were applied sequentially to Supabase project `rjsdhgbjvghjnuiilizm`. Supabase assigned remote migration versions `20261122204630`, `20261122204634`, `20261122204639`, `20261122204644`, `20261122204649` and `20261122204654`. Repository migration filenames were aligned to those applied versions so the CLI can compare local and remote histories without a version mismatch.
 
-Committed B2 sub-batches (repository complete; remote application and verification pending):
+- [x] B2.1 Security-definer helper functions — six private, stable helpers with empty search paths and authenticated-only execution.
+- [x] B2.2 School admin and staff RLS — school-scoped class-group, fee catalogue, settings and setup-progress policies.
+- [x] B2.3 Guardian/child isolation — linked-child and guardian-link visibility, school-staff reads and admin-only direct writes.
+- [x] B2.4 Driver, supervisor, trip and GPS access — active assignment checks, guardian-linked trip visibility, no direct driver handover/collector access, and no authenticated GPS-history access.
+- [x] B2.5 Private Storage — five private buckets with configured MIME/size limits and user/school-scoped object policies.
+- [x] B2.6 Atomic rate limiting — private implementation plus a public-schema RPC wrapper callable only by `service_role`.
 
-- [x] B2.2 School admin and staff RLS policies — migration `20261122160000_predrive_admin_staff_rls.sql` is committed. It scopes class-group read access to admins, teachers and supervisors; restricts fee catalogue, settings and setup-progress CRUD to school admins; and grants authenticated table privileges only on those four tables. It uses the already-applied `private.has_school_role` helper, so it does not depend on B2.1. Remote application is pending explicit approval.
-- [x] B2.3 Guardian/child relationship isolation — migration `20261122163000_predrive_guardian_child_rls.sql` is committed. Guardians can select only their own active child links and linked child records; school admins/teachers/supervisors receive school-scoped operational reads; only school admins can directly mutate child and guardian-link rows. Guardians can also read only the class-group label associated with their linked child. The migration grants authenticated SELECT only on `children` and `guardian_children`; remote application and policy tests remain pending explicit approval.
-- [x] B2.4 Driver, supervisor, trip and GPS access policies — migration `20261122170000_predrive_transport_trip_access_rls.sql` is committed. School admins/supervisors can read school operations; drivers can read only assigned trip/fleet context through `private.is_assigned_to_trip`, which verifies the active staff assignment, active school membership and non-suspended school; guardians can read only active trips and current positions carrying their linked child. Drivers receive no trip-child/handover/collector access. GPS history, trip events and collector records remain unavailable through direct authenticated table reads. The migration grants read-only access to the approved operational tables; remote application and cross-role tests remain pending explicit approval.
-- [x] B2.5 Storage buckets, object paths, MIME/size limits and Storage policies — migration `20261122173000_predrive_storage_buckets_rls.sql` is committed. It creates five private buckets only when absent, fails closed on conflicting existing bucket settings, enforces size/MIME limits, and adds user/school-scoped Storage object policies for incident photos, payment proofs, avatars, receipts and exports. Existing bucket configurations are not overwritten. Remote application and authenticated Storage tests remain pending explicit approval.
-- [x] B2.6 Database rate limiting and SQL security cases — migration `20261122180000_predrive_atomic_rate_limiting.sql` and test suite `supabase/tests/security/b2_security_acceptance.sql` are committed. The rate limiter keeps its implementation in unexposed `private` and provides a `public.consume_rate_limit` PostgREST entry point granted only to `service_role`, because `service_role` has no `USAGE` on `private`; it serializes each school/action/subject key with a transaction advisory lock and atomically records accepted attempts; the suite contains 63 checks: 61 catalog, grant, policy and private rate-limit assertions, plus two end-to-end calls to the public RPC under service_role; it covers all six B2.1 helper configurations and all six driver-facing policies' use of the complete active-assignment helper. The suite does not yet perform seeded multi-tenant row-visibility tests; those require B5 demo identities and remain a release gate. Remote application and execution remain pending explicit approval.
+Runtime verification:
+- The committed SQL acceptance suite `supabase/tests/security/b2_security_acceptance.sql` executed on the remote project without a SQL error. It checks 61 catalog/grant/policy/helper/rate-limit assertions and two end-to-end calls through the public rate-limit RPC under `service_role` (63 checks total).
+- Post-run catalog verification found all six helper functions with the expected SECURITY DEFINER/empty-search-path configuration; all five expected Storage buckets exist and are private; the public rate-limit wrapper exists; only `service_role` can execute it; `service_role` cannot execute the private implementation; and all 42 public application tables retain RLS.
+- The acceptance test transaction rolled back its rate-limit test rows; the table contains zero test rows after execution.
+- Security Advisor now reports 19 deny-by-default public tables without policies, down from 37 before B2. These remain inaccessible through authenticated direct table access pending their dedicated business workflows/policies. It also reports the pre-existing Supabase-owned `pg_net`-in-public warning.
+- Performance Advisor reports one multiple-permissive-SELECT-policy warning on `class_groups` because guardian and school-staff reads are expressed as separate permissive policies. Their PostgreSQL semantics are OR-combined; consolidate in a later reviewed migration if query-plan testing shows it is worthwhile. The unused-index notices are expected in a near-empty development database.
+- Health Advisor returned no findings.
 
-
+Acceptance limitations:
+- The SQL suite does not seed authenticated users or prove cross-school row visibility with real guardian, driver, supervisor and school-admin identities. That seeded multi-tenant test suite remains a B5/release gate.
+- Storage object uploads/downloads, signed URL access and real client role behavior were not exercised end-to-end; the suite verifies bucket configuration, policy presence and grants.
+- Clean-room replay remains deferred; applying B2 incrementally to the existing development project does not certify the full migration chain from an empty database.
 
 ## B3 — Database business logic (8 batches)
 
