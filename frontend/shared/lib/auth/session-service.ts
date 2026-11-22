@@ -193,7 +193,6 @@ export class AuthSessionService {
 
       if (!selected) return { ok: false, error: errors.forbidden() };
 
-      const activeSchool = session.data.activeSchool;
       const memberships = await this.port.listMemberships(identity.userId);
       const selectedMembership = memberships.find(
         (item) =>
