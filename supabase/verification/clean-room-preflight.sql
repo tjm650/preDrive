@@ -31,6 +31,20 @@ begin
       array_to_string(v_missing, ', ');
   end if;
 
+  -- The repository's default-privilege hardening is defined for objects
+  -- created by postgres. Supabase-managed supabase_admin defaults cannot be
+  -- changed by project roles, so migrations must not run under another owner.
+  if current_user <> 'postgres' then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: run migrations as postgres, not %; default-privilege hardening is scoped to postgres-created objects',
+      current_user;
+  end if;
+
+  if pg_has_role('postgres', 'supabase_admin', 'MEMBER') then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: postgres unexpectedly has supabase_admin membership; stop and review platform role configuration';
+  end if;
+
   -- The reset migration drops and recreates private, then creates objects
   -- in public. Verify the migration role can perform those DDL operations.
   if not has_database_privilege(current_user, current_database(), 'CREATE') then
