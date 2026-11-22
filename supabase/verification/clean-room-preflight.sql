@@ -94,6 +94,33 @@ begin
       v_count;
   end if;
 
+  -- The reset migration also drops custom public types. Check both schemas
+  -- so a supposedly empty target cannot silently lose pre-existing types.
+  select count(*)
+    into v_count
+    from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+   where n.nspname in ('public', 'private')
+     and t.typtype in ('e', 'c', 'd', 'r', 'm')
+     and not exists (
+       select 1
+         from pg_depend d
+        where d.classid = 'pg_type'::regclass
+          and d.objid = t.oid
+          and d.deptype = 'e'
+     )
+     and not exists (
+       select 1
+         from pg_class c
+        where c.reltype = t.oid
+     );
+
+  if v_count <> 0 then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: public/private contain % non-extension custom types',
+      v_count;
+  end if;
+
   raise notice
     'CLEAN-ROOM PREFLIGHT PASSED: required platform objects exist; cron, Vault, Auth, migration ledger, and application schemas are empty. Current role: %',
     current_user;
