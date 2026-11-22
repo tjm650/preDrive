@@ -284,7 +284,8 @@ begin
   end if;
   v_tests := v_tests + 1;
 
-  if has_function_privilege('service_role','private.consume_rate_limit(uuid,text,text,integer,integer)','EXECUTE')
+  if not has_schema_privilege('service_role','public','USAGE')
+     or has_function_privilege('service_role','private.consume_rate_limit(uuid,text,text,integer,integer)','EXECUTE')
      or not has_function_privilege('service_role','public.consume_rate_limit(uuid,text,text,integer,integer)','EXECUTE')
      or has_function_privilege('authenticated','public.consume_rate_limit(uuid,text,text,integer,integer)','EXECUTE')
      or has_function_privilege('anon','public.consume_rate_limit(uuid,text,text,integer,integer)','EXECUTE')
