@@ -2757,7 +2757,16 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      consume_rate_limit: {
+        Args: {
+          p_action: string
+          p_limit: number
+          p_school_id: string
+          p_subject_hash: string
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       alert_severity: "info" | "warning" | "urgent"
