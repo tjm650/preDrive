@@ -31,6 +31,38 @@ begin
       array_to_string(v_missing, ', ');
   end if;
 
+  -- The reset migration drops and recreates private, then creates objects
+  -- in public. Verify the migration role can perform those DDL operations.
+  if not has_database_privilege(current_user, current_database(), 'CREATE') then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: migration role % cannot create the private schema',
+      current_user;
+  end if;
+
+  if to_regnamespace('public') is null
+     or not has_schema_privilege(current_user, 'public', 'CREATE')
+  then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: migration role % cannot create objects in public',
+      current_user;
+  end if;
+
+  -- DROP SCHEMA requires ownership (or equivalent effective owner-role
+  -- privileges). Do not infer this from DELETE/EXECUTE grants on platform
+  -- tables or functions.
+  if to_regnamespace('private') is not null
+     and not exists (
+       select 1
+         from pg_namespace n
+        where n.nspname = 'private'
+          and pg_has_role(current_user, n.nspowner, 'USAGE')
+     )
+  then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: migration role % lacks effective ownership privileges on schema private',
+      current_user;
+  end if;
+
   -- Platform objects referenced by the historical one-time reset migration.
   if to_regclass('cron.job') is null then
     v_missing := array_append(v_missing, 'cron.job');
