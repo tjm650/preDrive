@@ -12,7 +12,7 @@ begin
   -- In particular, the Auth profile-sync trigger grants execution to
   -- supabase_auth_admin, while the foundation migrations alter defaults for
   -- postgres and grant/revoke privileges for the API roles.
-  select array_agg(required.role_name order by required.role_name)
+  select coalesce(array_agg(required.role_name order by required.role_name), array[]::text[])
     into v_missing
     from (values
       ('anon'),
