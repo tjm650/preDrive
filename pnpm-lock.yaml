@@ -61,7 +61,7 @@ importers:
         version: 0.5.1(@babel/core@7.29.13)(react-native@0.81.5(@babel/core@7.29.13)(@react-native/metro-config@0.88.0(@babel/core@7.29.13))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
     devDependencies:
       '@types/react':
-        specifier: ~19.1.10
+        specifier: ~19.1.17
         version: 19.1.17
       typescript:
         specifier: ~5.9.3
