@@ -484,3 +484,19 @@ Repository-only migration `20261122160000_predrive_admin_staff_rls.sql` has been
 The migration explicitly enables RLS on these four tables, removes direct `anon` and `authenticated` table grants, then grants authenticated users the CRUD privileges needed for Postgres to evaluate the corresponding RLS policies. It leaves `service_role` privileges unchanged. Every policy checks the authenticated user's active membership and role through the already-applied `private.has_school_role(uuid, public.user_role[])` function; no client-supplied school or user ID is trusted.
 
 This migration does not change children, guardian links, approved collectors, staff records, fleet, trips, GPS, safety, payment records, audit data, or any existing rows. It does not depend on B2.1's new helper functions. The file is committed but has **not** been applied to the development database; live policy and grant verification must follow explicit approval and application.
+
+
+## B2.3 guardian/child isolation migration — 2026-11-22
+
+Repository-only migration `20261122163000_predrive_guardian_child_rls.sql` has been committed. It enables RLS on `children` and `guardian_children` and adds relationship-aware policies:
+
+- Guardians can select only their own active guardian-child links, after their active `guardian` school membership is verified.
+- Guardians can select only child rows connected to one of those active links.
+- Guardians can select the class-group row associated with their linked child, not unrelated class groups.
+- School admins, teachers and supervisors can select child and guardian-link rows only in schools where they hold an active matching membership.
+- Only school admins can directly insert, update or delete child and guardian-link rows.
+- Authenticated receives SELECT only on `children` and `guardian_children`; no direct authenticated write grants are introduced by this migration.
+
+The migration reuses the existing, already-applied `private.has_school_role(uuid, public.user_role[])` helper and does not depend on B2.1. The existing class-group CRUD grants/policies from B2.2 remain in place; the guardian class-group SELECT policy is additive.
+
+No child, guardian, membership, school or class data is changed. The migration has been committed but **not applied** to the populated development database. Before remote application, validate policy composition and query plans with authenticated test identities for at least two schools, two guardians, one school admin, one teacher and one supervisor. Also verify that guardian reads cannot reveal unrelated children or links even when a client supplies another child's UUID.
