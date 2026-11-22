@@ -262,6 +262,20 @@ begin
       v_count;
   end if;
 
+  -- Dropping the private schema must never remove an extension's
+  -- declared installation schema.
+  select count(*)
+    into v_count
+    from pg_extension e
+    join pg_namespace n on n.oid = e.extnamespace
+   where n.nspname = 'private';
+
+  if v_count <> 0 then
+    raise exception
+      'CLEAN-ROOM PREFLIGHT FAILED: private is the installation schema for % extension(s)',
+      v_count;
+  end if;
+
   -- The historical reset drops private with CASCADE, unlike public where
   -- extension-owned objects are explicitly preserved. Refuse a target that
   -- has any extension-owned relation, routine, or type in private.
