@@ -516,3 +516,22 @@ Repository-only migration `20261122170000_predrive_transport_trip_access_rls.sql
 The policies use the already-applied `private.has_school_role(uuid, public.user_role[])` helper and exact live enum labels (`active`, `school_admin`, `supervisor`, `driver`, `guardian`). The trip/child/guardian policy dependency is intentionally acyclic: trip-child visibility does not query trips, while trip visibility may safely consult the filtered trip-child rows.
 
 The migration does not delete or modify data, does not publish Realtime tables, and does not grant access to GPS history. It is committed but **not applied** to the development database. Before remote application, validate with separate guardian, driver, supervisor and school-admin identities across at least two schools; explicitly test that an unrelated guardian cannot query a trip ID or bus position and that a driver cannot select trip-child, trip-event or collector records. Confirm that completed/cancelled trips return no current GPS rows.
+
+
+## B2.5 private Storage migration — 2026-11-22
+
+Repository-only migration `20261122173000_predrive_storage_buckets_rls.sql` has been committed. The five buckets are private and use explicit limits:
+
+| Bucket | Maximum size | Allowed MIME types |
+|---|---:|---|
+| `incident-photos` | 10 MiB | JPEG, PNG, WebP |
+| `payment-proofs` | 10 MiB | JPEG, PNG, WebP, PDF |
+| `avatars` | 2 MiB | JPEG, PNG, WebP |
+| `receipts` | 10 MiB | PDF |
+| `exports` | 25 MiB | CSV, PDF, XLSX |
+
+Object path conventions are encoded in the migration and policies. Incident evidence is school-scoped and uploader-scoped; guardians can upload/read only their own payment-proof path; avatars are user-owned; receipts are readable by the owning guardian or school admin; exports are readable only by the school admin whose user ID is in the path. Receipt and export generation/deletion are reserved for trusted Edge Functions. Incident evidence management is limited to authorized school staff. The migration creates buckets only if absent and fails closed if an existing bucket has different privacy, size or MIME configuration; it never silently overwrites an existing bucket.
+
+A small immutable parser, `private.storage_school_id(text)`, safely returns the first path segment as a UUID or NULL for malformed paths. Its execution is revoked from PUBLIC/anon and granted to authenticated so Storage policies can evaluate school membership without unsafe casts.
+
+Live read-only inspection confirmed the current Storage schema has the required `storage.buckets` columns and defaults, and there are currently zero Storage buckets and zero Storage object policies. The migration has **not** been applied to the development project. After explicit approval and application, test every bucket for unauthenticated denial, cross-school denial, cross-user denial, allowed MIME/size limits, correct upload paths, signed URL access, and service-role Edge Function behavior.
