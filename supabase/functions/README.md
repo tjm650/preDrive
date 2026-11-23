@@ -47,13 +47,21 @@ Supabase recommends an isolated `deno.json` in each function directory. Pin exac
 - `npm:@supabase/supabase-js@2.119.2`
 - `npm:zod@4.6.7`
 
-Each function added in later B4 batches must include its own `deno.json`, entrypoint, README section and tests. The function's `deno.json` must pin the same shared dependency versions unless a reviewed upgrade is made across the function suite.
+Each function must include its own `deno.json`, entrypoint, README section and tests. The function's `deno.json` must pin the same shared dependency versions unless a reviewed upgrade is made across the function suite.
 
 ## School invitations
 
-`invite-school-member` is a school-admin-only function. It verifies the caller's bearer token against Supabase Auth, checks the caller's active `school_admin` membership for the target school, rejects school-admin role invitations, and stores a seven-day pending invitation. Staff invitations require a full name and phone number; creation is limited to ten attempts per administrator per school in a 15-minute window. New accounts receive a Supabase Auth invitation email; an existing account can accept the pending invitation on its next successful sign-in through `accept_school_invitation()`. The RPC derives the identity and email from the authenticated profile. The B4.3 staff-onboarding migration (pending explicit approval) also provisions the `staff_members` row atomically from the invitation's stored name and phone. Existing-account invitations do not send a second Auth invitation email; the administrator must tell that person to sign in. The school must be active. The frontend API contract does not yet expose the admin invitation operation; B6 must add its adapter surface before the admin UI can call this function.
+`invite-school-member` is a school-admin-only function. It verifies the caller's bearer token against Supabase Auth, checks the caller's active `school_admin` membership for the target school, rejects school-admin role invitations, and stores a seven-day pending invitation. Staff invitations require a full name and phone number; creation is limited to ten attempts per administrator per school in a 15-minute window. New accounts receive a Supabase Auth invitation email; an existing account can accept the pending invitation on its next successful sign-in through `accept_school_invitation()`. The RPC derives the identity and email from the authenticated profile. The B4.3 staff-onboarding migration is applied and provisions the `staff_members` row atomically from the invitation's stored name and phone. Existing-account invitations do not send a second Auth invitation email; the administrator must tell that person to sign in. The school must be active. The frontend API contract does not yet expose the admin invitation operation; B6 must add its adapter surface before the admin UI can call this function.
 
 The Auth invitation email uses the project's configured Supabase Auth email delivery and Site URL. Configure and test production SMTP and the allowed redirect URLs before deployment. The database invitation expires after seven days; Supabase Auth's invite-token expiry is a separate Auth setting and must be aligned so the email link does not expire later than the database invitation. No email provider credentials are stored in this repository.
+
+## Payment intent creation
+
+`create-payment-intent` is a guardian-only, user-JWT Edge Function. It validates the active school membership, checks that the school is active, applies a five-attempt/five-minute per-guardian rate limit, and calls `initiate_payment()` with the verified caller JWT so the database derives `auth.uid()` from the guardian session. The database remains authoritative for invoice ownership, invoice status, currency, outstanding balance and idempotency. Amounts arrive in major currency units and are converted to integer minor units (100 per USD/ZiG unit).
+
+The payment adapter intentionally has no live gateway call in this batch. EcoCash creates a `simulated` pending intent; CBZ and CABS create `manual_bank` pending intents for the existing bank-transfer submission/review workflow. Card is rejected. No intent is marked successful by this function, and no money is moved. The `PaymentProviderAdapter` interface is the seam for a future reviewed Paynow integration; provider credentials and webhook settlement belong in later B4 batches.
+
+The function returns the existing shared `Payment` shape. It does not add fields or methods to the frontend API contract. The service-role key remains server-only; the RPC request carries the already-verified user's JWT in its Authorization header so `auth.uid()` remains the guardian.
 
 ## Local development and verification
 
@@ -64,6 +72,6 @@ The Auth invitation email uses the project's configured Supabase Auth email deli
 5. Run `deno check` on each function entrypoint before deployment.
 6. Deploy only after the matching function tests pass and the required secrets exist in the target Supabase environment.
 
-The repository workflow `.github/workflows/supabase-edge-functions.yml` runs `deno check` and the shared test suite on pushes and pull requests that change Edge Function files. Its first successful run is still pending.
+The repository workflow `.github/workflows/supabase-edge-functions.yml` runs `deno check` on shared modules and all deployed function entrypoints, then runs the shared Deno tests. A successful run for the B4.4 payment files must be recorded before deployment.
 
-No Edge Function has been deployed by this batch. No remote database objects or scheduled jobs have been changed.
+B4.4 source does not require a database migration. No payment intents, provider requests, successful settlements, Edge Function deployments or scheduled jobs were created by the source-only batch.
