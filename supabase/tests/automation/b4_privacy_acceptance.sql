@@ -1,5 +1,6 @@
 -- B4.8 privacy workflow catalog acceptance.
--- Read-only: run only after migration 20261123114538 is applied.
+-- Read-only: run only after privacy migrations 20261123114538 and
+-- the export-lease migration are applied.
 
 do $$
 declare
@@ -30,6 +31,28 @@ begin
     raise exception 'B4.8: terminal delivery retention index missing';
   end if;
 
+  if not exists (
+    select 1 from pg_indexes
+    where schemaname = 'public'
+      and indexname = 'deletion_requests_export_lease_idx'
+  ) then
+    raise exception 'B4.8: export lease index missing';
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'deletion_requests'
+      and column_name = 'processing_lease_id'
+  ) or not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'deletion_requests'
+      and column_name = 'processing_lease_expires_at'
+  ) then
+    raise exception 'B4.8: export lease columns missing';
+  end if;
+
   select p.oid, p.proconfig into v_function, v_config
   from pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
@@ -54,8 +77,56 @@ begin
      or has_function_privilege('anon', v_function, 'EXECUTE') then
     raise exception 'B4.8: deletion RPC execution grants are not restricted to service_role';
   end if;
+
+  if not exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'claim_data_export_requests'
+      and pg_get_function_identity_arguments(p.oid) =
+        'p_batch_size integer, p_lease_seconds integer'
+      and p.prosecdef
+      and p.proconfig @> array['search_path=""']
+      and has_function_privilege('service_role', p.oid, 'EXECUTE')
+      and not has_function_privilege('authenticated', p.oid, 'EXECUTE')
+      and not has_function_privilege('anon', p.oid, 'EXECUTE')
+  ) then
+    raise exception 'B4.8: export claim RPC missing or incorrectly secured';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'complete_data_export_request'
+      and pg_get_function_identity_arguments(p.oid) =
+        'p_school_id uuid, p_request_id uuid, p_lease_id uuid'
+      and p.prosecdef
+      and p.proconfig @> array['search_path=""']
+      and has_function_privilege('service_role', p.oid, 'EXECUTE')
+      and not has_function_privilege('authenticated', p.oid, 'EXECUTE')
+      and not has_function_privilege('anon', p.oid, 'EXECUTE')
+  ) then
+    raise exception 'B4.8: export completion RPC missing or incorrectly secured';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'release_data_export_request'
+      and pg_get_function_identity_arguments(p.oid) =
+        'p_school_id uuid, p_request_id uuid, p_lease_id uuid'
+      and p.prosecdef
+      and p.proconfig @> array['search_path=""']
+      and has_function_privilege('service_role', p.oid, 'EXECUTE')
+      and not has_function_privilege('authenticated', p.oid, 'EXECUTE')
+      and not has_function_privilege('anon', p.oid, 'EXECUTE')
+  ) then
+    raise exception 'B4.8: export release RPC missing or incorrectly secured';
+  end if;
 end;
-$$;
+$;
 
 select
   (select count(*) from supabase_migrations.schema_migrations) as migration_count,
