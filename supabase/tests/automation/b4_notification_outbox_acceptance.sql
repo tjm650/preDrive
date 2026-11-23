@@ -23,13 +23,15 @@ begin
   where conrelid = 'public.notification_deliveries'::regclass
     and conname in (
       'notification_deliveries_recipient_school_fkey',
-      'notification_deliveries_recipient_channel_key',
       'notification_deliveries_lock_state_check',
       'notification_deliveries_sent_state_check'
     );
 
-  if v_count <> 4 then
-    raise exception 'B4.7: expected four notification delivery constraints, found %', v_count;
+  -- B4.7.2 replaced the original recipient/channel unique constraint with
+  -- sequence-aware email and per-device push unique indexes. Those are
+  -- asserted by b4_notification_cycles_acceptance.sql.
+  if v_count <> 3 then
+    raise exception 'B4.7: expected three notification delivery constraints, found %', v_count;
   end if;
 
   select count(*) into v_count
