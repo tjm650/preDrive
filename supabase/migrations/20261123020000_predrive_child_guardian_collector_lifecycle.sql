@@ -135,7 +135,41 @@ begin
     raise exception using errcode = '42501', message = 'FORBIDDEN';
   end if;
   if p_full_name is null or char_length(btrim(p_full_name)) not between 2 and 160
-     or p_phone !~ '^\+[+]263[0-9]{9}$'
+     or p_phone !~ '^\+263[0-9]{9}
+     or p_pin !~ '^[0-9]{4,8}$' then
+    raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+
+  insert into public.approved_collectors (
+    school_id, child_id, full_name, relationship, phone, pin_hash, created_by
+  )
+  select p_school_id, c.id, btrim(p_full_name), p_relationship, p_phone,
+         extensions.crypt(p_pin, extensions.gen_salt('bf', 12)), v_actor
+  from public.children c
+  where c.id = p_child_id and c.school_id = p_school_id
+  returning id into v_collector_id;
+
+  if v_collector_id is null then
+    raise exception using errcode = 'P0002', message = 'CHILD_NOT_FOUND';
+  end if;
+
+  insert into public.audit_log (
+    school_id, actor_user_id, action, target_table, target_id
+  ) values (
+    p_school_id, v_actor, 'collector.created', 'approved_collectors', v_collector_id::text
+  );
+
+  return v_collector_id;
+end;
+$function$;
+
+revoke all on function public.create_child(uuid, text, text, date, uuid) from public, anon;
+revoke all on function public.link_guardian_to_child(uuid, uuid, uuid, public.collector_relationship, boolean) from public, anon;
+revoke all on function public.create_approved_collector(uuid, uuid, text, public.collector_relationship, text, text) from public, anon;
+grant execute on function public.create_child(uuid, text, text, date, uuid) to authenticated;
+grant execute on function public.link_guardian_to_child(uuid, uuid, uuid, public.collector_relationship, boolean) to authenticated;
+grant execute on function public.create_approved_collector(uuid, uuid, text, public.collector_relationship, text, text) to authenticated;
+
      or p_pin !~ '^[0-9]{4,8}$' then
     raise exception using errcode = '22023', message = 'VALIDATION';
   end if;
