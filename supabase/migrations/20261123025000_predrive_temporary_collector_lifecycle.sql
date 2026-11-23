@@ -121,6 +121,16 @@ as $function$
     and (
       private.has_role(p_school_id, 'school_admin'::public.user_role)
       or private.is_guardian_of(p_child_id)
+      or exists (
+        select 1 from public.trips t
+        join public.trip_children tc
+          on tc.trip_id = t.id and tc.school_id = t.school_id
+        join public.staff_members sm
+          on sm.id = t.supervisor_id and sm.school_id = t.school_id
+        where t.school_id = p_school_id and t.status = 'active'::public.trip_status
+          and tc.child_id = p_child_id
+          and sm.user_id = auth.uid() and sm.active and sm.role = 'supervisor'
+      )
     );
 $function$;
 
