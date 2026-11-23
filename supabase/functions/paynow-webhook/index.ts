@@ -120,7 +120,15 @@ const handler = createEdgeHandler(async (request) => {
     return jsonOk({ accepted: true, duplicate: true });
   }
 
-  const attemptCount = Math.min(event.attempt_count + 1, 20);
+  if (event.attempt_count >= 20) {
+    throw new HttpError(
+      "UNAVAILABLE",
+      "The payment notification has reached its processing retry limit.",
+      503,
+    );
+  }
+
+  const attemptCount = event.attempt_count + 1;
   const markEvent = async (
     status: "processed" | "ignored" | "failed",
     errorCode: string | null = null,
@@ -154,6 +162,16 @@ const handler = createEdgeHandler(async (request) => {
       "The payment notification does not match the recorded payment amount.",
       409,
     );
+  }
+
+  if (payment.status === "succeeded") {
+    await markEvent("processed");
+    return jsonOk({ accepted: true, processed: true, duplicate: true });
+  }
+
+  if (payment.status !== "pending" && payment.status !== "processing") {
+    await markEvent("ignored", "PAYMENT_ALREADY_TERMINAL");
+    return jsonOk({ accepted: true, processed: false });
   }
 
   if (callback.status !== "Paid") {
