@@ -124,8 +124,19 @@ begin
   end if;
 
   if has_table_privilege('authenticated', 'public.temporary_collectors', 'SELECT')
-     or has_table_privilege('authenticated', 'public.temporary_collectors', 'INSERT') then
+     or has_table_privilege('authenticated', 'public.temporary_collectors', 'INSERT')
+     or has_table_privilege('authenticated', 'public.temporary_collectors', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.temporary_collectors', 'DELETE') then
     raise exception 'temporary collectors must be accessed only through safe RPCs';
+  end if;
+
+  if pg_get_function_result('public.list_approved_collectors(uuid,uuid)'::regprocedure) ilike '%pin_hash%' then
+    raise exception 'Approved collector listing must not expose PIN hashes';
+  end if;
+
+  if has_function_privilege('anon', 'public.register_school(text,text,numeric)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.register_school(text,text,numeric)', 'EXECUTE') then
+    raise exception 'School registration grants are incorrect';
   end if;
 
   if has_function_privilege('anon', 'public.evaluate_trip_geofences(uuid,uuid)', 'EXECUTE')
