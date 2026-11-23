@@ -1,5 +1,12 @@
 -- B3.4: trip lifecycle, active-trip GPS and offline-safe event writes.
 
+alter table public.bus_position_history
+  add column if not exists idempotency_key uuid;
+
+create unique index if not exists bus_position_history_school_idempotency_uidx
+  on public.bus_position_history (school_id, idempotency_key)
+  where idempotency_key is not null;
+
 create or replace function public.start_trip(p_school_id uuid, p_trip_id uuid, p_started_at timestamptz)
 returns public.trips
 language plpgsql
@@ -160,7 +167,8 @@ create or replace function public.record_bus_position(
   p_heading_degrees numeric,
   p_speed_kph numeric,
   p_accuracy_meters numeric,
-  p_recorded_at timestamptz
+  p_recorded_at timestamptz,
+  p_idempotency_key uuid
 )
 returns void
 language plpgsql
@@ -175,13 +183,20 @@ begin
     raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
   end if;
   if p_longitude not between -180 and 180 or p_latitude not between -90 and 90
-     or p_recorded_at is null
+     or p_recorded_at is null or p_idempotency_key is null
      or p_recorded_at > now() + interval '2 minutes'
      or p_recorded_at < now() - interval '10 minutes'
      or (p_heading_degrees is not null and (p_heading_degrees < 0 or p_heading_degrees >= 360))
      or (p_speed_kph is not null and (p_speed_kph < 0 or p_speed_kph > 200))
      or (p_accuracy_meters is not null and (p_accuracy_meters < 0 or p_accuracy_meters > 1000)) then
     raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+
+  if exists (
+    select 1 from public.bus_position_history h
+    where h.school_id = p_school_id and h.idempotency_key = p_idempotency_key
+  ) then
+    return;
   end if;
 
   select t.bus_id into v_bus_id
@@ -217,22 +232,22 @@ begin
 
   insert into public.bus_position_history (
     school_id, trip_id, bus_id, location, heading_degrees,
-    speed_kph, accuracy_meters, recorded_at
+    speed_kph, accuracy_meters, recorded_at, idempotency_key
   ) values (
     p_school_id, p_trip_id, v_bus_id,
     extensions.st_setsrid(extensions.st_makepoint(p_longitude, p_latitude), 4326)::extensions.geography,
-    p_heading_degrees, p_speed_kph, p_accuracy_meters, p_recorded_at
+    p_heading_degrees, p_speed_kph, p_accuracy_meters, p_recorded_at, p_idempotency_key
   );
 
   insert into public.trip_events (
-    school_id, trip_id, event_type, actor_user_id, occurred_at
-  ) values (p_school_id, p_trip_id, 'position_recorded', v_actor, p_recorded_at);
+    school_id, trip_id, event_type, actor_user_id, idempotency_key, occurred_at
+  ) values (p_school_id, p_trip_id, 'position_recorded', v_actor, p_idempotency_key, p_recorded_at);
 end;
 $function$;
 
 revoke all on function public.start_trip(uuid, uuid, timestamptz) from public, anon;
 revoke all on function public.end_trip(uuid, uuid, timestamptz) from public, anon;
-revoke all on function public.record_bus_position(uuid, uuid, double precision, double precision, numeric, numeric, numeric, timestamptz) from public, anon;
+revoke all on function public.record_bus_position(uuid, uuid, double precision, double precision, numeric, numeric, numeric, timestamptz, uuid) from public, anon;
 grant execute on function public.start_trip(uuid, uuid, timestamptz) to authenticated;
 grant execute on function public.end_trip(uuid, uuid, timestamptz) to authenticated;
-grant execute on function public.record_bus_position(uuid, uuid, double precision, double precision, numeric, numeric, numeric, timestamptz) to authenticated;
+grant execute on function public.record_bus_position(uuid, uuid, double precision, double precision, numeric, numeric, numeric, timestamptz, uuid) to authenticated;
