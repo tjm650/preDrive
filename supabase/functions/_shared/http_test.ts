@@ -58,6 +58,18 @@ Deno.test("invalid CORS configuration fails closed", () => {
   if (!failed) throw new Error("Expected invalid origin configuration to fail.");
 });
 
+Deno.test("non-local HTTP origins are rejected", () => {
+  let failed = false;
+  try {
+    parseAllowedOrigins("http://app.example.test");
+  } catch {
+    failed = true;
+  }
+  if (!failed) {
+    throw new Error("Non-local browser origins must use HTTPS.");
+  }
+});
+
 Deno.test("database permission errors map to the public API code", () => {
   const error = toHttpError({
     code: "42501",
