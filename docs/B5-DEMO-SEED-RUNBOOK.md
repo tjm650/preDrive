@@ -88,13 +88,9 @@ Then run:
 
 ### 4. Historical trip and finance migration
 
-After review and explicit approval, apply:
-- `supabase/migrations/20261123131500_predrive_greenfield_demo_history_writer.sql`
+The migration `supabase/migrations/20261123131500_predrive_greenfield_demo_history_writer.sql` has been applied to the development database. Supabase recorded remote version `20261123133938` (`predrive_greenfield_demo_history_writer`).
 
-Then run:
-- `supabase/tests/seed/b5_demo_history_writer_catalog_acceptance.sql`
-
-The function is SECURITY DEFINER with an empty search path and EXECUTE granted only to service_role. It refuses to run unless the fixed Greenfield school is active and `is_demo=true`, and all B5.1–B5.3 dependencies pass preflight.
+The read-only catalog acceptance `supabase/tests/seed/b5_demo_history_writer_catalog_acceptance.sql` passed. The function is SECURITY DEFINER with an empty search path and EXECUTE granted only to service_role. It refuses to run unless the fixed Greenfield school is active and `is_demo=true`, and all B5.1–B5.3 dependencies pass preflight.
 
 ### 5. Historical demo data
 
@@ -128,7 +124,7 @@ Then test all five primary demo logins and their role-specific restrictions. Use
 
 ## Current status
 
-All scripts, fixtures, migration source and acceptance SQL are committed. The Deno workflow currently type-checks the seed tooling and reports 86 passing tests. The development database has not been seeded; no Auth users, demo school, pupils, payments or receipts exist remotely. The historical writer migration is not applied.
+All scripts, fixtures, migration source and acceptance SQL are committed. The Deno workflow type-checks the seed tooling and reports 86 passing tests. The Greenfield foundation is seeded and its acceptance SQL passed: 1 school, 3 classes, 3 buses, 3 routes, 15 stops, 4 fee items and 6 settings. The history-writer migration is applied as remote version `20261123133938`, and its catalog acceptance passed. No Auth users, profiles, memberships, children, trips, invoices, payments or receipts have been created yet.
 
 ## Known outstanding brief requirement
 
