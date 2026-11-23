@@ -1,0 +1,35 @@
+name: Supabase Edge Functions
+
+on:
+  push:
+    paths:
+      - "supabase/functions/**"
+      - ".github/workflows/supabase-edge-functions.yml"
+  pull_request:
+    paths:
+      - "supabase/functions/**"
+      - ".github/workflows/supabase-edge-functions.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shared-edge-runtime:
+    name: Shared Edge Function checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.8
+
+      - name: Type-check shared Edge Function modules and tests
+        run: deno check supabase/functions/_shared/*.ts
+
+      - name: Run shared Edge Function tests
+        run: deno test --allow-net supabase/functions/_shared
