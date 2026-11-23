@@ -98,6 +98,69 @@ $function$;
 revoke all on function public.set_guardian_notification_radius(uuid, uuid, integer) from public, anon;
 grant execute on function public.set_guardian_notification_radius(uuid, uuid, integer) to authenticated;
 
+create or replace function public.get_child_trip_eta(
+  p_school_id uuid,
+  p_trip_id uuid,
+  p_child_id uuid
+)
+returns integer
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $function$
+declare
+  v_distance_meters double precision;
+  v_speed_kph numeric;
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+  if not (
+    private.has_role(p_school_id, 'school_admin'::public.user_role)
+    or private.is_guardian_of(p_child_id)
+    or exists (
+      select 1 from public.trips t
+      join public.staff_members sm
+        on sm.id = t.supervisor_id and sm.school_id = t.school_id
+      where t.id = p_trip_id and t.school_id = p_school_id
+        and t.status = 'active'::public.trip_status
+        and sm.user_id = auth.uid() and sm.active and sm.role = 'supervisor'
+    )
+  ) then
+    raise exception using errcode = '42501', message = 'FORBIDDEN';
+  end if;
+
+  select
+    extensions.st_distance(bp.location, rs.location),
+    greatest(coalesce(nullif(bp.speed_kph, 0), 25), 5)
+  into v_distance_meters, v_speed_kph
+  from public.bus_positions bp
+  join public.trips t
+    on t.id = bp.trip_id and t.school_id = bp.school_id
+  join public.child_route_assignments cra
+    on cra.school_id = t.school_id and cra.route_id = t.route_id
+    and cra.child_id = p_child_id and cra.active
+  join public.route_stops rs
+    on rs.id = cra.route_stop_id and rs.school_id = cra.school_id
+  where bp.school_id = p_school_id and bp.trip_id = p_trip_id
+    and t.status = 'active'::public.trip_status
+    and bp.recorded_at >= now() - interval '5 minutes'
+    and rs.location is not null
+  order by rs.stop_order
+  limit 1;
+
+  if v_distance_meters is null then
+    return null;
+  end if;
+
+  return greatest(0, ceil(v_distance_meters / (v_speed_kph * 1000 / 60))::integer);
+end;
+$function$;
+
+revoke all on function public.get_child_trip_eta(uuid, uuid, uuid) from public, anon;
+grant execute on function public.get_child_trip_eta(uuid, uuid, uuid) to authenticated;
+
 create or replace function public.evaluate_trip_geofences(
   p_school_id uuid,
   p_trip_id uuid
