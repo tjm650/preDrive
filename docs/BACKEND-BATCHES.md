@@ -267,3 +267,20 @@ The current API contract has no Realtime subscription methods or payloads. Do no
 - Explain every command that the user is expected to run before asking them to run it.
 - Migration files are the intended schema design; compare remote state against a clean replay rather than copying drift into migrations.
 - B1.6 clean-room replay is deferred by explicit user decision. Continue B2 only through additive, reviewed migrations on the existing development project; never run the destructive historical reset migration against it. B1.6 remains open.
+
+## B4.6 — Refunds, receipts and payment reminders (source authored; migration approval and runtime verification pending)
+
+- [x] Add a strict school-admin refund request schema and Edge Function. It verifies the caller's active `school_admin` membership, applies a five-attempt/15-minute per-admin limit, forwards the verified JWT to the existing `request_refund()` RPC, and returns only a pending refund identifier.
+- [x] Keep refund settlement trusted-only. The new endpoint never marks a refund successful or failed and never moves money. A provider/manual settlement adapter remains a release dependency.
+- [x] Add guardian receipt retrieval using the existing `PaymentReceipt` API shape. The function verifies the payment is succeeded, the invoice belongs to the authenticated guardian, and the guardian membership is active before returning receipt metadata.
+- [x] Add school-time-zone-aware reminder stages: three days before due date, due date, and 7/14/30 days overdue. Reminders use existing `alerts` and `alert_recipients` tables and their unique deduplication constraints.
+- [x] Add tests for refund/receipt request validation, Harare local-date conversion, date boundaries, reminder stages and USD/ZiG minor-unit formatting.
+- [x] Add read-only catalog acceptance SQL at `supabase/tests/automation/b4_finance_acceptance.sql`.
+- [x] Extend Deno CI to type-check all three new Edge Function entrypoints and run the expanded shared tests.
+- [ ] Apply migration `20261123110000_predrive_payment_reminder_alert_source.sql` only after explicit user approval. It extends the `alerts_source_type_check` constraint with the dedicated `payment_reminder` value; no rows are changed.
+- [ ] Run the B4.6 catalog acceptance SQL after migration approval/application.
+- [ ] Configure `CRON_SECRET` and `APP_ALLOWED_ORIGINS`, deploy the functions and run authenticated guardian/admin and cron smoke tests.
+- [ ] Add native-reviewed Shona and Ndebele reminder copy and email/push delivery in B4.7.
+- [ ] Add a trusted refund settlement adapter and verify partial/full refund accounting against a controlled test payment before live refunds.
+
+**Operational boundary:** source and tests only. No migration was applied, no functions were deployed, no cron job was scheduled, and no payment/refund/receipt/alert data was created. The reminder function intentionally fails closed until the new source-type constraint migration is applied. B4.6 cannot be marked accepted until that migration is explicitly approved and its catalog/runtime checks pass.
