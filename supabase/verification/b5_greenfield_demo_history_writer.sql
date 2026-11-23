@@ -93,7 +93,7 @@ begin
     and rs.driver_id is not null
     and rs.supervisor_id is not null
     and extract(isodow from d.service_date) between 1 and 5
-  on conflict (id) do nothing;
+  on conflict do nothing;
 
   -- Attendance and handover states are explicitly synthetic demo events.
   insert into public.trip_children (
@@ -147,7 +147,7 @@ begin
     jsonb_build_object('demo_fixture', true), t.started_at
   from public.trips t
   where t.school_id = v_school_id and t.generation_key like 'greenfield-history:%'
-  on conflict (id) do nothing;
+  on conflict do nothing;
 
   insert into public.trip_events (
     id, school_id, trip_id, trip_child_id, event_type, actor_user_id,
@@ -164,7 +164,7 @@ begin
   from public.trip_children tc
   join public.trips t on t.id = tc.trip_id and t.school_id = tc.school_id
   where tc.school_id = v_school_id and t.generation_key like 'greenfield-history:%'
-  on conflict (id) do nothing;
+  on conflict do nothing;
 
   insert into public.trip_events (
     id, school_id, trip_id, trip_child_id, event_type, actor_user_id,
@@ -182,7 +182,7 @@ begin
   where tc.school_id = v_school_id
     and tc.status = 'handed_over'
     and t.generation_key like 'greenfield-history:%'
-  on conflict (id) do nothing;
+  on conflict do nothing;
 
   insert into public.trip_events (
     id, school_id, trip_id, event_type, actor_user_id, idempotency_key,
@@ -195,7 +195,7 @@ begin
     jsonb_build_object('demo_fixture', true), t.ended_at
   from public.trips t
   where t.school_id = v_school_id and t.generation_key like 'greenfield-history:%'
-  on conflict (id) do nothing;
+  on conflict do nothing;
 
   -- Four term fee lines are copied into each immutable invoice.
   insert into public.invoices (
@@ -235,7 +235,7 @@ begin
   join public.guardian_children gc
     on gc.school_id = c.school_id and gc.child_id = c.id and gc.active and gc.primary_contact
   where c.school_id = v_school_id and c.status = 'active'
-  on conflict (id) do nothing;
+  on conflict do nothing;
 
   insert into public.invoice_lines (
     id, school_id, invoice_id, fee_item_id, description,
@@ -250,7 +250,7 @@ begin
   where i.school_id = v_school_id
     and i.invoice_number like 'GF-2026-T4-%'
     and fi.school_id = v_school_id and fi.active and fi.currency = 'USD'
-  on conflict (id) do nothing;
+  on conflict do nothing;
 
   -- Simulated EcoCash records only. No external provider is contacted.
   insert into public.payments (
@@ -329,7 +329,7 @@ begin
   join public.trips t on t.school_id = v_school_id and t.schedule_id = rs.id
     and t.service_date = fixture.service_date and t.status = 'completed'
   join public.staff_members supervisor on supervisor.id = t.supervisor_id
-  on conflict (id) do nothing;
+  on conflict do nothing;
 
   -- Four delay reports are attached to the matching completed afternoon trips.
   insert into public.delay_reports (
@@ -357,7 +357,7 @@ begin
   join public.trips t on t.school_id = v_school_id and t.schedule_id = rs.id
     and t.service_date = fixture.service_date and t.status = 'completed'
   join public.staff_members driver on driver.id = t.driver_id
-  on conflict (id) do nothing;
+  on conflict do nothing;
 
   select count(*) into v_trip_count from public.trips
   where school_id = v_school_id and generation_key like 'greenfield-history:%';
