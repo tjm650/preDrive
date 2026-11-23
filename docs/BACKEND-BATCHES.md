@@ -78,6 +78,42 @@ Acceptance limitations:
 
 Before implementing RPCs, follow the exact 30-method inventory in [`API-CONTRACT.md`](./API-CONTRACT.md), derived from `frontend/shared/lib/api/contract.ts` and its input types. Do not invent method names or payloads.
 
+## B3 implementation status — repository prepared, remote acceptance pending
+
+Eight additive B3 migrations have been authored on `main`:
+
+| Sub-batch | Migration | Implemented database capabilities |
+|---|---|---|
+| B3.1 | `20261123010000_predrive_business_auth_lifecycle.sql` | School registration and invitation acceptance using `auth.uid()`; actor identity is not accepted from caller input. |
+| B3.2 | `20261123020000_predrive_child_guardian_collector_lifecycle.sql` | Child creation, admin-controlled guardian links, hashed approved-collector PINs, safe collector listing. |
+| B3.2 extension | `20261123025000_predrive_temporary_collector_lifecycle.sql` | Expiring, single-use temporary collectors; hashed PINs; three-failure/15-minute lockout; no direct table grants. |
+| B3.3 | `20261123030000_predrive_handover_and_attendance_logic.sql` | Idempotent child boarding/absence, supervisor-only handover, PIN lockout and immutable trip events. |
+| B3.4 | `20261123040000_predrive_trip_lifecycle_and_gps.sql` | Supervisor trip start/end, active-trip GPS, GPS idempotency, current-position removal at trip end, automatic unaccounted-child incidents and alerts. |
+| B3.5 | `20261123050000_predrive_safety_and_emergency_logic.sql` | Incidents, SOS, delay reports, vehicle checks, alert acknowledgement, incident and SOS resolution. |
+| B3.6 | `20261123060000_predrive_geofencing_and_guardian_arrival.sql` | Guardian 500/1,000/2,000 m radius, child route-stop assignments, ETA calculation, deduplicated geofence alerts. |
+| B3.7 | `20261123070000_predrive_finance_lifecycle.sql` | Idempotent pending payment intents, service-role-only payment/refund settlement, invoice balance updates and receipt creation. |
+| B3.8 | `20261123080000_predrive_privacy_bulk_and_admin_operations.sql` | Consent grant/withdrawal history, account/child deletion and export requests, review workflow, bulk child import payload, route reassignment/reordering and scheduled-trip cancellation. |
+
+A catalog acceptance suite is at `supabase/tests/business_logic/b3_business_logic_acceptance.sql`. It checks function signatures, SECURITY DEFINER search paths, RLS, table grants and privileged settlement/geofence grants. It is not a substitute for authenticated multi-tenant runtime tests.
+
+**Important: B3 is not marked complete yet.** The migrations are committed but have not been applied to the remote development database. A read-only migration-ledger check on 2026-11-23 confirmed that the remote ledger still contains only the 18 B1/B2 versions. No remote schema or data was changed during B3 authoring.
+
+Acceptance still required before B3 can be closed:
+- Review and apply the nine B3 migration files in version order, after the user explicitly approves the exact remote operation.
+- Run the B3 catalog suite and authenticated runtime tests with real school-admin, guardian, supervisor and driver identities.
+- Verify three-failure lockout, temporary collector expiry/single use, active-trip GPS restrictions and offline duplicate handling.
+- Verify unaccounted-child alert/incident creation, geofence deduplication, ETA, alert/SOS resolution and vehicle-check failure.
+- Verify payment idempotency, invoice arithmetic, receipts and refund settlement using trusted service-role test calls only.
+- Regenerate `frontend/shared/types/database.types.ts` from the applied schema and run workspace typecheck.
+
+Known integration boundaries:
+- The current 30-method `PreDriveApi` contract remains unchanged. B3 RPCs that exceed it are backend capabilities for later B6 integration, not newly invented frontend methods.
+- B4 must supply signed-provider webhook verification before calling payment/refund settlement, push delivery for generated alerts, geofence scheduling, ETA refresh, deletion/export execution and retention automation.
+- CSV parsing belongs in a trusted import boundary; the database bulk function accepts validated JSON rows, not raw CSV text.
+- Temporary collector RPCs are available in the backend but are not part of the current frontend API contract.
+- The current school-registration RPC creates a pending school and admin membership; activation/verification workflow is a B4/admin operational gate.
+- B1.6 clean-room replay remains deferred and is not certified by this B3 work.
+
 ## B4 — Edge Functions and automation (8 batches)
 
 1. Shared Deno Edge Function infrastructure.
