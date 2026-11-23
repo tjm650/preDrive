@@ -5,6 +5,9 @@ alter table public.guardian_children
   add column if not exists notification_radius_meters integer not null default 1000
   check (notification_radius_meters in (500, 1000, 2000));
 
+create unique index if not exists route_stops_id_school_route_uidx
+  on public.route_stops (id, school_id, route_id);
+
 create table if not exists public.child_route_assignments (
   id uuid primary key default gen_random_uuid(),
   school_id uuid not null references public.schools(id) on delete restrict,
@@ -22,9 +25,9 @@ create table if not exists public.child_route_assignments (
   constraint child_route_assignments_route_school_fkey
     foreign key (route_id, school_id)
     references public.transport_routes(id, school_id) on delete restrict,
-  constraint child_route_assignments_stop_school_fkey
-    foreign key (route_stop_id, school_id)
-    references public.route_stops(id, school_id) on delete restrict
+  constraint child_route_assignments_stop_route_school_fkey
+    foreign key (route_stop_id, school_id, route_id)
+    references public.route_stops(id, school_id, route_id) on delete restrict
 );
 
 create unique index if not exists child_route_assignments_one_active_child_uidx
@@ -53,7 +56,8 @@ for all to authenticated
 using (private.has_role(school_id, 'school_admin'::public.user_role))
 with check (private.has_role(school_id, 'school_admin'::public.user_role));
 
-grant select, insert, update, delete on public.child_route_assignments to authenticated;
+revoke insert, update, delete on public.child_route_assignments from authenticated;
+grant select on public.child_route_assignments to authenticated;
 
 create unique index if not exists alerts_school_dedupe_key_uidx
   on public.alerts (school_id, dedupe_key)
