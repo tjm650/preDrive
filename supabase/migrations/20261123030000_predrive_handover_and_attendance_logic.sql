@@ -52,14 +52,19 @@ begin
     pg_catalog.hashtextextended(p_school_id::text || p_idempotency_key::text, 0)
   );
 
+  v_event_type := case
+    when p_status = 'absent'::public.trip_child_status
+      then 'child_marked_absent'
+    else 'child_boarded'
+  end;
+
   select e.* into v_existing_event
   from public.trip_events e
   where e.school_id = p_school_id and e.idempotency_key = p_idempotency_key;
   if found then
     if v_existing_event.trip_id = p_trip_id
        and v_existing_event.occurred_at = p_recorded_at
-       and v_existing_event.event_type = case when p_status = 'absent'::public.trip_child_status
-         then 'child_marked_absent' else 'child_boarded' end
+       and v_existing_event.event_type = v_event_type
        and exists (
          select 1 from public.trip_children tc
          where tc.id = v_existing_event.trip_child_id and tc.child_id = p_child_id
@@ -90,7 +95,6 @@ begin
       updated_at = now()
   where id = v_trip_child.id;
 
-  v_event_type := case when p_status = 'absent' then 'child_marked_absent' else 'child_boarded' end;
   insert into public.trip_events (
     school_id, trip_id, trip_child_id, event_type, actor_user_id,
     idempotency_key, occurred_at
