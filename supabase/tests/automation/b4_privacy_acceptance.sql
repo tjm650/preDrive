@@ -131,7 +131,7 @@ begin
     raise exception 'B4.8: export release RPC missing or incorrectly secured';
   end if;
 end;
-$;
+$$;
 
 select
   (select count(*) from supabase_migrations.schema_migrations) as migration_count,
