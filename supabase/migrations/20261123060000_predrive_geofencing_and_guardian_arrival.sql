@@ -138,6 +138,8 @@ begin
   from public.bus_positions bp
   join public.trips t
     on t.id = bp.trip_id and t.school_id = bp.school_id
+  join public.trip_children tc
+    on tc.school_id = t.school_id and tc.trip_id = t.id and tc.child_id = p_child_id
   join public.child_route_assignments cra
     on cra.school_id = t.school_id and cra.route_id = t.route_id
     and cra.child_id = p_child_id and cra.active
