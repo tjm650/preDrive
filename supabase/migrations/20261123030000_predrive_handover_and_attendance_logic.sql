@@ -28,7 +28,7 @@ begin
   if v_actor is null then
     raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
   end if;
-  if p_status not in ('on_board'::public.trip_child_status, 'absent'::public.trip_child_status)
+  if p_status is null or p_status not in ('on_board'::public.trip_child_status, 'absent'::public.trip_child_status)
      or p_idempotency_key is null
      or p_recorded_at is null
      or p_recorded_at > now() + interval '2 minutes'
