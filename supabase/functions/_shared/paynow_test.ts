@@ -1,22 +1,21 @@
-import { verifyPaynowCallback } from "./paynow.ts";
+import { computePaynowHash, verifyPaynowCallback } from "./paynow.ts";
 
 const INTEGRATION_KEY = "3e9fed89-60e1-4ce5-ab6e-6b1eb2d4f977";
 
-Deno.test("Paynow verifies the published SHA-512 example", async () => {
-  const body = new URLSearchParams([
-    ["id", "1201"],
-    ["reference", "TEST REF"],
-    ["amount", "99.99"],
-    ["additionalinfo", "A test ticket transaction"],
-    ["returnurl", "http://www.google.com/search?q=returnurl"],
-    ["resulturl", "http://www.google.com/search?q=resulturl"],
-    ["status", "Message"],
-    ["hash", "2A033FC38798D913D42ECB786B9B19645ADEDBDE788862032F1BD82CF3B92DEF84F316385D5B40DBB35F1A4FD7D5BFE73835174136463CDD48C9366B0749C689"],
-  ]).toString();
-
-  const verified = await verifyPaynowCallback(body, INTEGRATION_KEY);
-  if (verified.reference !== "TEST REF" || verified.amountMinor !== 9999) {
-    throw new Error("Published Paynow example did not parse correctly.");
+Deno.test("Paynow SHA-512 calculation matches its published example", async () => {
+  const values = [
+    "1201",
+    "TEST REF",
+    "99.99",
+    "A test ticket transaction",
+    "http://www.google.com/search?q=returnurl",
+    "http://www.google.com/search?q=resulturl",
+    "Message",
+  ];
+  const hash = await computePaynowHash(values, INTEGRATION_KEY);
+  const expected = "2A033FC38798D913D42ECB786B9B19645ADEDBDE788862032F1BD82CF3B92DEF84F316385D5B40DBB35F1A4FD7D5BFE73835174136463CDD48C9366B0749C689";
+  if (hash !== expected) {
+    throw new Error("Paynow published SHA-512 example did not match.");
   }
 });
 
