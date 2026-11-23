@@ -195,3 +195,8 @@ B4.7.5 verification: GitHub Actions run [45158947154](https://github.com/tjm650/
 The privacy workers are intended for pg_cron-to-Edge-Function invocation after deployment and secret verification. Suggested cadence is every five minutes for export/deletion processing and once daily for retention during a low-traffic Harare window. These are recommendations only: no cron job is installed. The scheduled invocations require the configured high-entropy `CRON_SECRET`.
 
 Demo reset is deferred until B5 creates the canonical idempotent Greenfield demo seed. A reset function must be limited to the explicitly flagged `schools.is_demo = true` record and use a separate `DEMO_RESET_SECRET`; it must not trust a caller-supplied school ID or delete Auth users globally.
+
+
+## Export concurrency control (B4.8.5)
+
+The export worker claims requests through a service-role-only RPC using row-level locks and a 15-minute lease. A request cannot be claimed again while its lease is active. Completion requires the same unexpired lease. On failure, the worker releases its lease; it removes a partial object only if the release confirms that it still owns that lease. This prevents a stale overlapping worker from deleting a newer worker's completed artifact. The supporting migration must be applied before this worker version is deployed.
