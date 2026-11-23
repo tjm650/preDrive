@@ -209,3 +209,10 @@ The read-only test `supabase/tests/business_logic/b3_business_logic_acceptance.s
 
 This is catalog acceptance, not a substitute for real-user runtime acceptance. No Auth users or business records were seeded. B5 must test row visibility and role boundaries with real school-admin, guardian, supervisor, driver and teacher identities. B4 must provide verified payment webhooks, push delivery, geofence scheduling, deletion/export execution and retention automation. The clean-room replay remains deferred under B1.6; incremental application to the existing development project does not certify an empty-database replay.
 
+
+
+## B4.3 invitation staff-onboarding migration — authored, approval pending
+
+`supabase/migrations/20261123100000_predrive_invitation_staff_onboarding.sql` adds nullable `full_name` and `phone` fields to `school_invitations` and replaces `accept_school_invitation()` so accepted staff invitations create or reactivate the corresponding `staff_members` row in the same transaction as membership activation. Guardian invitations do not require staff details. Existing pending staff invitations created before this migration have no staff details and must be revoked/reissued; acceptance fails closed for those records.
+
+The migration has been committed but **has not been applied**. Obtain explicit written approval before applying it to the shared development project. Its read-only catalog acceptance suite is `supabase/tests/automation/b4_invitation_acceptance.sql`.
