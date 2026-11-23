@@ -41,7 +41,8 @@ export class HttpError extends Error {
     this.name = "HttpError";
     this.code = code;
     this.status = status;
-    this.retryable = options.retryable ?? false;
+    this.retryable = options.retryable ??
+      (code === "RATE_LIMITED" || code === "NETWORK" || code === "UNAVAILABLE");
     this.fieldErrors = options.fieldErrors;
   }
 }
