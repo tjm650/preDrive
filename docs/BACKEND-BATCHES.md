@@ -507,7 +507,7 @@ Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
 - [x] Re-read the current root `BRIEF.md` and verify the live child, class, route, route-stop and route-assignment schema/RPC contract.
 - [x] Add `scripts/demo-child-fixtures.ts` with 64 deterministic fictional child records.
 - [x] Distribute records across Sunbeams (22), Little Stars (21) and Explorers (21).
-- [x] Give every child a canonical Greenfield route and one of that route's five seeded stops. Balance route loads to 24/22/18 so no bus exceeds its seeded passenger capacity of 28/24/18.
+- [x] Give every child a canonical Greenfield route and one of that route's five seeded stops. Balance child loads to 26/22/16 and reserve two additional seats for the driver and supervisor, so total occupancy stays within the seeded bus capacities of 28/24/18.
 - [x] Make the first two records Tendai Moyo and Tadiwa Moyo for Chipo Moyo's guardian demo; both use Route A.
 - [x] Use plausible age-band birth years and Zimbabwean Shona/Ndebele/mixed name patterns; these are synthetic identities, not real pupils.
 - [x] Add six Deno fixture-integrity tests for count, class distribution, unique identity tuples, route/stop pairing, Chipo's two children and tenant/class IDs.
