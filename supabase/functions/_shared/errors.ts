@@ -83,23 +83,83 @@ const SAFE_DATABASE_MESSAGES: Record<string, {
   },
 };
 
-const CONFLICT_MESSAGES = new Set([
-  "TRIP_NOT_STARTABLE",
-  "TRIP_NOT_CANCELLABLE",
-  "ACTIVE_ASSIGNED_TRIP_REQUIRED",
-  "ACTIVE_SUPERVISOR_TRIP_REQUIRED",
-  "IDEMPOTENCY_KEY_REUSED",
-  "PIN_INVALID",
-  "PIN_LOCKED",
-  "PIN_EXPIRED",
-  "COLLECTOR_INACTIVE",
-  "COLLECTOR_EXPIRED",
-  "MEMBERSHIP_ROLE_CONFLICT",
-  "INVITATION_NOT_FOUND",
-  "DELETION_REQUEST_NOT_COMPLETABLE",
-  "PAYMENT_ALREADY_SETTLED",
-  "REFUND_NOT_AVAILABLE",
-]);
+const DATABASE_MESSAGE_CODES: Record<string, ApiErrorCode> = {
+  PROFILE_REQUIRED: "NOT_FOUND",
+  INVITATION_NOT_FOUND: "NOT_FOUND",
+  TRIP_CHILD_NOT_FOUND: "NOT_FOUND",
+  APPROVED_COLLECTOR_NOT_FOUND: "NOT_FOUND",
+  CHILD_NOT_FOUND: "NOT_FOUND",
+  FORBIDDEN_OR_NOT_FOUND: "NOT_FOUND",
+  TEMPORARY_COLLECTOR_NOT_FOUND_OR_EXPIRED: "NOT_FOUND",
+  PAYABLE_INVOICE_NOT_FOUND: "NOT_FOUND",
+  PAYMENT_NOT_FOUND: "NOT_FOUND",
+  SETTLED_PAYMENT_NOT_FOUND: "NOT_FOUND",
+  REFUND_NOT_FOUND: "NOT_FOUND",
+  FEE_ITEM_NOT_FOUND_OR_CURRENCY_MISMATCH: "NOT_FOUND",
+  PENDING_BANK_PAYMENT_NOT_FOUND: "NOT_FOUND",
+  SCHOOL_SUSPENDED: "FORBIDDEN",
+  ACTIVE_ASSIGNED_TRIP_REQUIRED: "FORBIDDEN",
+  ACTIVE_SUPERVISOR_TRIP_REQUIRED: "FORBIDDEN",
+  PIN_INVALID: "FORBIDDEN",
+  TRIP_NOT_STARTABLE: "CONFLICT",
+  TRIP_NOT_CANCELLABLE: "CONFLICT",
+  IDEMPOTENCY_KEY_REUSED: "CONFLICT",
+  CHILD_STATUS_CONFLICT: "CONFLICT",
+  CHILD_NOT_ON_BOARD: "CONFLICT",
+  MEMBERSHIP_ROLE_CONFLICT: "CONFLICT",
+  DELETION_REQUEST_NOT_COMPLETABLE: "CONFLICT",
+  PAYMENT_ALREADY_SETTLED: "CONFLICT",
+  INVOICE_BALANCE_CHANGED: "CONFLICT",
+  INVOICE_NOT_ISSUABLE: "CONFLICT",
+  INVOICE_NOT_VOIDABLE: "CONFLICT",
+  BANK_TRANSFER_NOT_REVIEWABLE: "CONFLICT",
+  PAYMENT_AMOUNT_INVALID_OR_RESERVED: "VALIDATION",
+  REFUND_EXCEEDS_PAYMENT: "VALIDATION",
+  INVOICE_LINE_VALIDATION: "VALIDATION",
+  PIN_LOCKED: "RATE_LIMITED",
+};
+
+const PUBLIC_ERROR_DETAILS: Record<ApiErrorCode, {
+  message: string;
+  status: number;
+}> = {
+  UNAUTHENTICATED: {
+    message: "Sign in to continue.",
+    status: 401,
+  },
+  FORBIDDEN: {
+    message: "You do not have permission to perform this action.",
+    status: 403,
+  },
+  NOT_FOUND: {
+    message: "The requested record could not be found.",
+    status: 404,
+  },
+  VALIDATION: {
+    message: "Check the supplied information and try again.",
+    status: 400,
+  },
+  CONFLICT: {
+    message: "The requested operation conflicts with the current record state.",
+    status: 409,
+  },
+  RATE_LIMITED: {
+    message: "Too many attempts. Please wait before trying again.",
+    status: 429,
+  },
+  NETWORK: {
+    message: "The network request could not be completed.",
+    status: 503,
+  },
+  UNAVAILABLE: {
+    message: "The service is temporarily unavailable. Please try again.",
+    status: 503,
+  },
+  UNKNOWN: {
+    message: "The request could not be completed.",
+    status: 500,
+  },
+};
 
 export function toHttpError(error: unknown): HttpError {
   if (error instanceof HttpError) return error;
@@ -126,11 +186,14 @@ export function toHttpError(error: unknown): HttpError {
     );
   }
 
-  if (CONFLICT_MESSAGES.has(message)) {
+  const mappedCode = DATABASE_MESSAGE_CODES[message];
+  if (mappedCode) {
+    const publicDetails = PUBLIC_ERROR_DETAILS[mappedCode];
     return new HttpError(
-      "CONFLICT",
-      "The requested operation conflicts with the current record state.",
-      409,
+      mappedCode,
+      publicDetails.message,
+      publicDetails.status,
+      { retryable: mappedCode === "RATE_LIMITED" },
     );
   }
 
