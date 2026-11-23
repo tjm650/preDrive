@@ -562,17 +562,17 @@ Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SU
 - [x] Define 64 USD term invoice plans using the four canonical fee items: 16 paid, 16 partially paid and 32 overdue. Each full invoice totals 55,500 minor units (US$555.00).
 - [x] Define two resolved fictional incidents and four historical delay reports.
 - [x] Add six Deno tests for the four-week window, route/direction coverage, child-to-route integrity, invoice status distribution, guardian mapping and safety fixture counts.
-- [x] Add read-only post-seed acceptance SQL at `supabase/tests/seed/b5_demo_history_acceptance.sql`.
+- [x] Add read-only post-seed acceptance SQL at `supabase/tests/seed/b5_demo_history_acceptance.sql` and writer security/catalog checks at `supabase/tests/seed/b5_demo_history_writer_catalog_acceptance.sql`.
 - [x] Deno 2.9.8 type-check passed and all 86 shared/seed tests passed (0 failures) in [GitHub Actions run 45181999248](https://github.com/tjm650/preDrive/actions/runs/45181999248).
-- [x] Draft `supabase/verification/b5_greenfield_demo_history_writer.sql`, a single transactional, service-role-only database routine guarded by the canonical `schools.is_demo=true` tenant. It creates 120 completed historical trips, 2,560 attendance rows, 64 term invoices, 32 simulated EcoCash payments/receipts, two resolved incidents and four labelled delay reports. It does not call any real provider or claim real handover PIN verification.
+- [x] Add migration source `supabase/migrations/20261123131500_predrive_greenfield_demo_history_writer.sql` plus its review copy at `supabase/verification/b5_greenfield_demo_history_writer.sql`. It defines one transactional, service-role-only database routine guarded by the canonical `schools.is_demo=true` tenant. It creates 120 completed historical trips, 2,560 attendance rows, 64 term invoices, 32 simulated EcoCash payments/receipts, two resolved incidents and four labelled delay reports. It does not call any real provider or claim real handover PIN verification.
 - [x] Add `scripts/seed-greenfield-history.ts`, which calls the dedicated RPC and rejects any result that does not match the exact canonical counts.
-- [ ] Review and validate the SQL writer, convert it into a migration using the repository's migration workflow, and apply it only after explicit user authorization. The existing `start_trip` RPC intentionally rejects trips older than 12 hours; do not bypass it through ad-hoc service-role REST inserts.
+- [ ] Review and validate the SQL writer, then apply migration `20261123131500` only after explicit user authorization. The existing `start_trip` RPC intentionally rejects trips older than 12 hours; do not bypass it through ad-hoc service-role REST inserts.
 - [ ] Run the history acceptance SQL only after the writer migration and fixture dependencies have been reviewed and explicitly authorized.
 - [ ] Run the history acceptance SQL only after the writer and fixture dependencies have been reviewed and explicitly authorized.
 
 **Finance boundary:** all 64 invoice plans are USD and are demo-only. Planned payment records are simulated; no Paynow, EcoCash, CBZ or CABS provider was contacted. The fixture source does not create or settle payments.
 
-**Operational boundary:** the SQL writer is a verification-folder proposal, not an applied migration. No trips, attendance, incidents, delays, invoices, payments or receipts were created. The history runner will fail until its RPC is installed by an approved migration.
+**Operational boundary:** migration `20261123131500` is committed but not applied. Its SQL has not yet been executed against a database. No trips, attendance, incidents, delays, invoices, payments or receipts were created. The history runner will fail until its RPC is installed by an approved migration.
 
 ## B5.5 — Tenant-isolation runtime acceptance (test source complete; execution pending)
 
@@ -591,7 +591,7 @@ B5 source foundations now cover the Greenfield school/fleet/fee catalogue, five 
 
 **The following are not complete or live:**
 1. Remote B5 seed and Auth provisioning have not been authorized or run. The development project remains empty of application records.
-2. The demo-only historical/finance writer exists as a source proposal but is not a migration, has not been SQL-executed, and is not installed remotely. Existing trip lifecycle RPCs correctly prevent creating trips weeks in the past; do not bypass them with direct REST inserts.
+2. The demo-only historical/finance writer exists as migration source but has not been SQL-executed or applied remotely. Existing trip lifecycle RPCs correctly prevent creating trips weeks in the past; do not bypass them with direct REST inserts.
 3. The product brief requires at least 30 real-road-path coordinates per route. The current database/API stores route metadata and ordered stop points only; it has no typed route geometry field. Do not fabricate straight-line/interpolated roads or hide polylines in settings. A typed route-geometry schema and shared API contract must be reviewed in B6 before route polylines can be persisted and consumed.
 4. Shona/Ndebele notification copy still requires native-speaker review before notification delivery can be enabled.
 
