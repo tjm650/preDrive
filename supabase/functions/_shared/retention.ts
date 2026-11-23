@@ -7,7 +7,7 @@ import {
 } from "./privacy.ts";
 import type { ServiceClient } from "./supabase.ts";
 
-function cutoff(days: number, now: Date): string {
+export function retentionCutoff(days: number, now: Date): string {
   return new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
@@ -29,7 +29,7 @@ export async function runApprovedRetention(
     exportFilesFailed: 0,
   };
 
-  const gpsCutoff = cutoff(GPS_HISTORY_TTL_DAYS, now);
+  const gpsCutoff = retentionCutoff(GPS_HISTORY_TTL_DAYS, now);
   const { data: oldPositions, error: gpsSelectError } = await client
     .from("bus_position_history")
     .select("id")
@@ -48,7 +48,7 @@ export async function runApprovedRetention(
     result.gpsHistoryDeleted = gpsIds.length;
   }
 
-  const deliveryCutoff = cutoff(TERMINAL_DELIVERY_TTL_DAYS, now);
+  const deliveryCutoff = retentionCutoff(TERMINAL_DELIVERY_TTL_DAYS, now);
   const { data: oldDeliveries, error: deliverySelectError } = await client
     .from("notification_deliveries")
     .select("id")
@@ -68,7 +68,7 @@ export async function runApprovedRetention(
     result.terminalDeliveriesDeleted = deliveryIds.length;
   }
 
-  const exportCutoff = cutoff(DATA_EXPORT_TTL_DAYS, now);
+  const exportCutoff = retentionCutoff(DATA_EXPORT_TTL_DAYS, now);
   const { data: expiredExports, error: exportSelectError } = await client
     .from("deletion_requests")
     .select("id,school_id")
