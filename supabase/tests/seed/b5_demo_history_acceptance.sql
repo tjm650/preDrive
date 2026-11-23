@@ -19,6 +19,16 @@ begin
     raise exception 'B5.4: expected 20 distinct historical school weekdays';
   end if;
 
+  if (
+    select count(*)
+    from public.trip_children tc
+    join public.trips t on t.id = tc.trip_id and t.school_id = tc.school_id
+    where tc.school_id = v_school_id
+      and t.generation_key like 'greenfield-history:%'
+  ) <> 2560 then
+    raise exception 'B5.4: expected 2,560 historical attendance rows';
+  end if;
+
   if exists (
     select 1
     from public.trips t
@@ -53,6 +63,15 @@ begin
     where school_id = v_school_id and status = 'overdue'
   ) <> 32 then
     raise exception 'B5.4: expected 16 paid, 16 partially paid and 32 overdue invoices';
+  end if;
+
+  if exists (
+    select 1 from public.payments
+    where school_id = v_school_id
+      and idempotency_key like 'greenfield-demo-payment:%'
+      and (status <> 'succeeded' or provider <> 'simulated' or method <> 'ecocash')
+  ) then
+    raise exception 'B5.4: demo payments must remain simulated EcoCash records';
   end if;
 
   if (
