@@ -54,6 +54,7 @@ const handler = createEdgeHandler(async (request) => {
         client,
         item.school_id,
         item.id,
+        leaseId,
         payload,
       );
 
@@ -63,6 +64,7 @@ const handler = createEdgeHandler(async (request) => {
           p_school_id: item.school_id,
           p_request_id: item.id,
           p_lease_id: leaseId,
+          p_object_path: objectPath,
         },
       );
       if (completionError) throw completionError;
@@ -77,9 +79,9 @@ const handler = createEdgeHandler(async (request) => {
         },
       );
 
-      // Only the worker that still owns the lease may remove its partial
-      // artifact. A stale worker must never delete a newer worker's upload.
-      if (objectPath && !releaseError && released === true) {
+      // Each lease has a unique object path, so cleanup cannot remove a
+      // newer worker's artifact even after this worker loses its lease.
+      if (objectPath) {
         await client.storage.from("exports").remove([objectPath]);
       }
       failed += 1;
