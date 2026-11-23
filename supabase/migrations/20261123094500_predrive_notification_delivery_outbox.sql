@@ -107,27 +107,16 @@ begin
     from public.profiles p
     where p.id = new.recipient_user_id
       and p.email is not null
-      and exists (
-        select 1
-        from public.consent_records cr
-        where cr.school_id = new.school_id
-          and cr.subject_user_id = new.recipient_user_id
-          and cr.purpose = 'communications'
-          and cr.effective_at <= now()
-        order by cr.effective_at desc, cr.captured_at desc, cr.created_at desc, cr.id desc
-        limit 1
-      )
-      and (
-        select cr.status
-        from public.consent_records cr
-        where cr.school_id = new.school_id
-          and cr.subject_user_id = new.recipient_user_id
-          and cr.purpose = 'communications'
-          and cr.effective_at <= now()
-        order by cr.effective_at desc, cr.captured_at desc, cr.created_at desc, cr.id desc
-        limit 1
-      ) = 'granted'
-  ) then
+  ) and coalesce((
+    select cr.status
+    from public.consent_records cr
+    where cr.school_id = new.school_id
+      and cr.subject_user_id = new.recipient_user_id
+      and cr.purpose = 'communications'
+      and cr.effective_at <= now()
+    order by cr.effective_at desc, cr.captured_at desc, cr.created_at desc, cr.id desc
+    limit 1
+  ), 'denied') = 'granted' then
     insert into public.notification_deliveries (
       school_id, alert_recipient_id, channel, locale
     )
@@ -164,8 +153,10 @@ begin
     return new;
   end if;
 
-  if tg_op = 'UPDATE' and old.status = 'published' then
-    return new;
+  if tg_op = 'UPDATE' then
+    if old.status = 'published' then
+      return new;
+    end if;
   end if;
 
   insert into public.alerts (
