@@ -563,7 +563,7 @@ Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SU
 - [x] Define two resolved fictional incidents and four historical delay reports.
 - [x] Add six Deno tests for the four-week window, route/direction coverage, child-to-route integrity, invoice status distribution, guardian mapping and safety fixture counts.
 - [x] Add read-only post-seed acceptance SQL at `supabase/tests/seed/b5_demo_history_acceptance.sql`.
-- [x] Deno 2.9.8 type-check passed and all 83 shared/seed tests passed (0 failures) in [GitHub Actions run 45180830821](https://github.com/tjm650/preDrive/actions/runs/45180830821).
+- [x] Deno 2.9.8 type-check passed and all 85 shared/seed tests passed (0 failures) in [GitHub Actions run 45181353988](https://github.com/tjm650/preDrive/actions/runs/45181353988).
 - [x] Draft `supabase/verification/b5_greenfield_demo_history_writer.sql`, a single transactional, service-role-only database routine guarded by the canonical `schools.is_demo=true` tenant. It creates 120 completed historical trips, 2,560 attendance rows, 64 term invoices, 32 simulated EcoCash payments/receipts, two resolved incidents and four labelled delay reports. It does not call any real provider or claim real handover PIN verification.
 - [x] Add `scripts/seed-greenfield-history.ts`, which calls the dedicated RPC and rejects any result that does not match the exact canonical counts.
 - [ ] Review and validate the SQL writer, convert it into a migration using the repository's migration workflow, and apply it only after explicit user authorization. The existing `start_trip` RPC intentionally rejects trips older than 12 hours; do not bypass it through ad-hoc service-role REST inserts.
@@ -605,3 +605,6 @@ deno run --allow-env --allow-net scripts/seed-greenfield-history.ts
 ```
 
 Requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. The RPC is intentionally service-role-only and restricted to the fixed Greenfield demo tenant. It is not installed on the remote project.
+
+
+**Collector PIN continuity:** keep `PREDRIVE_DEMO_COLLECTOR_PIN_SECRET` unchanged for all retries of a partially completed seed. Each collector receives a deterministic, distinct eight-digit PIN derived from its child index and collector slot. The database stores only the bcrypt hash; the seed never prints the derived PINs.
