@@ -369,6 +369,17 @@ begin
   if not found then
     raise exception using errcode = '40001', message = 'INCIDENT_NOT_RESOLVABLE';
   end if;
+
+  update public.alerts
+  set status = 'resolved'::public.alert_status,
+      acknowledged_at = coalesce(acknowledged_at, now()),
+      acknowledged_by = coalesce(acknowledged_by, auth.uid()),
+      resolved_at = now(), resolved_by = auth.uid(),
+      repeat_until_acknowledged = false, next_escalation_at = null,
+      updated_at = now()
+  where school_id = p_school_id and source_type = 'incident'
+    and source_id = p_incident_id
+    and status <> 'resolved'::public.alert_status;
 end;
 $function$;
 
