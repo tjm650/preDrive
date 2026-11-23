@@ -99,3 +99,8 @@ The current `PreDriveApi` exposes **30 methods**:
 The current contract does **not** expose methods for ending a trip, writing GPS positions, editing/deleting children, managing guardian links or collector records, acknowledging alerts, resolving incidents, vehicle checks, delay reports, broadcasts, refunds, bank-transfer review, realtime subscriptions, or bulk imports. Some underlying schema entities exist, but their existence does not authorize the backend to invent client-facing methods or assume those workflows are integrated.
 
 The current contract also does not define realtime event names or payloads. Keep the Realtime publication empty until an explicit contract is agreed. B3/B4 implementation should map only the 30 operations above to the necessary database functions and Edge Functions, while keeping privileged operations server-side.
+
+
+## B4 invitation capability (not yet part of the client API)
+
+The server-side `invite-school-member` Edge Function is implemented for the school-admin workflow. It is intentionally not added as a `PreDriveApi` method in this batch because the frontend contract and SupabaseAdapter must be updated together in B6. The function accepts a school ID, email and one of guardian/teacher/supervisor/driver roles; it never accepts a caller-supplied actor ID or role. It returns a pending invitation identifier and expiry. The Auth sign-in adapter accepts a matching invitation through the existing `accept_school_invitation()` RPC after Supabase verifies the password. This does not expand the current 30-method API count.
