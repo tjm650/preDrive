@@ -84,10 +84,10 @@ Deno.test("Greenfield route assignments never exceed the seeded bus capacities",
     counts.set(child.routeCode, (counts.get(child.routeCode) ?? 0) + 1);
   }
   if (
-    counts.get("A") !== 24 ||
+    counts.get("A") !== 26 ||
     counts.get("B") !== 22 ||
-    counts.get("C") !== 18
+    counts.get("C") !== 16
   ) {
-    throw new Error("Expected route passenger counts of 24, 22 and 18 for bus capacities 28, 24 and 18.");
+    throw new Error("Expected route pupil counts of 26, 22 and 16, leaving two seats for the driver and supervisor on buses of 28, 24 and 18 seats.");
   }
 });
