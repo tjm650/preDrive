@@ -6,6 +6,7 @@ import {
 import { HttpError } from "../_shared/errors.ts";
 import {
   SCHOOL_INVITATION_TTL_MS,
+  hashInvitationRateLimitSubject,
   schoolInvitationSchema,
 } from "../_shared/invitations.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
@@ -29,6 +30,31 @@ const handler = createEdgeHandler(async (request) => {
     ["school_admin"],
     client,
   );
+
+  const rateLimitSubject = await hashInvitationRateLimitSubject(
+    actor.schoolId,
+    actor.userId,
+  );
+  const { data: rateLimitAllowed, error: rateLimitError } = await client.rpc(
+    "consume_rate_limit",
+    {
+      p_school_id: actor.schoolId,
+      p_action: "school.invitation.create",
+      p_subject_hash: rateLimitSubject,
+      p_limit: 10,
+      p_window_seconds: 900,
+    },
+  );
+
+  if (rateLimitError) throw rateLimitError;
+  if (rateLimitAllowed !== true) {
+    throw new HttpError(
+      "RATE_LIMITED",
+      "Too many invitations have been created. Wait 15 minutes before trying again.",
+      429,
+      { retryable: true },
+    );
+  }
 
   const { data: school, error: schoolError } = await client
     .from("schools")
