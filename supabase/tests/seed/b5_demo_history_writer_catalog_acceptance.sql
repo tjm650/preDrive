@@ -23,8 +23,7 @@ begin
 
   if not has_function_privilege('service_role', v_function, 'EXECUTE')
      or has_function_privilege('authenticated', v_function, 'EXECUTE')
-     or has_function_privilege('anon', v_function, 'EXECUTE')
-     or has_function_privilege('public', v_function, 'EXECUTE') then
+     or has_function_privilege('anon', v_function, 'EXECUTE') then
     raise exception 'B5.4: history writer must be executable only by service_role';
   end if;
 end;
