@@ -85,13 +85,13 @@ Eight additive B3 migrations have been authored on `main`:
 | Sub-batch | Migration | Implemented database capabilities |
 |---|---|---|
 | B3.1 | `20261123010000_predrive_business_auth_lifecycle.sql` | School registration and invitation acceptance using `auth.uid()`; actor identity is not accepted from caller input. |
-| B3.2 | `20261123020000_predrive_child_guardian_collector_lifecycle.sql` | Child creation, admin-controlled guardian links, hashed approved-collector PINs, safe collector listing. |
+| B3.2 | `20261123020000_predrive_child_guardian_collector_lifecycle.sql` plus `20261123025000_predrive_temporary_collector_lifecycle.sql` | Child creation, admin-controlled guardian links, approved and temporary collectors, hashed PINs, expiry, lockout and safe listing. |
 | B3.2 extension | `20261123025000_predrive_temporary_collector_lifecycle.sql` | Expiring, single-use temporary collectors; hashed PINs; three-failure/15-minute lockout; no direct table grants. |
 | B3.3 | `20261123030000_predrive_handover_and_attendance_logic.sql` | Idempotent child boarding/absence, supervisor-only handover, PIN lockout and immutable trip events. |
 | B3.4 | `20261123040000_predrive_trip_lifecycle_and_gps.sql` | Supervisor trip start/end, active-trip GPS, GPS idempotency, current-position removal at trip end, automatic unaccounted-child incidents and alerts. |
-| B3.5 | `20261123050000_predrive_safety_and_emergency_logic.sql` | Incidents, SOS, delay reports, vehicle checks, alert acknowledgement, incident and SOS resolution. |
+| B3.5 | `20261123050000_predrive_safety_and_emergency_logic.sql` | Incidents, SOS, delay reports, vehicle checks, alert acknowledgement, incident and SOS resolution; automatic incidents on failed vehicle checks. |
 | B3.6 | `20261123060000_predrive_geofencing_and_guardian_arrival.sql` | Guardian 500/1,000/2,000 m radius, child route-stop assignments, ETA calculation, deduplicated geofence alerts. |
-| B3.7 | `20261123070000_predrive_finance_lifecycle.sql` | Idempotent pending payment intents, service-role-only payment/refund settlement, invoice balance updates and receipt creation. |
+| B3.7 | `20261123070000_predrive_finance_lifecycle.sql` | Invoice create/issue/void, idempotent pending payment intents, bank-transfer submission/review, service-role-only settlement/refunds, invoice balance updates and receipt creation. |
 | B3.8 | `20261123080000_predrive_privacy_bulk_and_admin_operations.sql` | Consent grant/withdrawal history, account/child deletion and export requests, review workflow, bulk child import payload, route reassignment/reordering and scheduled-trip cancellation. |
 
 A catalog acceptance suite is at `supabase/tests/business_logic/b3_business_logic_acceptance.sql`. It checks function signatures, SECURITY DEFINER search paths, RLS, table grants and privileged settlement/geofence grants. It is not a substitute for authenticated multi-tenant runtime tests.
