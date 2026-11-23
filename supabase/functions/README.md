@@ -178,3 +178,13 @@ B4.7.5 verification: GitHub Actions run [45158947154](https://github.com/tjm650/
 - It removes private export objects for completed, non-held data-export requests older than seven days. It leaves the deletion-request/audit metadata in place.
 - It does not delete invoices, payments, refunds, receipts, incidents, alerts, trip records, consent records, audit records, child records, profiles, memberships or Auth users.
 - Each category is bounded per run. If a category fails, the function returns a safe error rather than continuing with an unbounded destructive operation. No retention schedule is installed by source creation.
+
+
+## Controlled privacy withdrawal (B4.8.3)
+
+- `process-approved-deletions` is POST-only and protected by `CRON_SECRET`. It processes only reviewed `account` and `child_record` requests already in `processing` with no retention hold.
+- Child requests use the service-role-only `execute_approved_deletion_request(school_id, request_id)` RPC. The RPC is transactional, locks the request and child row, and refuses unreviewed, completed or held requests.
+- If a child has an active trip or an unresolved incident, the RPC places a retention hold and changes no child data.
+- Otherwise it marks the child `withdrawn` and deactivates guardian links, approved collectors, temporary collectors and route assignments. It preserves invoices, payments, refunds, receipts, consent history, incidents, alerts, trip/attendance history, GPS retention policy and audit records.
+- Account-wide deletion requests are automatically held for coordinated review across all linked schools and the Auth lifecycle. This worker never bans or deletes Auth users and never disables memberships in unrelated schools.
+- The migration adds bounded worker/retention indexes and grants the withdrawal RPC only to `service_role`. Apply the migration only after explicit approval; source presence is not evidence that the remote function exists.
