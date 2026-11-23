@@ -1,3 +1,8 @@
 #:schema https://supabase.com/schemas/config/v1.json
 
 project_id = "predrive"
+
+[functions.paynow-webhook]
+# Paynow authenticates callbacks with its SHA-512 integration-key hash.
+# The function verifies this itself; no Supabase user JWT is available.
+verify_jwt = false
