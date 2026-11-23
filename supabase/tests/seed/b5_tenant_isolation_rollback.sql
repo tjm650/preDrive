@@ -53,6 +53,14 @@ begin
 
   insert into public.school_memberships (school_id, user_id, role, active)
   values (v_other_school_id, v_guardian_id, 'guardian', true);
+
+  insert into public.guardian_children (
+    school_id, guardian_user_id, child_id, relationship, primary_contact, active
+  ) values (
+    v_other_school_id, v_guardian_id,
+    '20000000-0000-4000-8000-000000000201',
+    'parent', true, true
+  );
 end;
 $$;
 
