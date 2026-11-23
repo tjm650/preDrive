@@ -267,15 +267,15 @@ B4.8 export-lease acceptance: the lease columns, queue index, SECURITY DEFINER f
 `supabase/migrations/20261123122938_predrive_privacy_export_path_constraint_fix.sql` replaces the over-escaped export object-path constraint introduced with the lease migration. The corrected expression accepts the exact school/request/lease UUID `.json` path and rejects malformed suffixes. Remote PostgreSQL verification and the B4.8 privacy acceptance SQL both passed. The development migration ledger contains 36 versions.
 
 
-## 20261123131500 — predrive_greenfield_demo_history_writer
+## 20261123131500 — predrive_greenfield_demo_history_writer — applied
 
+- Migration source file: `supabase/migrations/20261123131500_predrive_greenfield_demo_history_writer.sql`.
+- Supabase recorded the remote migration as version `20261123133938` (`predrive_greenfield_demo_history_writer`).
 - Adds `public.seed_greenfield_demo_history()`, a SECURITY DEFINER routine with an empty search path.
 - EXECUTE is revoked from public, anon and authenticated; only service_role may call it.
 - Requires the fixed Greenfield school ID to exist with `is_demo=true` and active status.
 - Requires completed B5.1–B5.3 fixtures before it can run.
 - Creates deterministic 20-weekday trip history, synthetic attendance/handover events, USD invoices, simulated EcoCash payment/receipt records, two resolved incidents and four delay reports.
 - Does not contact Paynow, EcoCash, CBZ or CABS; does not send notifications; does not create live bus positions.
-- Migration file: `supabase/migrations/20261123131500_predrive_greenfield_demo_history_writer.sql`.
 - Companion runner: `scripts/seed-greenfield-history.ts`.
-- Read-only data acceptance: `supabase/tests/seed/b5_demo_history_acceptance.sql`.
-- This migration is source-only and has **not** been applied remotely. Explicit approval is required before application and seeding.
+- Read-only catalog acceptance `supabase/tests/seed/b5_demo_history_writer_catalog_acceptance.sql` passed. Data acceptance `supabase/tests/seed/b5_demo_history_acceptance.sql` remains pending until history is seeded.
