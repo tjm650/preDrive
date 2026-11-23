@@ -501,3 +501,26 @@ deno run --allow-env --allow-net scripts/seed-auth-users.ts
 Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and (for each account that does not already exist) `PREDRIVE_DEMO_ADMIN_PASSWORD`, `PREDRIVE_DEMO_GUARDIAN_PASSWORD`, `PREDRIVE_DEMO_SUPERVISOR_PASSWORD`, `PREDRIVE_DEMO_DRIVER_PASSWORD`, `PREDRIVE_DEMO_TEACHER_PASSWORD`. Set them in the execution environment or a trusted secret manager; never commit them, paste them into chat, or expose them to browser/mobile builds.
 
 **Safety boundary:** the script has not been run. No Auth users, profiles, memberships or staff rows were created. The remote development database remains unchanged. Existing user passwords are never reset on rerun. If provisioning stops partway due to a network/database failure, rerun after resolving the cause; the marker and conflict checks allow safe continuation without deleting users.
+
+## B5.3.1 — Deterministic child and transport fixture definitions (source complete; database provisioning pending)
+
+- [x] Re-read the current root `BRIEF.md` and verify the live child, class, route, route-stop and route-assignment schema/RPC contract.
+- [x] Add `scripts/demo-child-fixtures.ts` with 64 deterministic fictional child records.
+- [x] Distribute records across Sunbeams (22), Little Stars (21) and Explorers (21).
+- [x] Give every child a canonical Greenfield route and one of that route's five seeded stops.
+- [x] Make the first two records Tendai Moyo and Tadiwa Moyo for Chipo Moyo's guardian demo.
+- [x] Use plausible age-band birth years and Zimbabwean Shona/Ndebele/mixed name patterns; these are synthetic identities, not real pupils.
+- [x] Add six Deno fixture-integrity tests for count, class distribution, unique identity tuples, route/stop pairing, Chipo's two children and tenant/class IDs.
+- [x] Add fixture source and tests to the Supabase Deno CI workflow.
+- [ ] Run CI and verify all fixture tests pass before building the authenticated provisioning runner.
+- [ ] Add an admin-JWT runner that calls `create_child`, `assign_child_route_stop`, `link_guardian_to_child` and `create_approved_collector`; never bypass the database's admin and guardian authorization checks.
+- [ ] Provision one to three collectors per child using an environment-supplied demo PIN; only the database RPC may hash/store it.
+- [ ] Complete guardian identities and links for all 64 children. The brief's "one demo account per role" means the single Chipo guardian login is the showcased guardian; supporting guardian identities for other families must be treated as non-showcase fixture accounts, not additional public demo entry points.
+- [ ] Resolve full staffing fixture counts (3 supervisors, 3 drivers, 6 teachers) without sharing one Auth identity across multiple staff records or weakening the staff uniqueness constraints.
+- [ ] Add school-admin route schedules and staff assignments after the complete staff fixture exists.
+- [ ] Add typed road-path geometry only after an approved schema/API contract; current route records contain stop points but no route-line geometry column.
+- [ ] Run read-only acceptance SQL and repeat the authenticated seed to verify idempotency without duplicate children, links, collectors or route assignments.
+
+**Important idempotency rule:** `assign_child_route_stop` deactivates any current assignment and inserts a new row. The runner must compare the existing active route/stop before invoking it; it must not call the RPC unconditionally on each seed run.
+
+**Safety boundary:** fixture source and CI wiring only. No remote seed, Auth user, child, guardian link, collector, staff row, route assignment, PIN hash, trip or finance record was created. No remote schema changes were made.
