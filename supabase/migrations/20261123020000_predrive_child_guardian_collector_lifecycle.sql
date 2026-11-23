@@ -142,8 +142,8 @@ begin
     raise exception using errcode = '42501', message = 'FORBIDDEN';
   end if;
   if p_full_name is null or char_length(btrim(p_full_name)) not between 2 and 160
-     or p_phone !~ '^\+263[0-9]{9}
-     or p_pin is null or p_pin !~ '^[0-9]{4,8} then
+     or p_phone is null or p_phone !~ '^\+263[0-9]{9}$'
+     or p_pin is null or p_pin !~ '^[0-9]{4,8}$'
     raise exception using errcode = '22023', message = 'VALIDATION';
   end if;
 
