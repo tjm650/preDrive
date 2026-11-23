@@ -71,7 +71,18 @@ export function resolveCors(
 
 export function applyCors(response: Response, cors: CorsDecision): Response {
   const headers = new Headers(response.headers);
-  cors.headers.forEach((value, key) => headers.set(key, value));
+  cors.headers.forEach((value, key) => {
+    if (key.toLowerCase() !== "vary") {
+      headers.set(key, value);
+    }
+  });
+
+  const existingVary = headers.get("Vary");
+  const varyValues = new Set(
+    (existingVary ?? "").split(",").map((value) => value.trim()).filter(Boolean),
+  );
+  varyValues.add("Origin");
+  headers.set("Vary", [...varyValues].join(", "));
 
   if (!headers.has("Cache-Control")) {
     headers.set("Cache-Control", "no-store");
