@@ -57,6 +57,7 @@ begin
   where e.school_id = p_school_id and e.idempotency_key = p_idempotency_key;
   if found then
     if v_existing_event.trip_id = p_trip_id
+       and v_existing_event.occurred_at = p_recorded_at
        and v_existing_event.event_type = case when p_status = 'absent'::public.trip_child_status
          then 'child_marked_absent' else 'child_boarded' end
        and exists (
