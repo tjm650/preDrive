@@ -310,14 +310,294 @@ begin
 end;
 $function$;
 
+create or replace function public.create_invoice(
+  p_school_id uuid,
+  p_child_id uuid,
+  p_guardian_user_id uuid,
+  p_invoice_number text,
+  p_currency public.currency_code,
+  p_due_date date,
+  p_lines jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_invoice_id uuid;
+  v_line jsonb;
+  v_description text;
+  v_quantity numeric(12,3);
+  v_unit_amount bigint;
+  v_line_total bigint;
+  v_fee_item_id uuid;
+  v_subtotal bigint := 0;
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+  if not private.has_role(p_school_id, 'school_admin'::public.user_role) then
+    raise exception using errcode = '42501', message = 'FORBIDDEN';
+  end if;
+  if p_invoice_number is null or char_length(btrim(p_invoice_number)) not between 3 and 64
+     or p_currency is null or p_due_date is null
+     or jsonb_typeof(p_lines) <> 'array'
+     or jsonb_array_length(p_lines) < 1
+     or jsonb_array_length(p_lines) > 50 then
+    raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+  if not exists (
+    select 1 from public.guardian_children gc
+    where gc.school_id = p_school_id and gc.child_id = p_child_id
+      and gc.guardian_user_id = p_guardian_user_id and gc.active
+  ) then
+    raise exception using errcode = '23503', message = 'GUARDIAN_CHILD_LINK_REQUIRED';
+  end if;
+
+  for v_line in select value from jsonb_array_elements(p_lines)
+  loop
+    v_description := btrim(v_line ->> 'description');
+    v_quantity := (v_line ->> 'quantity')::numeric;
+    v_unit_amount := (v_line ->> 'unitAmountMinor')::bigint;
+    v_fee_item_id := nullif(v_line ->> 'feeItemId', '')::uuid;
+
+    if v_description is null or char_length(v_description) not between 2 and 240
+       or v_quantity is null or v_quantity <= 0
+       or v_unit_amount is null or v_unit_amount < 0 then
+      raise exception using errcode = '22023', message = 'INVOICE_LINE_VALIDATION';
+    end if;
+
+    if v_fee_item_id is not null and not exists (
+      select 1 from public.fee_items fi
+      where fi.id = v_fee_item_id and fi.school_id = p_school_id
+        and fi.currency = p_currency and fi.active
+    ) then
+      raise exception using errcode = '23503', message = 'FEE_ITEM_NOT_FOUND_OR_CURRENCY_MISMATCH';
+    end if;
+
+    v_line_total := round(v_quantity * v_unit_amount)::bigint;
+    v_subtotal := v_subtotal + v_line_total;
+  end loop;
+
+  insert into public.invoices (
+    school_id, child_id, guardian_user_id, invoice_number, currency,
+    subtotal_minor, credit_minor, total_minor, paid_minor, balance_minor,
+    status, due_date, created_by
+  ) values (
+    p_school_id, p_child_id, p_guardian_user_id, btrim(p_invoice_number), p_currency,
+    v_subtotal, 0, v_subtotal, 0, v_subtotal,
+    'draft'::public.invoice_status, p_due_date, auth.uid()
+  ) returning id into v_invoice_id;
+
+  for v_line in select value from jsonb_array_elements(p_lines)
+  loop
+    v_description := btrim(v_line ->> 'description');
+    v_quantity := (v_line ->> 'quantity')::numeric;
+    v_unit_amount := (v_line ->> 'unitAmountMinor')::bigint;
+    v_fee_item_id := nullif(v_line ->> 'feeItemId', '')::uuid;
+    v_line_total := round(v_quantity * v_unit_amount)::bigint;
+
+    insert into public.invoice_lines (
+      school_id, invoice_id, fee_item_id, description,
+      quantity, unit_amount_minor, line_total_minor, currency
+    ) values (
+      p_school_id, v_invoice_id, v_fee_item_id, v_description,
+      v_quantity, v_unit_amount, v_line_total, p_currency
+    );
+  end loop;
+
+  return v_invoice_id;
+end;
+$function$;
+
+create or replace function public.issue_invoice(
+  p_school_id uuid,
+  p_invoice_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+  if not private.has_role(p_school_id, 'school_admin'::public.user_role) then
+    raise exception using errcode = '42501', message = 'FORBIDDEN';
+  end if;
+
+  update public.invoices
+  set status = 'issued'::public.invoice_status,
+      issued_at = now(),
+      updated_at = now()
+  where id = p_invoice_id and school_id = p_school_id
+    and status = 'draft'::public.invoice_status
+    and total_minor > 0;
+
+  if not found then
+    raise exception using errcode = '40001', message = 'INVOICE_NOT_ISSUABLE';
+  end if;
+end;
+$function$;
+
+create or replace function public.void_invoice(
+  p_school_id uuid,
+  p_invoice_id uuid,
+  p_reason text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+  if not private.has_role(p_school_id, 'school_admin'::public.user_role) then
+    raise exception using errcode = '42501', message = 'FORBIDDEN';
+  end if;
+  if p_reason is null or char_length(btrim(p_reason)) not between 2 and 500 then
+    raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+
+  update public.invoices
+  set status = 'void'::public.invoice_status,
+      voided_at = now(),
+      notes = left(coalesce(notes || E'\n', '') || 'Voided: ' || btrim(p_reason), 2000),
+      updated_at = now()
+  where id = p_invoice_id and school_id = p_school_id
+    and status in ('draft'::public.invoice_status, 'issued'::public.invoice_status, 'overdue'::public.invoice_status)
+    and paid_minor = 0;
+
+  if not found then
+    raise exception using errcode = '40001', message = 'INVOICE_NOT_VOIDABLE';
+  end if;
+end;
+$function$;
+
+create or replace function public.submit_bank_transfer(
+  p_school_id uuid,
+  p_payment_id uuid,
+  p_depositor_name text,
+  p_bank_reference text,
+  p_proof_storage_path text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_payment public.payments%rowtype;
+  v_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+  if p_depositor_name is null or char_length(btrim(p_depositor_name)) not between 2 and 160
+     or p_bank_reference is null or char_length(btrim(p_bank_reference)) not between 3 and 120
+     or (p_proof_storage_path is not null and (
+       char_length(p_proof_storage_path) > 512
+       or left(p_proof_storage_path, 1) = '/'
+       or position('..' in p_proof_storage_path) > 0
+       or left(p_proof_storage_path, length(p_school_id::text || '/' || auth.uid()::text || '/'))
+          <> p_school_id::text || '/' || auth.uid()::text || '/'
+     )) then
+    raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+
+  select p.* into v_payment
+  from public.payments p
+  join public.invoices i on i.id = p.invoice_id and i.school_id = p.school_id
+  where p.id = p_payment_id and p.school_id = p_school_id
+    and p.created_by = auth.uid()
+    and p.method in ('cbz_transfer'::public.payment_method, 'cabs_transfer'::public.payment_method)
+    and p.provider = 'manual_bank'
+    and p.status = 'pending'::public.payment_status
+    and i.guardian_user_id = auth.uid()
+  for update of p;
+  if not found then
+    raise exception using errcode = 'P0002', message = 'PENDING_BANK_PAYMENT_NOT_FOUND';
+  end if;
+
+  insert into public.bank_transfer_submissions (
+    school_id, payment_id, bank, depositor_name, bank_reference, proof_storage_path
+  ) values (
+    p_school_id, p_payment_id, v_payment.method, btrim(p_depositor_name),
+    btrim(p_bank_reference), p_proof_storage_path
+  ) returning id into v_id;
+
+  return v_id;
+end;
+$function$;
+
+create or replace function public.review_bank_transfer(
+  p_school_id uuid,
+  p_submission_id uuid,
+  p_decision text,
+  p_review_note text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_payment_id uuid;
+  v_bank_reference text;
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+  if not private.has_role(p_school_id, 'school_admin'::public.user_role) then
+    raise exception using errcode = '42501', message = 'FORBIDDEN';
+  end if;
+  if p_decision not in ('verified', 'rejected') then
+    raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+
+  update public.bank_transfer_submissions
+  set status = p_decision,
+      reviewed_by = auth.uid(),
+      reviewed_at = now(),
+      review_note = nullif(btrim(p_review_note), ''),
+      updated_at = now()
+  where id = p_submission_id and school_id = p_school_id
+    and status = 'pending'::public.bank_transfer_status
+  returning payment_id, bank_reference
+  into v_payment_id, v_bank_reference;
+
+  if not found then
+    raise exception using errcode = '40001', message = 'BANK_TRANSFER_NOT_REVIEWABLE';
+  end if;
+
+  if p_decision = 'verified' then
+    perform public.apply_payment_result(v_payment_id, true, v_bank_reference);
+  end if;
+end;
+$function$;
+
 revoke all on function public.initiate_payment(uuid, uuid, bigint, public.currency_code, public.payment_method, text) from public, anon;
 revoke all on function public.apply_payment_result(uuid, boolean, text) from public, anon, authenticated;
 revoke all on function public.request_refund(uuid, uuid, bigint, text) from public, anon;
 revoke all on function public.apply_refund_result(uuid, boolean, text) from public, anon, authenticated;
+revoke all on function public.create_invoice(uuid,uuid,uuid,text,public.currency_code,date,jsonb) from public, anon;
+revoke all on function public.issue_invoice(uuid,uuid) from public, anon;
+revoke all on function public.void_invoice(uuid,uuid,text) from public, anon;
+revoke all on function public.submit_bank_transfer(uuid,uuid,text,text,text) from public, anon;
+revoke all on function public.review_bank_transfer(uuid,uuid,text,text) from public, anon;
 grant execute on function public.initiate_payment(uuid, uuid, bigint, public.currency_code, public.payment_method, text) to authenticated;
 grant execute on function public.request_refund(uuid, uuid, bigint, text) to authenticated;
 grant execute on function public.apply_payment_result(uuid, boolean, text) to service_role;
 grant execute on function public.apply_refund_result(uuid, boolean, text) to service_role;
+grant execute on function public.create_invoice(uuid,uuid,uuid,text,public.currency_code,date,jsonb) to authenticated;
+grant execute on function public.issue_invoice(uuid,uuid) to authenticated;
+grant execute on function public.void_invoice(uuid,uuid,text) to authenticated;
+grant execute on function public.submit_bank_transfer(uuid,uuid,text,text,text) to authenticated;
+grant execute on function public.review_bank_transfer(uuid,uuid,text,text) to authenticated;
 
 comment on function public.apply_payment_result(uuid, boolean, text) is
   'Trusted settlement only. Caller must be a B4 service-role Edge Function after webhook signature verification.';
