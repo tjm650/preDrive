@@ -112,16 +112,6 @@ export async function buildPersonalDataExport(
       .range(from, to)
   );
 
-  const childConsents = childIds.length
-    ? await readAllRows((from, to) =>
-      client.from("consent_records")
-        .select("id,school_id,subject_user_id,child_id,purpose,policy_version,status,captured_by,captured_at,effective_at,evidence,created_at")
-        .in("child_id", childIds)
-        .order("id", { ascending: true })
-        .range(from, to)
-    )
-    : [];
-
   const invoices = await readAllRows((from, to) =>
     client.from("invoices")
       .select("id,school_id,child_id,guardian_user_id,invoice_number,currency,subtotal_minor,credit_minor,total_minor,paid_minor,balance_minor,status,due_date,issued_at,paid_at,voided_at,notes,created_at,updated_at")
@@ -178,7 +168,7 @@ export async function buildPersonalDataExport(
     guardianChildLinks: guardianLinks,
     children,
     approvedCollectors: collectors,
-    consentRecords: [...ownConsents, ...childConsents],
+    consentRecords: ownConsents,
     invoices,
     payments,
     tripChildAttendance: tripChildren,
