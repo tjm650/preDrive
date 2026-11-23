@@ -252,3 +252,6 @@ The migration is committed on `main` but has **not** been applied to the develop
 ## B4.8 export concurrency lease migration — source authored, remote approval pending
 
 `supabase/migrations/20261123133000_predrive_privacy_export_leases.sql` adds a paired lease ID/expiry to `deletion_requests`, an export-queue index, and service-role-only RPCs to claim, complete and release export requests. Claiming uses row locks with `SKIP LOCKED`; completion requires the same unexpired lease. A worker that loses its lease cannot remove a newer worker's export artifact. No remote migration has been applied for this lease change.
+
+
+The export-lease migration also stores the exact lease-specific object path on completion. The authenticated download endpoint reads only that recorded path, and retention validates/removes the stored path. This avoids shared-path overwrite races between an expired worker and a replacement worker.
