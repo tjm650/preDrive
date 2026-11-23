@@ -1,134 +1,67 @@
--- B5.3 Greenfield household, transport and collector acceptance.
--- Read-only: run only after the authenticated operational seed has completed.
--- No PIN hashes, collector PINs or Auth credentials are selected.
+import { GREENFIELD_CHILDREN } from "./demo-child-fixtures.ts";
+import {
+  buildGreenfieldHistoricalTrips,
+  buildGreenfieldInvoicePlans,
+  GREENFIELD_DELAY_REPORTS,
+  GREENFIELD_HISTORY_WINDOW,
+  GREENFIELD_RESOLVED_INCIDENTS,
+} from "./demo-history-fixtures.ts";
 
-do $$
-declare
-  v_school_id constant uuid := '10000000-0000-4000-8000-000000000001';
-begin
-  if (select count(*) from public.children where school_id = v_school_id and status = 'active') <> 64 then
-    raise exception 'B5.3: expected exactly 64 active Greenfield children';
-  end if;
-
-  if exists (
-    select 1 from public.class_groups g
-    left join public.children c on c.school_id = g.school_id and c.class_group_id = g.id and c.status = 'active'
-    where g.school_id = v_school_id
-    group by g.id, g.name
-    having
-      (g.name = 'Sunbeams' and count(c.id) <> 22) or
-      (g.name = 'Little Stars' and count(c.id) <> 21) or
-      (g.name = 'Explorers' and count(c.id) <> 21)
-  ) then
-    raise exception 'B5.3: child class distribution must be 22/21/21';
-  end if;
-
+Deno.test("Greenfield history spans four complete school weeks", () => {
+  const trips = buildGreenfieldHistoricalTrips();
+  const weekdays = new Set(trips.map((trip) => trip.serviceDate));
   if (
-    select count(*)
-    from public.guardian_children gc
-    join public.children c on c.id = gc.child_id and c.school_id = gc.school_id
-    where gc.school_id = v_school_id and gc.active and c.status = 'active'
-  ) <> 64 then
-    raise exception 'B5.3: expected one active guardian link for every active child';
-  end if;
+    weekdays.size !== GREENFIELD_HISTORY_WINDOW.weekdays ||
+    trips.length !== GREENFIELD_HISTORY_WINDOW.trips ||
+    [...weekdays].some((date) => date < GREENFIELD_HISTORY_WINDOW.startDate || date > GREENFIELD_HISTORY_WINDOW.endDate)
+  ) throw new Error("Expected 20 weekdays and 120 historical trips.");
+});
 
+Deno.test("historical trips cover both directions on all three routes", () => {
+  const trips = buildGreenfieldHistoricalTrips();
+  for (const route of ["A", "B", "C"]) {
+    for (const direction of ["to_school", "from_school"]) {
+      if (trips.filter((trip) => trip.routeCode === route && trip.direction === direction).length !== 20) {
+        throw new Error("Every route and direction must have 20 historical trips.");
+      }
+    }
+  }
+});
+
+Deno.test("historical trip children always match their route", () => {
+  for (const trip of buildGreenfieldHistoricalTrips()) {
+    if (
+      trip.childIndices.length < 18 ||
+      trip.childIndices.some((index) => GREENFIELD_CHILDREN[index]?.routeCode !== trip.routeCode)
+    ) throw new Error("Historical trip contains a child assigned to another route.");
+  }
+});
+
+Deno.test("invoice fixture totals 16 paid, 16 partial and 32 overdue", () => {
+  const plans = buildGreenfieldInvoicePlans();
+  const count = (status: string) => plans.filter((plan) => plan.expectedStatus === status).length;
   if (
-    select count(distinct gc.guardian_user_id)
-    from public.guardian_children gc
-    where gc.school_id = v_school_id and gc.active
-  ) <> 32 then
-    raise exception 'B5.3: expected 32 active guardian household identities';
-  end if;
+    plans.length !== 64 ||
+    count("paid") !== 16 ||
+    count("partially_paid") !== 16 ||
+    count("overdue") !== 32 ||
+    plans.some((plan) => plan.totalMinor !== 55500 || plan.currency !== "USD")
+  ) throw new Error("Invoice plan does not match the canonical finance distribution.");
+});
 
+Deno.test("invoice fixtures are linked to the canonical household guardian", () => {
+  const plans = buildGreenfieldInvoicePlans();
   if (
-    select count(*)
-    from public.guardian_children gc
-    join public.profiles p on p.id = gc.guardian_user_id
-    join public.children c on c.id = gc.child_id and c.school_id = gc.school_id
-    where gc.school_id = v_school_id
-      and lower(p.email) = 'chipo.moyo@greenfield.predrive-demo.invalid'
-      and c.first_name in ('Tendai', 'Tadiwa')
-      and c.last_name = 'Moyo'
-      and gc.active
-      and gc.relationship = 'parent'
-      and gc.primary_contact
-  ) <> 2 then
-    raise exception 'B5.3: Chipo Moyo must be the primary guardian for Tendai and Tadiwa Moyo';
-  end if;
+    plans[0].guardianEmail !== "chipo.moyo@greenfield.predrive-demo.invalid" ||
+    plans[1].guardianEmail !== "chipo.moyo@greenfield.predrive-demo.invalid" ||
+    new Set(plans.map((plan) => plan.invoiceNumber)).size !== 64
+  ) throw new Error("Invoice guardian or invoice-number mapping is not canonical.");
+});
 
-  if exists (
-    select 1
-    from public.children c
-    left join public.child_route_assignments a
-      on a.school_id = c.school_id and a.child_id = c.id and a.active
-    left join public.route_stops s
-      on s.id = a.route_stop_id and s.school_id = a.school_id and s.route_id = a.route_id and s.active
-    where c.school_id = v_school_id and c.status = 'active'
-    group by c.id
-    having count(a.id) <> 1 or count(s.id) <> 1
-  ) then
-    raise exception 'B5.3: every active child must have exactly one active, valid route-stop assignment';
-  end if;
-
+Deno.test("history includes two resolved incidents and four delay reports", () => {
   if (
-    select count(*)
-    from public.approved_collectors ac
-    join public.children c on c.id = ac.child_id and c.school_id = ac.school_id
-    where ac.school_id = v_school_id and ac.active and c.status = 'active'
-  ) <> 128 then
-    raise exception 'B5.3: expected exactly two active approved collectors per child';
-  end if;
-
-  if exists (
-    select 1
-    from public.approved_collectors ac
-    where ac.school_id = v_school_id
-      and (char_length(ac.pin_hash) not between 40 and 100 or ac.pin_hash ~ '^[0-9]{4,8}$')
-  ) then
-    raise exception 'B5.3: collector PIN storage must contain only password hashes';
-  end if;
-
-  if (
-    select count(*)
-    from public.staff_members s
-    where s.school_id = v_school_id and s.active and s.role = 'supervisor'
-  ) <> 3 or (
-    select count(*)
-    from public.staff_members s
-    where s.school_id = v_school_id and s.active and s.role = 'driver'
-  ) <> 3 or (
-    select count(*)
-    from public.staff_members s
-    where s.school_id = v_school_id and s.active and s.role = 'teacher'
-  ) <> 6 then
-    raise exception 'B5.3: expected 3 supervisors, 3 drivers and 6 teachers';
-  end if;
-
-  if (
-    select count(*)
-    from public.route_schedules rs
-    join public.staff_members d on d.id = rs.driver_id and d.school_id = rs.school_id and d.role = 'driver' and d.active
-    join public.staff_members s on s.id = rs.supervisor_id and s.school_id = rs.school_id and s.role = 'supervisor' and s.active
-    where rs.school_id = v_school_id and rs.active
-  ) <> 6 then
-    raise exception 'B5.3: expected six active weekday schedules with valid driver and supervisor assignments';
-  end if;
-
-  if exists (
-    select 1
-    from public.school_memberships m
-    join public.profiles p on p.id = m.user_id
-    where lower(p.email) like '%@greenfield.predrive-demo.invalid'
-      and m.school_id <> v_school_id
-  ) then
-    raise exception 'B5.3: a reserved Greenfield fixture identity is linked to another school';
-  end if;
-end;
-$$;
-
-select
-  (select count(*) from public.children where school_id = '10000000-0000-4000-8000-000000000001') as children,
-  (select count(distinct guardian_user_id) from public.guardian_children where school_id = '10000000-0000-4000-8000-000000000001' and active) as guardian_households,
-  (select count(*) from public.approved_collectors where school_id = '10000000-0000-4000-8000-000000000001' and active) as approved_collectors,
-  (select count(*) from public.staff_members where school_id = '10000000-0000-4000-8000-000000000001' and active) as staff_members,
-  (select count(*) from public.route_schedules where school_id = '10000000-0000-4000-8000-000000000001' and active) as route_schedules;
+    GREENFIELD_RESOLVED_INCIDENTS.length !== 2 ||
+    GREENFIELD_DELAY_REPORTS.length !== 4 ||
+    GREENFIELD_RESOLVED_INCIDENTS.some((incident) => incident.resolvedAt <= incident.occurredAt)
+  ) throw new Error("Historical safety fixture counts or timestamps are invalid.");
+});
