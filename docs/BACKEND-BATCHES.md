@@ -9,12 +9,12 @@ This register tracks the backend implementation plan. B0 is planning/audit work 
 | B0 | Architecture and initial audit (planning only) | — | Complete | 0 |
 | B1 | Database foundation and schema | 6 | 5 | 1 |
 | B2 | Security and RLS | 6 | 6 | 0 |
-| B3 | Database business logic | 8 | 0 | 8 |
+| B3 | Database business logic | 8 | 8 | 0 |
 | B4 | Edge Functions and automation | 8 | 0 | 8 |
 | B5 | Demo data and seed scripts | 4 | 0 | 4 |
 | B6 | Frontend integration | 6 | 0 | 6 |
 | B7 | QA, deployment and release | 8 | 0 | 8 |
-| **Total** | | **46** | **11** | **35** |
+| **Total** | | **46** | **19** | **27** |
 
 ## B1 — Database foundation and schema
 
@@ -30,12 +30,12 @@ B1.6 security decision update (2026-11-22): the pg_net ACL/ownership audit is co
 B1.6 acceptance checkpoint:
 - [ ] Complete full migration replay on a separate empty disposable hosted Supabase project (a preview branch cloned from the populated dev project is not a clean-room replay).
 - [x] Add read-only clean-room preflight at `supabase/verification/clean-room-preflight.sql`; it checks required platform objects, empty cron/Vault/Auth/migration-ledger state, absence of existing non-extension application relations/functions and custom PostgreSQL types (base, enum, composite, domain, range, multirange and pseudo types; excluding generated array and relation row types) in `public` and `private`, absence of namespace-owned objects in `private` that `DROP SCHEMA ... CASCADE` could remove, installed `pg_cron` and `supabase_vault` extension records (not just matching object names), the reset migration's required privileges, and migration execution as `postgres` (not a member of `supabase_admin`) so the repository's default-privilege protections apply. It has not been executed against a clean hosted project.
-- [ ] All 42 application tables have RLS enabled and the tenant-column audit passes. Current live state: 42 enabled, none FORCE RLS; 37 have no policies by deliberate deny-by-default staging.
+- [ ] All 42 application tables have RLS enabled and the tenant-column audit passes. Current live state after B3: 44 enabled, none FORCE RLS; 20 have no policies by deliberate deny-by-default staging.
 - [ ] Remote-vs-replay comparison covers columns, types, defaults, constraints, indexes, enums, functions, triggers, RLS/policies, extensions, publications, cron, Storage and Auth integration objects.
 - [ ] Verify the clean target's Data API exposed-schema allowlist and table exposure configuration: expose only the intended application schema(s), keep `private` and `net` unexposed, and verify minimum grants plus RLS. New public tables are no longer automatically exposed by default on Supabase. This must also be checked on the current development project before B1.6 sign-off; the live allowlist cannot be inferred from SQL catalog privileges or the current minimal `supabase/config.toml`.
 - [ ] Database lint/advisor review passes or every exception is documented and accepted. The `pg_net` platform ACL audit is documented: `supabase_admin` owns the extension and its PUBLIC grants; Supabase does not support changing these per-project grants, so no ACL/relocation workaround is permitted. The extension-in-public Security Advisor warning remains open as a platform exception; final acceptance still requires confirming `net` and `private` are absent from the live Data API exposed-schema allowlist. The 149 unused-index notices remain informational until representative workload testing.
 - [ ] Function, trigger, RLS policy, table/column grant, index and default-privilege inventories reconcile against the clean replay; current live state is documented in `BACKEND-SCHEMA.md`. Supabase-managed `supabase_admin` default ACLs in `public` are accepted as a documented platform exception: Supabase confirms they apply only to objects created by `supabase_admin` and cannot be changed by project roles. Current inventory found zero `supabase_admin`-owned public relations/routines; all 50 public relations are `postgres`-owned, and `postgres` defaults grant no table/sequence/function privileges to API roles. The clean-room preflight enforces migration execution as `postgres` and verifies it is not a member of `supabase_admin`. Re-audit after extensions, restores and platform upgrades.
-- [ ] Generated database types are regenerated from the verified clean-replay schema and typecheck. The current development project has been regenerated and its output matches the committed 93,685-byte `frontend/shared/types/database.types.ts` exactly. Workspace TypeScript checks now pass for shared, mobile and web on commit `1bc1ae2de67da2bcdb83ff8ba0dfb94f35baceea` ([GitHub Actions run](https://github.com/tjm650/preDrive/actions/runs/44921668805)); the first run exposed missing style keys in three mobile cards, which were corrected. Repeat type generation and typecheck against the verified clean replay before sign-off.
+- [ ] Generated database types are regenerated from the verified clean-replay schema and typecheck. The current development project has been regenerated after B3 and its output is committed in `frontend/shared/types/database.types.ts` (110,951 characters); workspace typecheck is pending CI. Workspace TypeScript checks now pass for shared, mobile and web on commit `1bc1ae2de67da2bcdb83ff8ba0dfb94f35baceea` ([GitHub Actions run](https://github.com/tjm650/preDrive/actions/runs/44921668805)); the first run exposed missing style keys in three mobile cards, which were corrected. Repeat type generation and typecheck against the verified clean replay before sign-off.
 - [ ] `docs/MIGRATIONS.md` and schema documentation reflect the verified workflow and state.
 
 ## B2 — Security and RLS (6 batches)
@@ -78,35 +78,47 @@ Acceptance limitations:
 
 Before implementing RPCs, follow the exact 30-method inventory in [`API-CONTRACT.md`](./API-CONTRACT.md), derived from `frontend/shared/lib/api/contract.ts` and its input types. Do not invent method names or payloads.
 
-## B3 implementation status — repository prepared, remote acceptance pending
+## B3 implementation status — applied to development; catalog acceptance passed
 
-Eight additive B3 migrations have been authored on `main`:
+Nine additive B3 migration files have been applied sequentially to the existing development project `rjsdhgbjvghjnuiilizm` on 2026-11-23. Supabase recorded remote versions `20261123033037` through `20261123033205`; the repository migration filenames remain the ordered source files listed below.
 
-| Sub-batch | Migration | Implemented database capabilities |
+| Sub-batch | Migration file(s) | Implemented database capabilities |
 |---|---|---|
 | B3.1 | `20261123010000_predrive_business_auth_lifecycle.sql` | School registration and invitation acceptance using `auth.uid()`; actor identity is not accepted from caller input. |
-| B3.2 | `20261123020000_predrive_child_guardian_collector_lifecycle.sql` plus `20261123025000_predrive_temporary_collector_lifecycle.sql` | Child creation, admin-controlled guardian links, approved and temporary collectors, hashed PINs, expiry, lockout and safe listing. |
-| B3.2 extension | `20261123025000_predrive_temporary_collector_lifecycle.sql` | Expiring, single-use temporary collectors; hashed PINs; three-failure/15-minute lockout; no direct table grants. |
-| B3.3 | `20261123030000_predrive_handover_and_attendance_logic.sql` | Idempotent child boarding/absence, supervisor-only handover, PIN lockout and immutable trip events. |
+| B3.2 | `20261123020000_predrive_child_guardian_collector_lifecycle.sql` and `20261123025000_predrive_temporary_collector_lifecycle.sql` | Child creation, admin-controlled guardian links, approved and temporary collectors, hashed PINs, expiry, lockout and safe listing. |
+| B3.3 | `20261123030000_predrive_handover_and_attendance_logic.sql` | Idempotent child boarding/absence, supervisor-only handover, PIN lockout and trip events. |
 | B3.4 | `20261123040000_predrive_trip_lifecycle_and_gps.sql` | Supervisor trip start/end, active-trip GPS, GPS idempotency, current-position removal at trip end, automatic unaccounted-child incidents and alerts. |
-| B3.5 | `20261123050000_predrive_safety_and_emergency_logic.sql` | Incidents, SOS, delay reports, vehicle checks, alert acknowledgement, incident and SOS resolution; automatic incidents on failed vehicle checks. |
-| B3.6 | `20261123060000_predrive_geofencing_and_guardian_arrival.sql` | Guardian 500/1,000/2,000 m radius, child route-stop assignments, ETA calculation, deduplicated geofence alerts. |
+| B3.5 | `20261123050000_predrive_safety_and_emergency_logic.sql` | Incidents, SOS, delay reports, vehicle checks, alert acknowledgement, incident and SOS resolution. |
+| B3.6 | `20261123060000_predrive_geofencing_and_guardian_arrival.sql` | Guardian 500/1,000/2,000 m radius, child route-stop assignments, ETA calculation and deduplicated geofence alerts. |
 | B3.7 | `20261123070000_predrive_finance_lifecycle.sql` | Invoice create/issue/void, idempotent pending payment intents, bank-transfer submission/review, service-role-only settlement/refunds, invoice balance updates and receipt creation. |
 | B3.8 | `20261123080000_predrive_privacy_bulk_and_admin_operations.sql` | Consent grant/withdrawal history, account/child deletion and export requests, review workflow, bulk child import payload, route reassignment/reordering and scheduled-trip cancellation. |
 
-A catalog acceptance suite is at `supabase/tests/business_logic/b3_business_logic_acceptance.sql`. It checks function signatures, SECURITY DEFINER search paths, RLS, table grants and privileged settlement/geofence grants. It is not a substitute for authenticated multi-tenant runtime tests.
+**Remote migration versions recorded by Supabase**
 
-**Important: B3 is not marked complete yet.** The migrations are committed but have not been applied to the remote development database. A read-only migration-ledger check on 2026-11-23 confirmed that the remote ledger still contains only the 18 B1/B2 versions. No remote schema or data was changed during B3 authoring.
+| Remote version | Migration name |
+|---|---|
+| 20261123033037 | `predrive_business_auth_lifecycle` |
+| 20261123033044 | `predrive_child_guardian_collector_lifecycle` |
+| 20261123033051 | `predrive_temporary_collector_lifecycle` |
+| 20261123033132 | `predrive_handover_and_attendance_logic` |
+| 20261123033140 | `predrive_trip_lifecycle_and_gps` |
+| 20261123033146 | `predrive_safety_and_emergency_logic` |
+| 20261123033152 | `predrive_geofencing_and_guardian_arrival` |
+| 20261123033159 | `predrive_finance_lifecycle` |
+| 20261123033205 | `predrive_privacy_bulk_and_admin_operations` |
 
-Acceptance still required before B3 can be closed:
-- Review and apply the nine B3 migration files in version order, after the user explicitly approves the exact remote operation.
-- Run the B3 catalog suite and authenticated runtime tests with real school-admin, guardian, supervisor and driver identities.
-- Verify three-failure lockout, temporary collector expiry/single use, active-trip GPS restrictions and offline duplicate handling.
-- Verify unaccounted-child alert/incident creation, geofence deduplication, ETA, alert/SOS resolution and vehicle-check failure.
-- Verify payment idempotency, invoice arithmetic, receipts and refund settlement using trusted service-role test calls only.
-- Regenerate `frontend/shared/types/database.types.ts` from the applied schema and run workspace typecheck.
+The committed catalog acceptance suite `supabase/tests/business_logic/b3_business_logic_acceptance.sql` ran against the remote database without SQL errors. It checks the 45 expected RPC signatures, SECURITY DEFINER empty search paths, RLS, table grants, privileged settlement/geofence grants and deferred route-stop uniqueness. A separate read-only catalog verification confirmed:
+- 45/45 expected B3 functions resolve; all are SECURITY DEFINER with empty `search_path`.
+- No B3 RPC is executable by `anon`; the four trusted-only operations (geofence evaluation, payment settlement, refund settlement and deletion completion) are not executable by `authenticated` and are executable by `service_role`.
+- Both new tables have `school_id` and RLS enabled. `temporary_collectors` has no direct authenticated table privileges; `child_route_assignments` is SELECT-only for authenticated and writes remain RPC-only.
+- The guardian notification-radius column and all three idempotency/deduplication indexes exist; route-stop order uniqueness is deferrable and initially deferred.
+- All 44 public application tables retain RLS. The remote migration ledger now contains 27 versions (12 B1, six B2 and nine B3).
 
-Known integration boundaries:
+The first B3.3 apply attempt stopped at a PL/pgSQL parse error after its idempotent index statement had been created. The expression was simplified in the committed migration, then B3.3 was successfully reapplied; the later migrations were not attempted until it succeeded. The final catalog acceptance and index checks passed.
+
+**B3 implementation is complete at the migration/catalog level.** It is not a full end-to-end acceptance of real user behavior: no Auth users or school data were seeded, and this catalog suite does not prove row visibility across two live schools. B5 must supply the real admin, guardian, supervisor, driver and teacher identities and multi-tenant runtime tests.
+
+Known integration and acceptance boundaries:
 - The current 30-method `PreDriveApi` contract remains unchanged. B3 RPCs that exceed it are backend capabilities for later B6 integration, not newly invented frontend methods.
 - B4 must supply signed-provider webhook verification before calling payment/refund settlement, push delivery for generated alerts, geofence scheduling, ETA refresh, deletion/export execution and retention automation.
 - CSV parsing belongs in a trusted import boundary; the database bulk function accepts validated JSON rows, not raw CSV text.
