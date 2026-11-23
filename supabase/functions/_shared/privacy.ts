@@ -9,8 +9,28 @@ export const DATA_EXPORT_SIGNED_URL_SECONDS = 60;
 export function dataExportObjectPath(
   schoolId: string,
   requestId: string,
+  leaseId: string,
 ): string {
-  return `${schoolId}/privacy/${requestId}.json`;
+  return schoolId + "/privacy/" + requestId + "/" + leaseId + ".json";
+}
+
+export function legacyDataExportObjectPath(
+  schoolId: string,
+  requestId: string,
+): string {
+  return schoolId + "/privacy/" + requestId + ".json";
+}
+
+export function isValidDataExportObjectPath(
+  schoolId: string,
+  requestId: string,
+  value: unknown,
+): value is string {
+  if (typeof value !== "string") return false;
+  const prefix = schoolId + "/privacy/" + requestId + "/";
+  if (!value.startsWith(prefix)) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.json$/i
+    .test(value.slice(prefix.length));
 }
 
 export function isValidDeletionRequestId(value: unknown): value is string {
