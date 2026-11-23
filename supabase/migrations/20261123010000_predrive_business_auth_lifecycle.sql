@@ -58,6 +58,7 @@ declare
   v_user_id uuid := auth.uid();
   v_email text;
   v_invitation public.school_invitations%rowtype;
+  v_existing_membership public.school_memberships%rowtype;
 begin
   if v_user_id is null then
     raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
@@ -84,10 +85,22 @@ begin
     raise exception using errcode = 'P0002', message = 'INVITATION_NOT_FOUND';
   end if;
 
-  insert into public.school_memberships (school_id, user_id, role, active)
-  values (v_invitation.school_id, v_user_id, v_invitation.role, true)
-  on conflict (school_id, user_id) do update
-    set role = excluded.role, active = true, updated_at = now();
+  select m.* into v_existing_membership
+  from public.school_memberships m
+  where m.school_id = v_invitation.school_id and m.user_id = v_user_id
+  for update;
+
+  if found then
+    if v_existing_membership.role <> v_invitation.role then
+      raise exception using errcode = '23505', message = 'MEMBERSHIP_ROLE_CONFLICT';
+    end if;
+    update public.school_memberships
+    set active = true, updated_at = now()
+    where id = v_existing_membership.id;
+  else
+    insert into public.school_memberships (school_id, user_id, role, active)
+    values (v_invitation.school_id, v_user_id, v_invitation.role, true);
+  end if;
 
   update public.school_invitations
   set status = 'accepted'::public.invitation_status,
