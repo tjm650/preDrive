@@ -278,7 +278,7 @@ begin
   if not private.has_role(p_school_id, 'school_admin'::public.user_role) then
     raise exception using errcode = '42501', message = 'FORBIDDEN';
   end if;
-  if p_decision not in ('under_review', 'approved', 'rejected', 'processing', 'completed')
+  if p_decision is null or p_decision not in ('under_review', 'approved', 'rejected', 'processing')
      or (p_retention_hold_reason is not null and char_length(btrim(p_retention_hold_reason)) not between 2 and 1000) then
     raise exception using errcode = '22023', message = 'VALIDATION';
   end if;
@@ -288,7 +288,7 @@ begin
       decision_note = nullif(btrim(p_decision_note), ''),
       reviewed_by = auth.uid(),
       reviewed_at = now(),
-      completed_at = case when p_decision = 'completed' then now() else null end,
+      completed_at = null,
       retention_hold = p_retention_hold_reason is not null,
       retention_hold_reason = nullif(btrim(p_retention_hold_reason), ''),
       updated_at = now()
@@ -470,15 +470,51 @@ grant execute on function public.withdraw_consent(uuid,uuid) to authenticated;
 grant execute on function public.request_account_deletion(uuid,text) to authenticated;
 grant execute on function public.reorder_route_stops(uuid,uuid,uuid[]) to authenticated;
 
+create or replace function public.complete_deletion_request(
+  p_school_id uuid,
+  p_request_id uuid,
+  p_completion_note text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  -- The B4 trusted worker must finish the export/deletion before calling this.
+  if p_completion_note is not null and char_length(btrim(p_completion_note)) > 2000 then
+    raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+
+  update public.deletion_requests
+  set status = 'completed',
+      completed_at = now(),
+      decision_note = coalesce(
+        nullif(btrim(p_completion_note), ''),
+        decision_note
+      ),
+      updated_at = now()
+  where id = p_request_id and school_id = p_school_id
+    and status = 'processing'
+    and retention_hold = false;
+
+  if not found then
+    raise exception using errcode = '40001', message = 'DELETION_REQUEST_NOT_COMPLETABLE';
+  end if;
+end;
+$function$;
+
 revoke all on function public.request_data_export(uuid, text) from public, anon;
 revoke all on function public.request_child_record_deletion(uuid, uuid, text) from public, anon;
 revoke all on function public.review_deletion_request(uuid, uuid, text, text, text) from public, anon;
 revoke all on function public.bulk_create_children(uuid, jsonb) from public, anon;
 revoke all on function public.assign_child_route_stop(uuid, uuid, uuid, uuid) from public, anon;
 revoke all on function public.cancel_scheduled_trip(uuid, uuid, text) from public, anon;
+revoke all on function public.complete_deletion_request(uuid,uuid,text) from public, anon, authenticated;
 grant execute on function public.request_data_export(uuid, text) to authenticated;
 grant execute on function public.request_child_record_deletion(uuid, uuid, text) to authenticated;
 grant execute on function public.review_deletion_request(uuid, uuid, text, text, text) to authenticated;
 grant execute on function public.bulk_create_children(uuid, jsonb) to authenticated;
 grant execute on function public.assign_child_route_stop(uuid, uuid, uuid, uuid) to authenticated;
 grant execute on function public.cancel_scheduled_trip(uuid, uuid, text) to authenticated;
+grant execute on function public.complete_deletion_request(uuid,uuid,text) to service_role;
