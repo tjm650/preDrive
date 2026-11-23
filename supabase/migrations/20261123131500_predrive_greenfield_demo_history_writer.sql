@@ -53,6 +53,18 @@ begin
     raise exception using errcode = '23514', message = 'GREENFIELD_OPERATIONAL_FIXTURES_INCOMPLETE';
   end if;
 
+  if exists (
+    select 1
+    from public.transport_routes r
+    join public.buses b on b.id = r.assigned_bus_id and b.school_id = r.school_id
+    join public.child_route_assignments a on a.route_id = r.id and a.school_id = r.school_id and a.active
+    where r.school_id = v_school_id
+    group by r.id, b.capacity
+    having count(a.child_id) + 2 > b.capacity
+  ) then
+    raise exception using errcode = '23514', message = 'GREENFIELD_ROUTE_EXCEEDS_BUS_CAPACITY';
+  end if;
+
   if (select count(*) from public.fee_items where school_id = v_school_id and active and currency = 'USD' and billing_period = 'term') <> 4 then
     raise exception using errcode = '23514', message = 'GREENFIELD_FEE_CATALOGUE_INCOMPLETE';
   end if;
