@@ -405,11 +405,13 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 - [x] Add bounded indexes for GPS retention, terminal notification retention and the deletion worker queue.
 - [x] Add `process-approved-deletions`, a cron-secret-protected worker that processes only reviewed `processing` requests.
 - [x] Add read-only catalog acceptance SQL at `supabase/tests/automation/b4_privacy_acceptance.sql`.
-- [ ] Obtain explicit approval before applying migration `20261123120000` to the remote development database.
-- [ ] After approval and application, run the catalog acceptance SQL and controlled tests for child withdrawal, active-trip hold, unresolved-incident hold, account-wide hold and tenant isolation.
-- [ ] Configure secrets, deploy and smoke-test only after the migration and Deno CI pass.
+- [x] User approved and remote migration `20261123120000` was applied to the existing development database.
+- [x] Read-only catalog acceptance SQL passed: private exports bucket exists with required capacity; retention indexes exist; deletion RPC is SECURITY DEFINER with empty search_path and executable only by `service_role`.
+- [x] Remote migration ledger now contains 34 versions; zero deletion requests, GPS history rows and notification-delivery rows were present during verification.
+- [ ] Run controlled runtime tests for child withdrawal, active-trip hold, unresolved-incident hold, account-wide hold and tenant isolation using isolated synthetic fixtures.
+- [ ] Configure secrets, deploy and smoke-test only after controlled runtime tests and all Deno CI checks pass.
 
-**Operational boundary:** migration source and worker are committed; migration has not been applied remotely. No child, account, school membership, or protected record has been changed. Account deletion remains held for coordinated review rather than pretending a single-school approval is sufficient for a multi-school account.
+**Operational boundary:** migration is applied; no child, account, school membership or protected record was changed. No function is deployed and no cron schedule is installed. Account deletion remains held for coordinated review rather than pretending a single-school approval is sufficient for a multi-school account.
 
 
 ### B4.8.4 — Scheduling and demo-reset boundary
