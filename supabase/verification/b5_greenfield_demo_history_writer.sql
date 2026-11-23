@@ -213,20 +213,20 @@ begin
     55500,
     0,
     55500,
-    case when mod(row_number() over (order by c.id)::integer - 1, 4) = 0 then 55500
-         when mod(row_number() over (order by c.id)::integer - 1, 4) = 1 then 27750
+    case when mod(row_number() over (order by c.created_at, c.id)::integer - 1, 4) = 0 then 55500
+         when mod(row_number() over (order by c.created_at, c.id)::integer - 1, 4) = 1 then 27750
          else 0 end,
-    case when mod(row_number() over (order by c.id)::integer - 1, 4) = 0 then 0
-         when mod(row_number() over (order by c.id)::integer - 1, 4) = 1 then 27750
+    case when mod(row_number() over (order by c.created_at, c.id)::integer - 1, 4) = 0 then 0
+         when mod(row_number() over (order by c.created_at, c.id)::integer - 1, 4) = 1 then 27750
          else 55500 end,
-    case when mod(row_number() over (order by c.id)::integer - 1, 4) = 0 then 'paid'::public.invoice_status
-         when mod(row_number() over (order by c.id)::integer - 1, 4) = 1 then 'partially_paid'::public.invoice_status
+    case when mod(row_number() over (order by c.created_at, c.id)::integer - 1, 4) = 0 then 'paid'::public.invoice_status
+         when mod(row_number() over (order by c.created_at, c.id)::integer - 1, 4) = 1 then 'partially_paid'::public.invoice_status
          else 'overdue'::public.invoice_status end,
-    case when mod(row_number() over (order by c.id)::integer - 1, 4) = 2 then date '2026-11-06'
-         when mod(row_number() over (order by c.id)::integer - 1, 4) = 3 then date '2026-11-13'
+    case when mod(row_number() over (order by c.created_at, c.id)::integer - 1, 4) = 2 then date '2026-11-06'
+         when mod(row_number() over (order by c.created_at, c.id)::integer - 1, 4) = 3 then date '2026-11-13'
          else date '2026-11-20' end,
     timestamptz '2026-10-15 09:00:00+02',
-    case when mod(row_number() over (order by c.id)::integer - 1, 4) = 0
+    case when mod(row_number() over (order by c.created_at, c.id)::integer - 1, 4) = 0
       then timestamptz '2026-11-16 10:00:00+02' else null end,
     v_admin_id,
     timestamptz '2026-10-01 09:00:00+02',
