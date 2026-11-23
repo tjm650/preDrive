@@ -57,7 +57,8 @@ Deno.test("Chipo Moyo's guardian demo children are Tendai and Tadiwa", () => {
     firstTwo[0].firstName !== "Tendai" ||
     firstTwo[0].lastName !== "Moyo" ||
     firstTwo[1].firstName !== "Tadiwa" ||
-    firstTwo[1].lastName !== "Moyo"
+    firstTwo[1].lastName !== "Moyo" ||
+    firstTwo.some((child) => child.routeCode !== "A")
   ) {
     throw new Error("Guardian demo relationship is not canonical.");
   }
