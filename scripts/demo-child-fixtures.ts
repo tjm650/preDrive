@@ -83,7 +83,13 @@ export const GREENFIELD_CHILDREN: readonly DemoChildFixture[] =
       DEMO_CLASS_IDS.littleStars,
       DEMO_CLASS_IDS.explorers,
     ][classIndex];
-    const routeIndex = index < 2 ? 0 : ((index - 2) < 60 ? (index - 2) % 3 : index - 61);
+    const routeIndex = index < 2
+      ? 0
+      : (index - 2) < 54
+      ? (index - 2) % 3
+      : (index - 2) < 58
+      ? 0
+      : 1;
     const route = ROUTES[routeIndex];
     const stopIndex = Math.floor(index / ROUTES.length) % route.stopIds.length;
 
