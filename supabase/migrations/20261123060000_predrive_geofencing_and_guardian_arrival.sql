@@ -59,6 +59,41 @@ create unique index if not exists alerts_school_dedupe_key_uidx
   on public.alerts (school_id, dedupe_key)
   where dedupe_key is not null;
 
+create or replace function public.set_guardian_notification_radius(
+  p_school_id uuid,
+  p_child_id uuid,
+  p_radius_meters integer
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+  if p_radius_meters not in (500, 1000, 2000) then
+    raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+
+  update public.guardian_children
+  set notification_radius_meters = p_radius_meters,
+      updated_at = now()
+  where school_id = p_school_id
+    and child_id = p_child_id
+    and guardian_user_id = auth.uid()
+    and active;
+
+  if not found then
+    raise exception using errcode = '42501', message = 'GUARDIAN_CHILD_LINK_REQUIRED';
+  end if;
+end;
+$function$;
+
+revoke all on function public.set_guardian_notification_radius(uuid, uuid, integer) from public, anon;
+grant execute on function public.set_guardian_notification_radius(uuid, uuid, integer) to authenticated;
+
 create or replace function public.evaluate_trip_geofences(
   p_school_id uuid,
   p_trip_id uuid
