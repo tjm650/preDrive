@@ -45,7 +45,11 @@ begin
   if (select count(*) from public.children where school_id = v_school_id and status = 'active') <> 64
      or (select count(*) from public.guardian_children where school_id = v_school_id and active) <> 64
      or (select count(*) from public.approved_collectors where school_id = v_school_id and active) <> 128
-     or (select count(*) from public.route_schedules where school_id = v_school_id and active and driver_id is not null and supervisor_id is not null) <> 6 then
+     or (select count(*) from public.child_route_assignments where school_id = v_school_id and active) <> 64
+     or (select count(*) from public.route_schedules rs
+         join public.staff_members d on d.id = rs.driver_id and d.school_id = rs.school_id and d.role = 'driver' and d.active
+         join public.staff_members s on s.id = rs.supervisor_id and s.school_id = rs.school_id and s.role = 'supervisor' and s.active
+         where rs.school_id = v_school_id and rs.active) <> 6 then
     raise exception using errcode = '23514', message = 'GREENFIELD_OPERATIONAL_FIXTURES_INCOMPLETE';
   end if;
 
@@ -197,7 +201,7 @@ begin
   insert into public.invoices (
     id, school_id, child_id, guardian_user_id, invoice_number, currency,
     subtotal_minor, credit_minor, total_minor, paid_minor, balance_minor,
-    status, due_date, issued_at, paid_at, created_by
+    status, due_date, issued_at, paid_at, created_by, created_at, updated_at
   )
   select
     md5('greenfield-invoice:' || c.id::text)::uuid,
@@ -224,7 +228,9 @@ begin
     timestamptz '2026-10-15 09:00:00+02',
     case when mod(row_number() over (order by c.id)::integer - 1, 4) = 0
       then timestamptz '2026-11-16 10:00:00+02' else null end,
-    v_admin_id
+    v_admin_id,
+    timestamptz '2026-10-01 09:00:00+02',
+    timestamptz '2026-10-01 09:00:00+02'
   from public.children c
   join public.guardian_children gc
     on gc.school_id = c.school_id and gc.child_id = c.id and gc.active and gc.primary_contact
