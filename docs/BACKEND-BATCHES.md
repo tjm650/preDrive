@@ -128,6 +128,25 @@ Known integration and acceptance boundaries:
 
 ## B4 — Edge Functions and automation (8 batches)
 
+B4.1 source implementation is committed on `main`. Runtime Deno tests and Edge Runtime type-checking remain unexecuted because the current workspace has no Deno runtime. Do not deploy functions or schedule jobs until their individual tests pass and the required project secrets are configured.
+
+### B4.1 — Shared Deno Edge Function infrastructure (source authored; runtime verification pending)
+
+- [x] Stable API error envelope and normalization to the existing frontend `ApiErrorCode` union.
+- [x] Exact-origin CORS allowlist; no wildcard; server-to-server requests without an Origin header remain supported.
+- [x] Request wrapper with correlation IDs, no-store responses and safe exception handling.
+- [x] Structured allowlisted logs; no request bodies, child data, names, emails, phone numbers, PINs, tokens or provider payloads.
+- [x] Server-only Supabase service-role client factory.
+- [x] JWT verification with `auth.getUser(token)` and active `school_memberships` role checks; authorization does not use user-editable metadata.
+- [x] Dedicated high-entropy cron-secret verification helper.
+- [x] Bounded JSON parsing and Zod validation.
+- [x] Deno tests authored for CORS, error normalization and request validation.
+- [ ] Execute `deno test supabase/functions/_shared` and `deno check` in a Deno 2-compatible environment.
+- [ ] Configure the real `APP_ALLOWED_ORIGINS` and `CRON_SECRET` secrets in the development project; do not commit secret values.
+- [ ] Deploy no Edge Functions in B4.1; deployment belongs to each function's implementation and acceptance batch.
+
+Shared dependency versions are pinned to `npm:@supabase/supabase-js@2.119.2` and `npm:zod@4.6.7`. Supabase recommends a separate `deno.json` per deployed function; the individual function batches will add their own entrypoints and isolated Deno configuration.
+
 1. Shared Deno Edge Function infrastructure.
 2. Daily trip generation.
 3. Invitations and authentication workflows.
