@@ -200,7 +200,11 @@ begin
       gc.notification_radius_meters,
       c.first_name,
       rs.id as stop_id,
-      rs.name as stop_name
+      rs.name as stop_name,
+      greatest(0, ceil(
+        extensions.st_distance(v_position.location, rs.location) /
+        (greatest(coalesce(nullif(v_position.speed_kph, 0), 25), 5) * 1000 / 60)
+      )::integer) as eta_minutes
     from public.trip_children tc
     join public.children c
       on c.id = tc.child_id and c.school_id = tc.school_id
@@ -240,8 +244,8 @@ begin
     ) values (
       p_school_id,
       'Bus approaching',
-      'The bus is approaching ' || v_assignment.stop_name ||
-        '. Please get ' || v_assignment.first_name || ' ready.',
+      'The bus is about ' || v_assignment.eta_minutes || ' minutes from ' ||
+        v_assignment.stop_name || '. Please get ' || v_assignment.first_name || ' ready.',
       'info'::public.alert_severity,
       'geofence',
       p_trip_id,
