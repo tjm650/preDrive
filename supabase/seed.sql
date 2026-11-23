@@ -21,6 +21,16 @@ begin
   if exists (
     select 1
     from public.schools
+    where id = v_demo_school_id
+      and is_demo = false
+  ) then
+    raise exception
+      'The reserved Greenfield demo ID belongs to a non-demo school. Refusing to modify it.';
+  end if;
+
+  if exists (
+    select 1
+    from public.schools
     where is_demo = true
       and id <> v_demo_school_id
   ) then
