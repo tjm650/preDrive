@@ -271,6 +271,7 @@ as $function$
 declare
   v_actor uuid := auth.uid();
   v_check_id uuid;
+  v_incident_id uuid;
   v_alert_id uuid;
 begin
   if v_actor is null then
@@ -307,7 +308,7 @@ begin
       p_school_id, 'Vehicle failed safety check',
       'A vehicle inspection found one or more failed safety items. The bus must not be dispatched until reviewed.',
       'high'::public.incident_severity, p_trip_id, v_actor, now()
-    );
+    ) returning id into v_incident_id;
 
     update public.buses set status = 'maintenance'::public.bus_status, updated_at = now()
     where id = p_bus_id and school_id = p_school_id;
@@ -317,7 +318,7 @@ begin
     ) values (
       p_school_id, 'Vehicle marked unsafe',
       'A vehicle check failed. The bus has been moved to maintenance status.',
-      'urgent'::public.alert_severity, 'vehicle_check', v_check_id, v_actor
+      'urgent'::public.alert_severity, 'incident', v_incident_id, v_actor
     ) returning id into v_alert_id;
 
     insert into public.alert_recipients (school_id, alert_id, recipient_user_id)
