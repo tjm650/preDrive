@@ -93,6 +93,24 @@ begin
   delete from public.bus_positions where trip_id = p_trip_id;
 
   if v_unaccounted > 0 then
+    insert into public.incidents (
+      school_id, title, description, severity, trip_id, child_id,
+      reported_by, occurred_at
+    )
+    select
+      p_school_id,
+      'Child unaccounted at trip end',
+      'The trip ended while ' || c.first_name || ' ' || c.last_name || ' was not marked absent or handed over.',
+      'critical'::public.incident_severity,
+      p_trip_id,
+      tc.child_id,
+      v_actor,
+      p_ended_at
+    from public.trip_children tc
+    join public.children c on c.id = tc.child_id and c.school_id = tc.school_id
+    where tc.school_id = p_school_id and tc.trip_id = p_trip_id
+      and tc.status not in ('handed_over'::public.trip_child_status, 'absent'::public.trip_child_status);
+
     insert into public.alerts (
       school_id, title, message, severity, source_type, source_id,
       dedupe_key, created_by, repeat_until_acknowledged, next_escalation_at
