@@ -10,6 +10,8 @@ on:
   pull_request:
     paths:
       - "supabase/functions/**"
+      - "scripts/seed-auth-users.ts"
+      - "scripts/seed-auth-users_test.ts"
       - ".github/workflows/supabase-edge-functions.yml"
   workflow_dispatch:
 
