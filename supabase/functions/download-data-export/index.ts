@@ -9,7 +9,7 @@ import { parseJsonBody, z } from "../_shared/validation.ts";
 import {
   DATA_EXPORT_BUCKET,
   DATA_EXPORT_SIGNED_URL_SECONDS,
-  dataExportObjectPath,
+  isValidDataExportObjectPath,
   isValidDeletionRequestId,
 } from "../_shared/privacy.ts";
 
@@ -28,7 +28,7 @@ const handler = createEdgeHandler(async (request) => {
 
   const { data: item, error } = await client
     .from("deletion_requests")
-    .select("id,school_id,requested_by,subject_user_id,request_type,status,retention_hold")
+    .select("id,school_id,requested_by,subject_user_id,request_type,status,retention_hold,export_object_path")
     .eq("id", body.requestId)
     .eq("request_type", "data_export")
     .eq("status", "completed")
@@ -39,12 +39,13 @@ const handler = createEdgeHandler(async (request) => {
   if (
     !item ||
     item.requested_by !== authenticated.user.id ||
-    item.subject_user_id !== authenticated.user.id
+    item.subject_user_id !== authenticated.user.id ||
+    !isValidDataExportObjectPath(item.school_id, item.id, item.export_object_path)
   ) {
     throw new HttpError("NOT_FOUND", "The requested export is unavailable.", 404);
   }
 
-  const path = dataExportObjectPath(item.school_id, item.id);
+  const path = item.export_object_path;
   const { data, error: signedUrlError } = await client.storage
     .from(DATA_EXPORT_BUCKET)
     .createSignedUrl(path, DATA_EXPORT_SIGNED_URL_SECONDS, {
