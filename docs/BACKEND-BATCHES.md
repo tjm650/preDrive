@@ -300,7 +300,10 @@ The current API contract has no Realtime subscription methods or payloads. Do no
 - [x] Add Expo Push and Resend HTTP adapters with request timeouts, deterministic Resend idempotency keys and provider response sanitisation.
 - [x] Recheck active school/membership, open alert, recipient acknowledgement, current communications consent, active push registration and broadcast expiry immediately before delivery.
 - [x] Revoke Expo registrations when the provider returns `DeviceNotRegistered`; suppress deliveries when the recipient is no longer eligible.
-- [x] Add Deno tests for safe HTML, unsupported locales, retry bounds, provider error classification and Expo token validation.
+- [x] Add Deno tests for safe HTML, English-only locale selection, retry bounds, provider error classification, Expo token validation and receipt classification.
+- [x] Accept English regional locale tags (for example `en-ZW`) without weakening the Shona/Ndebele suppression boundary.
+- [x] Validate Expo send responses as exactly one well-formed ticket for the single-recipient request; reject empty, malformed or multi-ticket responses.
+- [x] Attach a stable per-delivery Expo `collapseId` and Android `tag` so repeated submissions for one outbox row can replace/collapse on supported devices. Distinct escalation rows keep distinct identifiers.
 - [ ] Add native-reviewed Shona and Ndebele templates. Until reviewed copy is committed, non-English deliveries are suppressed rather than sent English copy.
 - [x] Add per-device delivery records so all active devices can receive pushes and each Expo receipt can be tracked independently; worker now uses the delivery's exact device-token reference.
 - [x] Add a separately reviewed delivery-cycle schema and service-role-only escalation enqueue RPC. The worker invocation/cron path and controlled escalation runtime tests remain pending.
@@ -311,7 +314,7 @@ The current API contract has no Realtime subscription methods or payloads. Do no
 **Operational boundary:** migration is applied as remote version `20261123074827`; remote ledger contains 31 versions. No Edge Functions were deployed, no cron jobs scheduled, no provider credentials configured, and no notifications sent. The outbox is empty. Email requires explicit latest communications consent; push requires an active registered Expo token. The approved migration does not send messages by itself.
 
 
-**Delivery worker boundary:** source and CI wiring are committed. Deno 2.9.8 type-check and all 45 shared tests passed on commit `68642408eec8d971085359dbf833cec2c21ca8ae` ([GitHub Actions run 45139514983](https://github.com/tjm650/preDrive/actions/runs/45139514983)). The worker has not been deployed or invoked against real delivery rows. English is the only enabled locale; Shona/Ndebele are suppressed pending native review. Push currently targets one most-recently-seen device token per recipient because the existing outbox has no device-token foreign key. Expo push tickets indicate acceptance by Expo, not final device delivery; receipt polling is a follow-on requirement. Resend idempotency keys are retained for 24 hours, so retries are bounded to complete within that window. No secrets, cron jobs, deployments or messages were created.
+**Delivery worker boundary:** source and CI wiring are committed. The worker has not been deployed or invoked against real delivery rows. English (including regional English tags such as `en-ZW`) is the only enabled locale; Shona/Ndebele are suppressed pending native review. Push rows are device-scoped and use a stable per-delivery Expo collapse identifier plus Android replacement tag. These identifiers reduce visible duplicate notifications on supported devices but do not provide exactly-once transport: Expo and downstream APNs/FCM delivery are best-effort and can be at-least-once. Expo push tickets indicate acceptance by Expo, not final device delivery; receipt polling is implemented. Resend idempotency keys are retained for 24 hours, so retries are bounded to complete within that window. No secrets, cron jobs, deployments or messages were created.
 
 
 ### B4.7.2 — Per-device notification cycles and Expo receipt tracking (schema synchronized; worker source updated; runtime pending)
@@ -343,3 +346,16 @@ The remote acceptance SQL passed. The development database read-only snapshot re
 - [ ] Only after both function smoke tests pass, schedule two independent one-minute jobs: one to materialize due escalation deliveries and one to send pending outbox deliveries. The database routine enforces the five-minute repeat interval itself.
 
 The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments the delivery sequence, and inserts per-device push/per-recipient consented email rows. The existing delivery worker performs the actual send and rechecks eligibility before delivery. No database migration, remote data write, deployment, secret configuration, or cron schedule was performed in this batch.
+
+
+### B4.7.5 — Notification template and provider hardening (source complete; CI and runtime acceptance pending)
+
+- [x] Normalize English locale tags so `en`, `en-ZW` and other regional English variants use the English template.
+- [x] Continue suppressing Shona and Ndebele until native-reviewed templates are supplied; regional variants do not bypass this rule.
+- [x] Add strict parsing for the single Expo ticket expected from each single-recipient request.
+- [x] Add stable delivery-specific Expo `collapseId` and Android `tag` values to reduce duplicate display after retries on supported platforms.
+- [x] Add tests for regional locale behavior, malformed ticket payloads, and stable/bounded collapse identifiers.
+- [ ] Complete Deno CI and both read-only remote notification acceptance suites.
+- [ ] Complete controlled provider and concurrent-worker runtime tests after B5 supplies isolated seeded identities and device records.
+
+**Delivery guarantee:** collapse/replacement identifiers reduce duplicate display but do not make Expo/APNs/FCM exactly-once. A timeout after the provider accepts a request can leave the sender uncertain whether it was accepted; the worker retries transient failures in accordance with Expo's documented guidance. Critical alert UX must therefore tolerate duplicate delivery and remain backed by the in-app alert record and acknowledgement state.
