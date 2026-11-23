@@ -228,6 +228,7 @@ async function loadEligibleContext(
       .order("effective_at", { ascending: false })
       .order("captured_at", { ascending: false })
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (consentError) throw consentError;
@@ -296,11 +297,24 @@ async function sendExpoPush(
   }
 
   const ticket = Array.isArray(payload.data) ? payload.data[0] : payload.data;
-  if (ticket?.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
-    throw new ProviderFailure("DEVICE_NOT_REGISTERED", false, token.id);
+  if (!ticket || typeof ticket.status !== "string") {
+    throw new ProviderFailure("EXPO_PROVIDER_RESPONSE_INVALID", true);
   }
-  if (ticket?.status !== "ok" || !ticket.id) {
+  if (ticket.status === "error") {
+    const providerError = ticket.details?.error;
+    if (providerError === "DeviceNotRegistered") {
+      throw new ProviderFailure("DEVICE_NOT_REGISTERED", false, token.id);
+    }
+    if (providerError === "MessageRateExceeded") {
+      throw new ProviderFailure("EXPO_PROVIDER_RATE_LIMITED", true);
+    }
+    if (providerError === "ExpoServerError") {
+      throw new ProviderFailure("EXPO_PROVIDER_UNAVAILABLE", true);
+    }
     throw new ProviderFailure("EXPO_PROVIDER_REJECTED", false);
+  }
+  if (ticket.status !== "ok" || !ticket.id) {
+    throw new ProviderFailure("EXPO_PROVIDER_RESPONSE_INVALID", true);
   }
 
   return { messageId: ticket.id };
@@ -520,13 +534,14 @@ const handler = createEdgeHandler(async (request) => {
           delivery.channel === "push" &&
           error.tokenId
         ) {
-          await client
+          const { error: revokeError } = await client
             .from("device_tokens")
             .update({ active: false, revoked_at: new Date().toISOString() })
             .eq("id", error.tokenId)
             .eq("school_id", delivery.school_id)
             .eq("provider", "expo")
             .eq("active", true);
+          if (revokeError) throw revokeError;
           await suppressDelivery(client, delivery, workerId, error.code);
           suppressed += 1;
           continue;
