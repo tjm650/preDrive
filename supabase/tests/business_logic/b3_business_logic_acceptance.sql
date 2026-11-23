@@ -17,12 +17,16 @@ begin
       'public.create_child(uuid,text,text,date,uuid)',
       'public.link_guardian_to_child(uuid,uuid,uuid,public.collector_relationship,boolean)',
       'public.create_approved_collector(uuid,uuid,text,public.collector_relationship,text,text)',
+      'public.create_temporary_collector(uuid,uuid,text,text,public.collector_relationship,text,timestamptz)',
+      'public.list_temporary_collectors(uuid,uuid)',
+      'public.revoke_temporary_collector(uuid,uuid)',
+      'public.verify_temporary_handover(uuid,uuid,uuid,uuid,text)',
       'public.list_approved_collectors(uuid,uuid)',
       'public.record_child_status(uuid,uuid,uuid,timestamptz,uuid,public.trip_child_status)',
       'public.verify_handover(uuid,uuid,uuid,uuid,text)',
       'public.start_trip(uuid,uuid,timestamptz)',
       'public.end_trip(uuid,uuid,timestamptz)',
-      'public.record_bus_position(uuid,uuid,double precision,double precision,numeric,numeric,numeric,timestamptz)',
+      'public.record_bus_position(uuid,uuid,double precision,double precision,numeric,numeric,numeric,timestamptz,uuid)',
       'public.create_incident(uuid,text,text,public.incident_severity,uuid,uuid)',
       'public.raise_sos(uuid,uuid)',
       'public.report_trip_delay(uuid,uuid,public.delay_reason,text,smallint)',
@@ -84,7 +88,8 @@ begin
       and p.proname in (
         'register_school', 'accept_school_invitation', 'create_child',
         'link_guardian_to_child', 'create_approved_collector',
-        'list_approved_collectors', 'record_child_status', 'verify_handover',
+        'create_temporary_collector', 'list_temporary_collectors',
+        'revoke_temporary_collector', 'verify_temporary_handover', 'list_approved_collectors', 'record_child_status', 'verify_handover',
         'start_trip', 'end_trip', 'record_bus_position', 'create_incident',
         'raise_sos', 'report_trip_delay', 'acknowledge_alert',
         'complete_vehicle_check', 'set_guardian_notification_radius',
@@ -100,6 +105,20 @@ begin
       raise exception 'SECURITY DEFINER function has unsafe search_path: %', v_record.signature;
     end if;
   end loop;
+
+  if not exists (
+    select 1 from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'temporary_collectors'
+      and c.relrowsecurity
+  ) then
+    raise exception 'temporary_collectors must have RLS enabled';
+  end if;
+
+  if has_table_privilege('authenticated', 'public.temporary_collectors', 'SELECT')
+     or has_table_privilege('authenticated', 'public.temporary_collectors', 'INSERT') then
+    raise exception 'temporary collectors must be accessed only through safe RPCs';
+  end if;
 
   if has_function_privilege('anon', 'public.evaluate_trip_geofences(uuid,uuid)', 'EXECUTE')
      or has_function_privilege('authenticated', 'public.evaluate_trip_geofences(uuid,uuid)', 'EXECUTE') then
