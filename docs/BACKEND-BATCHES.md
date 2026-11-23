@@ -486,6 +486,7 @@ B4 implementation is complete at the repository and development-schema level. Th
 - [x] Preflight all reserved email collisions and passwords before the first Auth mutation. Re-runs do not reset existing demo passwords.
 - [x] Require a unique 16–128 character password from a server environment variable for each newly-created account. No password, service-role key or credential file is stored or printed.
 - [x] Add six Deno tests for role coverage, reserved domains, Zimbabwean phone shape, password variable names, password policy and fixed tenant ID.
+- [x] Add read-only post-provision acceptance SQL at `supabase/tests/seed/b5_demo_auth_acceptance.sql` for Auth markers, profile language, exact roles, staff rows and school isolation.
 - [x] Extend the Supabase Edge Function workflow to type-check and run the demo Auth seed tests.
 - [ ] Run Deno CI and address any type/test failures before provisioning.
 - [ ] Apply B5.1 SQL seed first, then run Auth provisioning with secure environment variables after explicit authorization for remote Auth user and membership creation.
