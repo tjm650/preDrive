@@ -70,6 +70,18 @@ begin
     raise exception 'B5.3: every active child must have exactly one active, valid route-stop assignment';
   end if;
 
+  if exists (
+    select 1
+    from public.transport_routes r
+    join public.buses b on b.id = r.assigned_bus_id and b.school_id = r.school_id
+    join public.child_route_assignments a on a.route_id = r.id and a.school_id = r.school_id and a.active
+    where r.school_id = v_school_id
+    group by r.id, b.capacity
+    having count(a.child_id) > b.capacity
+  ) then
+    raise exception 'B5.3: a route has more assigned children than its bus capacity';
+  end if;
+
   if (
     select count(*)
     from public.approved_collectors ac
