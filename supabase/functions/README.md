@@ -43,7 +43,10 @@ Set these as Supabase Function secrets for each environment. Do not put them in 
 | `SUPABASE_SERVICE_ROLE_KEY` | Trusted server-only Supabase client | Yes |
 | `APP_ALLOWED_ORIGINS` | Comma-separated exact HTTPS origins allowed to call browser-facing functions | No |
 | `CRON_SECRET` | High-entropy credential for scheduled server-to-server invocations | Yes |
+| `RESEND_FROM_EMAIL` | Sender identity on a verified Resend domain | No |
+| `EXPO_ACCESS_TOKEN` | Optional Expo Push enhanced-security credential | Yes, if enabled |
 | `PAYNOW_INTEGRATION_KEY` | Paynow SHA-512 callback verification key | Yes |
+| `RESEND_API_KEY` | Resend transactional email API credential | Yes |
 | `PAYNOW_INTEGRATION_KEY` | Paynow SHA-512 callback verification key | Yes |
 
 The platform-provided `SUPABASE_URL` and service-role key must be checked in the target project before deployment. `APP_ALLOWED_ORIGINS` must contain the real production web origins and any explicitly approved development origin. Do not use `*`.
