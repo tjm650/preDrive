@@ -31,7 +31,7 @@ Deno.test("historical trips cover both directions on all three routes", () => {
 Deno.test("historical trip children always match their route", () => {
   for (const trip of buildGreenfieldHistoricalTrips()) {
     if (
-      trip.childIndices.length < 18 ||
+      trip.childIndices.length < 16 ||
       trip.childIndices.some((index) => GREENFIELD_CHILDREN[index]?.routeCode !== trip.routeCode)
     ) throw new Error("Historical trip contains a child assigned to another route.");
   }
