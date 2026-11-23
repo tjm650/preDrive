@@ -125,3 +125,12 @@ B4.4 source does not require a database migration. No payment intents, provider 
 - Current source templates send English only. Shona and Ndebele deliveries are safely suppressed until native-reviewed copy is supplied; they are never silently sent English text. The worker currently selects the most recently seen active Expo token for a recipient; a later device-scoped outbox migration is needed to deliver to multiple devices independently and track each receipt.
 - The existing outbox uniqueness constraint is one delivery per alert recipient and channel. Repeated urgent-alert escalation requires a separate delivery-cycle schema design; sent rows must not be reset or reused.
 - Migration `20261123074827_predrive_notification_delivery_outbox.sql` is applied and catalog-verified. The worker and provider adapters are source-only: no function deployment, secrets, cron jobs or messages were created. Configure `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and optionally `EXPO_ACCESS_TOKEN` only in Supabase Function secrets after provider account/sender verification. The sender address must belong to a verified Resend domain.
+
+
+## Device-scoped notification delivery and Expo receipts
+
+B4.7.2 adds sequence-aware notification deliveries. Initial alert notifications use sequence 1; repeat-until-acknowledged escalation creates later sequences. Push rows reference one specific `device_tokens` row, so a worker never substitutes a different device if the original token is revoked or deleted. The composite foreign key clears only `device_token_id` on token deletion and preserves the school tenant key.
+
+The `deliver-notifications` worker now polls Expo's documented `/push/getReceipts` endpoint using the ticket ID returned by `/push/send`. It waits at least 15 minutes, rechecks missing receipts periodically, and stops after Expo's 24-hour receipt retention. A receipt confirms handoff to APNs/FCM, not receipt by the person. Receipt-level `DeviceNotRegistered` revokes the associated device registration. Receipt failures are recorded separately and never cause a second send of a delivery already accepted by Expo.
+
+The worker remains source-only. No Edge Function is deployed, no cron job is scheduled, no provider credentials are configured and no messages have been sent. Shona and Ndebele remain suppressed until native-reviewed templates are available.
