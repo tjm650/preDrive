@@ -88,7 +88,7 @@ Then run:
 
 ### 4. Historical trip and finance migration
 
-The migration `supabase/migrations/20261123131500_predrive_greenfield_demo_history_writer.sql` has been applied to the development database. Supabase recorded remote version `20261123133938` (`predrive_greenfield_demo_history_writer`).
+The migration `supabase/migrations/20261123133938_predrive_greenfield_demo_history_writer.sql` has been applied to the development database. Supabase recorded remote version `20261123133938` (`predrive_greenfield_demo_history_writer`).
 
 The read-only catalog acceptance `supabase/tests/seed/b5_demo_history_writer_catalog_acceptance.sql` passed. The function is SECURITY DEFINER with an empty search path and EXECUTE granted only to service_role. It refuses to run unless the fixed Greenfield school is active and `is_demo=true`, and all B5.1–B5.3 dependencies pass preflight.
 
