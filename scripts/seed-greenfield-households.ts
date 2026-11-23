@@ -634,6 +634,25 @@ async function main(): Promise<void> {
       if (memberships.length) {
         throw new Error("A reserved fixture identity is linked to another school; refusing all fixture creation.");
       }
+      const schoolMemberships = await api.rows<Membership>("school_memberships", {
+        school_id: "eq." + GREENFIELD_DEMO_SCHOOL_ID,
+        user_id: "eq." + existing.id,
+      });
+      if (schoolMemberships.length > 1 || (schoolMemberships.length === 1 &&
+        (schoolMemberships[0].role !== identity.role || !schoolMemberships[0].active))) {
+        throw new Error("A reserved fixture identity has a conflicting Greenfield membership.");
+      }
+      if (["supervisor", "driver", "teacher"].includes(identity.role)) {
+        const staffRows = await api.rows<Staff>("staff_members", {
+          school_id: "eq." + GREENFIELD_DEMO_SCHOOL_ID,
+          user_id: "eq." + existing.id,
+        });
+        if (staffRows.length > 1 || (staffRows.length === 1 &&
+          (staffRows[0].role !== identity.role || staffRows[0].full_name !== identity.fullName ||
+            staffRows[0].phone !== identity.phone || !staffRows[0].active))) {
+          throw new Error("A reserved fixture identity has a conflicting Greenfield staff record.");
+        }
+      }
     }
   }
 
