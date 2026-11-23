@@ -567,6 +567,31 @@ async function main(): Promise<void> {
   const api = new GreenfieldSeedApi(config);
   const collectorPins = await buildDemoCollectorPins(config.collectorPinSecret);
   await ensureDemoFoundation(api);
+  const adminToken = await api.signInAdmin(ADMIN_EMAIL, config.adminPassword);
+  const adminProfiles = await api.rows<Profile>("profiles", { email: "eq." + ADMIN_EMAIL });
+  if (adminProfiles.length !== 1) {
+    throw new Error("Primary school administrator profile is missing or duplicated.");
+  }
+  const adminMemberships = await api.rows<Membership>("school_memberships", {
+    school_id: "eq." + GREENFIELD_DEMO_SCHOOL_ID,
+    user_id: "eq." + adminProfiles[0].id,
+  });
+  if (adminMemberships.length !== 1 || adminMemberships[0].role !== "school_admin" || !adminMemberships[0].active) {
+    throw new Error("Primary account is not an active Greenfield school administrator.");
+  }
+  const chipoProfiles = await api.rows<Profile>("profiles", { email: "eq." + CHIPO_EMAIL });
+  if (chipoProfiles.length !== 1) {
+    throw new Error("Primary Chipo guardian profile is missing or duplicated.");
+  }
+  const chipoId = chipoProfiles[0].id;
+  const chipoMemberships = await api.rows<Membership>("school_memberships", {
+    school_id: "eq." + GREENFIELD_DEMO_SCHOOL_ID,
+    user_id: "eq." + chipoId,
+  });
+  if (chipoMemberships.length !== 1 || chipoMemberships[0].role !== "guardian" || !chipoMemberships[0].active) {
+    throw new Error("Chipo's primary guardian membership is missing or inactive.");
+  }
+
   const users = await api.listAuthUsers();
   const userByEmail = new Map(
     users.filter((user) => user.email).map((user) => [user.email!.toLowerCase(), user]),
@@ -577,13 +602,6 @@ async function main(): Promise<void> {
     const id = await ensureFixtureIdentity(api, userByEmail, identity);
     fixtureIds.set(identity.email, id);
   }
-
-  const adminToken = await api.signInAdmin(ADMIN_EMAIL, config.adminPassword);
-  const profiles = await api.rows<Profile>("profiles", {
-    email: "eq." + CHIPO_EMAIL,
-  });
-  if (profiles.length !== 1) throw new Error("Primary Chipo guardian profile is missing or duplicated.");
-  const chipoId = profiles[0].id;
 
   const primaryStaffEmails = [
     "supervisor.route-a@greenfield.predrive-demo.invalid",
