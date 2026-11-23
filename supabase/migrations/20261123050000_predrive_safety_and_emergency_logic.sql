@@ -301,6 +301,14 @@ begin
   ) returning id into v_check_id;
 
   if not p_safe_to_operate then
+    insert into public.incidents (
+      school_id, title, description, severity, trip_id, reported_by, occurred_at
+    ) values (
+      p_school_id, 'Vehicle failed safety check',
+      'A vehicle inspection found one or more failed safety items. The bus must not be dispatched until reviewed.',
+      'high'::public.incident_severity, p_trip_id, v_actor, now()
+    );
+
     update public.buses set status = 'maintenance'::public.bus_status, updated_at = now()
     where id = p_bus_id and school_id = p_school_id;
 
