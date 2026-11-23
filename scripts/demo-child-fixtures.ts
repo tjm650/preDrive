@@ -85,9 +85,9 @@ export const GREENFIELD_CHILDREN: readonly DemoChildFixture[] =
     ][classIndex];
     const routeIndex = index < 2
       ? 0
-      : (index - 2) < 54
+      : (index - 2) < 48
       ? (index - 2) % 3
-      : (index - 2) < 58
+      : (index - 2) < 56
       ? 0
       : 1;
     const route = ROUTES[routeIndex];
