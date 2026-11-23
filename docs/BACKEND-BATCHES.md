@@ -312,3 +312,19 @@ The current API contract has no Realtime subscription methods or payloads. Do no
 
 
 **Delivery worker boundary:** source and CI wiring are committed. Deno 2.9.8 type-check and all 45 shared tests passed on commit `68642408eec8d971085359dbf833cec2c21ca8ae` ([GitHub Actions run 45139514983](https://github.com/tjm650/preDrive/actions/runs/45139514983)). The worker has not been deployed or invoked against real delivery rows. English is the only enabled locale; Shona/Ndebele are suppressed pending native review. Push currently targets one most-recently-seen device token per recipient because the existing outbox has no device-token foreign key. Expo push tickets indicate acceptance by Expo, not final device delivery; receipt polling is a follow-on requirement. Resend idempotency keys are retained for 24 hours, so retries are bounded to complete within that window. No secrets, cron jobs, deployments or messages were created.
+
+
+### B4.7.2 — Per-device notification cycles and Expo receipt tracking (schema synchronized; worker source updated; runtime pending)
+
+- [x] Reconcile the already-applied remote migration versions `20261123093600` and `20261123093624` into the repository under matching filenames.
+- [x] Add read-only catalog acceptance at `supabase/tests/automation/b4_notification_cycles_acceptance.sql`.
+- [x] Verify sequence/receipt columns, per-device and per-sequence indexes, RLS, the column-specific device-token delete action, empty function search paths, and service-role-only escalation execution.
+- [x] Update `deliver-notifications` to bind each push delivery to its `device_token_id`; missing/revoked/deleted token references are suppressed rather than redirected to another device.
+- [x] Add Expo receipt polling using the ticket ID returned by the send endpoint, after a 15-minute wait. Receipt checks are retried while Expo has not produced a receipt and expire after Expo's 24-hour receipt-retention window.
+- [x] Revoke a device registration on a receipt-level `DeviceNotRegistered` error. Receipt outcomes do not resend a delivery already accepted by Expo.
+- [x] Add shared unit tests for receipt outcome classification.
+- [ ] Confirm the GitHub Actions Deno type-check and shared test run for the latest commit.
+- [ ] Run controlled runtime tests against seeded device registrations and mocked/Expo-issued receipt IDs.
+- [ ] Deploy only after secrets and provider configuration are verified; no deployment or cron schedule is part of this batch.
+
+The remote acceptance SQL passed. The development database read-only snapshot reported 33 migrations, zero notification deliveries, zero alerts, zero scheduled repeat alerts and outbox RLS enabled. No notification was sent and no remote schema mutation was performed in this reconciliation.
