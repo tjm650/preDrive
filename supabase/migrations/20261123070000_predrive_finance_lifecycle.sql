@@ -20,6 +20,7 @@ declare
   v_invoice public.invoices%rowtype;
   v_payment public.payments%rowtype;
   v_request_hash text;
+  v_pending_minor bigint;
   v_existing public.payments%rowtype;
 begin
   if v_actor is null then
@@ -70,8 +71,14 @@ begin
     raise exception using errcode = 'P0002', message = 'PAYABLE_INVOICE_NOT_FOUND';
   end if;
 
-  if v_invoice.currency <> p_currency or p_amount_minor > v_invoice.balance_minor then
-    raise exception using errcode = '22023', message = 'PAYMENT_AMOUNT_INVALID';
+  select coalesce(sum(p.amount_minor), 0) into v_pending_minor
+  from public.payments p
+  where p.school_id = p_school_id and p.invoice_id = p_invoice_id
+    and p.status in ('pending'::public.payment_status, 'processing'::public.payment_status);
+
+  if v_invoice.currency <> p_currency
+     or p_amount_minor + v_pending_minor > v_invoice.balance_minor then
+    raise exception using errcode = '22023', message = 'PAYMENT_AMOUNT_INVALID_OR_RESERVED';
   end if;
 
   insert into public.payments (
@@ -470,7 +477,12 @@ begin
       updated_at = now()
   where id = p_invoice_id and school_id = p_school_id
     and status in ('draft'::public.invoice_status, 'issued'::public.invoice_status, 'overdue'::public.invoice_status)
-    and paid_minor = 0;
+    and paid_minor = 0
+    and not exists (
+      select 1 from public.payments p
+      where p.school_id = p_school_id and p.invoice_id = p_invoice_id
+        and p.status in ('pending'::public.payment_status, 'processing'::public.payment_status)
+    );
 
   if not found then
     raise exception using errcode = '40001', message = 'INVOICE_NOT_VOIDABLE';
