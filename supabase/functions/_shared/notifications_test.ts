@@ -36,7 +36,7 @@ Deno.test("Shona and Ndebele are not silently sent using English copy", () => {
 
 Deno.test("retry schedule is bounded and exhausts after twelve attempts", () => {
   if (retryDelayMs(1) !== 30_000) throw new Error("First retry delay is incorrect.");
-  if (retryDelayMs(8) !== 14_400_000) throw new Error("Backoff cap is incorrect.");
+  if (retryDelayMs(8) !== 7_200_000) throw new Error("Backoff cap is incorrect.");
   if (retryDelayMs(12) !== null) throw new Error("Exhausted deliveries must not retry.");
   if (retryDelayMs(0) !== null || retryDelayMs(-1) !== null) {
     throw new Error("Invalid attempt counts must not retry.");
