@@ -135,7 +135,7 @@ export const GREENFIELD_RESOLVED_INCIDENTS = [
 export const GREENFIELD_DELAY_REPORTS = [
   { reference: "GF-DELAY-001", routeCode: "A", date: "2026-10-29", minutes: 12, reason: "traffic" },
   { reference: "GF-DELAY-002", routeCode: "B", date: "2026-11-03", minutes: 8, reason: "weather" },
-  { reference: "GF-DELAY-003", routeCode: "C", date: "2026-11-10", minutes: 15, reason: "roadworks" },
+  { reference: "GF-DELAY-003", routeCode: "C", date: "2026-11-10", minutes: 15, reason: "road_closure" },
   { reference: "GF-DELAY-004", routeCode: "A", date: "2026-11-18", minutes: 6, reason: "traffic" },
 ] as const;
 
