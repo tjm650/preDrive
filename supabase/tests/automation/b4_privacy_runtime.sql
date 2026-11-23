@@ -1,6 +1,6 @@
 -- B4.8 transactional runtime acceptance.
 -- This script creates synthetic fixtures and rolls the entire transaction back.
--- Run against a disposable development database with the B4.8 migration applied.
+-- Run only after B4.8 deletion and export-lease migrations are applied.
 
 begin;
 
