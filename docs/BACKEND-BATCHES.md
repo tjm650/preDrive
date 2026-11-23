@@ -426,7 +426,7 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 **Operational boundary:** zero pg_cron jobs remain installed. No Edge Functions are deployed and no secrets are configured. Demo reset is not implemented until B5 establishes the canonical dataset and a safe transactional reset contract.
 
  
-### B4.8.5 — Export concurrency leases (source authored; remote migration approval pending)
+### B4.8.5 — Export concurrency leases (migration applied; path constraint corrected; runtime release gates pending)
 
 - [x] Add 15-minute per-request export leases with atomic `FOR UPDATE SKIP LOCKED` claiming, a maximum batch size of ten and a bounded lease duration.
 - [x] Add service-role-only RPCs to claim, complete and release an export lease.
@@ -434,14 +434,24 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 - [x] Prevent a stale worker from deleting a newer worker's artifact after losing its lease.
 - [x] Extend rollback-only runtime SQL to test single claim, duplicate claim rejection, lease release/reclaim and successful leased completion.
 - [x] Extend read-only acceptance SQL to verify lease columns, index, SECURITY DEFINER, empty search_path and service-role-only execution.
-- [ ] Obtain explicit approval before applying the export lease migration to the remote development database.
-- [ ] Run updated rollback-only runtime and catalog acceptance SQL after migration.
-- [ ] Run Deno CI and review the new export worker before deployment.
+- [x] User approved and remote export lease migration `20261123122532_predrive_privacy_export_leases` was applied.
+- [x] Corrected the over-escaped export object-path constraint in migration `20261123122938_predrive_privacy_export_path_constraint_fix`.
+- [x] Verified a canonical school/request/lease UUID `.json` path matches and a malformed suffix does not.
+- [x] Verified export claim RPC is executable by `service_role` only; no deletion requests exist.
+- [ ] Complete populated lease race tests after B5 provides isolated school/Auth fixtures; current queue is empty.
+- [ ] Run final Deno CI on the current `main` commit before deploying.
 
-**Operational boundary:** migration and worker changes are committed on `main`; the lease migration is not applied remotely. No export requests, lease rows, storage objects or user records were created.
+**Operational boundary:** both lease and corrective path migrations are applied remotely. No export requests, lease rows, storage objects or user records were created. No Edge Functions or cron jobs are deployed.
 
 
 **B4.8.5 hardening note:** Export objects now use a unique per-lease path recorded on the completed request. Download signs only that recorded, validated path; retention removes that exact object. This prevents a stale worker from overwriting a newer export, even if the earlier worker's lease expires while it is uploading. The updated export-lease migration includes `export_object_path` and the completion RPC validates the exact school/request/lease path.
 
 
 B4.8.5 source verification: Deno 2.9.8 type-check passed and all 55 shared tests passed (0 failures) in [GitHub Actions run 45169371867](https://github.com/tjm650/preDrive/actions/runs/45169371867). The rollback-only SQL lease scenarios are ready but require the lease migration to be applied before execution.
+
+
+### B4 completion status — source and schema baseline
+
+B4 implementation is complete at the repository and development-schema level. The remote database contains 36 migration versions. The export lease path constraint was corrected in remote migration `20261123122938`; canonical UUID-based object paths now match, while malformed suffixes are rejected. The export claim RPC remains service-role-only. No privacy requests or export artifacts were created.
+
+**Release gates that remain intentionally closed:** Supabase Edge Functions are not deployed; no `CRON_SECRET`, `APP_ALLOWED_ORIGINS`, Paynow, Expo or Resend credentials are configured; no pg_cron jobs are installed; no provider callback or real payment has been exercised. B4.4 still has simulated EcoCash/manual-bank intent creation, while Paynow webhook settlement requires a Paynow initiation adapter and account credentials. These are external configuration/provider-integration gates, not verified production runtime. B5 seeded Auth identities and demo records are required for realistic tenant-isolation and populated-worker tests. Do not describe B4 as production-live until these gates pass.
