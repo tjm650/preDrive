@@ -23,6 +23,8 @@ All trusted application workflows run in Supabase Edge Functions (Deno/TypeScrip
 | `_shared/supabase.ts` | Server-only service-role client factory and required environment lookup |
 | `_shared/auth.ts` | JWT verification, active school-membership authorization and cron-secret verification |
 | `_shared/validation.ts` | Bounded JSON parsing and Zod validation |
+| `_shared/payments.ts` | Payment-intent validation, provider adapter interface, minor-unit conversion and opaque rate-limit subjects |
+| `_shared/payments_test.ts` | Payment request, currency precision, provider routing and rate-limit hash tests |
 | `_shared/http_test.ts` | CORS and error-mapping tests |
 | `_shared/errors_test.ts` | Stable business-error mapping and safe-message tests |
 | `_shared/validation_test.ts` | Request-size and schema-validation tests |
