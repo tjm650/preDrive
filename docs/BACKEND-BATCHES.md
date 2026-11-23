@@ -378,3 +378,17 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 - [ ] Complete export coverage review against the final product data inventory before representing the export as a complete legal data portability package.
 
 **Operational boundary:** source only. No remote migration, database write, export artifact, secret, function deployment or cron schedule was created. The export worker requires a school administrator to move a request into `processing`; it cannot approve or complete account/child deletion requests.
+
+
+### B4.8.2 — Approved privacy retention worker (source added; runtime pending)
+
+- [x] Add explicit constants for 30-day historical GPS, seven-day export-file and 90-day terminal notification-delivery retention.
+- [x] Add `run-approved-retention`, protected by `CRON_SECRET`, with a hard maximum of 5,000 rows per table per invocation.
+- [x] Delete only historical GPS rows older than 30 days, terminal notification metadata (`sent`, `failed`, `suppressed`) older than 90 days, and private export objects for completed non-held export requests older than seven days.
+- [x] Preserve export request metadata as an audit trail.
+- [x] Explicitly exclude financial, safety, consent, audit, child, profile, membership, trip and Auth records from automated deletion.
+- [x] Add deterministic retention-period and cutoff tests; include the worker in Deno CI and set `verify_jwt=false` only because the handler validates `CRON_SECRET`.
+- [ ] Complete CI verification and controlled retention tests with synthetic rows and a fixed clock before deployment.
+- [ ] Configure secrets, deploy and run a dry-run/controlled test before scheduling the worker.
+
+**Operational boundary:** source only. No migration, remote row deletion, export-file deletion, secret configuration, deployment or cron schedule was performed. Retention policy values are engineering defaults approved by the user, not a statement of Zimbabwean statutory retention periods.
