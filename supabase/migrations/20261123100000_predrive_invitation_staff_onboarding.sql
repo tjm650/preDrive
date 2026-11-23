@@ -13,6 +13,20 @@ comment on column public.school_invitations.full_name is
 comment on column public.school_invitations.phone is
   'Invited staff member contact number used to create staff_members on invitation acceptance; null for guardian invitations.';
 
+-- NOT VALID preserves historical pending invitations while enforcing complete
+-- details on every new or updated non-guardian invitation.
+alter table public.school_invitations
+  add constraint school_invitations_staff_details_check
+  check (
+    role = 'guardian'::public.user_role
+    or (
+      full_name is not null
+      and char_length(btrim(full_name)) between 2 and 160
+      and phone is not null
+      and char_length(btrim(phone)) between 7 and 32
+    )
+  ) not valid;
+
 create or replace function public.accept_school_invitation()
 returns uuid
 language plpgsql
