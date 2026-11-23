@@ -328,3 +328,18 @@ The current API contract has no Realtime subscription methods or payloads. Do no
 - [ ] Deploy only after secrets and provider configuration are verified; no deployment or cron schedule is part of this batch.
 
 The remote acceptance SQL passed. The development database read-only snapshot reported 33 migrations, zero notification deliveries, zero alerts, zero scheduled repeat alerts and outbox RLS enabled. No notification was sent and no remote schema mutation was performed in this reconciliation.
+
+
+### B4.7.4 — Urgent-alert escalation worker (source complete; runtime pending)
+
+- [x] Add `supabase/functions/enqueue-alert-escalations/index.ts`, a POST-only, `CRON_SECRET`-protected Edge Function.
+- [x] Call the existing service-role-only `enqueue_due_alert_escalations(p_batch_size)` RPC with a fixed batch size of 100; do not accept caller-selected school/alert IDs or batch size.
+- [x] Validate the RPC result as an integer from 0 through 100 and return only aggregate processing counts.
+- [x] Configure `verify_jwt = false` only for this function because it independently verifies the high-entropy cron secret.
+- [x] Add Deno unit tests for bounded RPC result validation and add the function to CI type-checking.
+- [ ] Confirm the GitHub Actions type-check and complete shared test suite.
+- [ ] Run controlled database runtime tests for duplicate/concurrent invocations, sequence uniqueness, acknowledgement during enqueue, no active device, revoked token, withdrawn email consent, and the 1,000-cycle safety cap.
+- [ ] Deploy both `enqueue-alert-escalations` and `deliver-notifications` only after secure secrets and provider configuration are verified.
+- [ ] Only after both function smoke tests pass, schedule two independent one-minute jobs: one to materialize due escalation deliveries and one to send pending outbox deliveries. The database routine enforces the five-minute repeat interval itself.
+
+The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments the delivery sequence, and inserts per-device push/per-recipient consented email rows. The existing delivery worker performs the actual send and rechecks eligibility before delivery. No database migration, remote data write, deployment, secret configuration, or cron schedule was performed in this batch.
