@@ -410,3 +410,15 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 - [ ] Configure secrets, deploy and smoke-test only after the migration and Deno CI pass.
 
 **Operational boundary:** migration source and worker are committed; migration has not been applied remotely. No child, account, school membership, or protected record has been changed. Account deletion remains held for coordinated review rather than pretending a single-school approval is sufficient for a multi-school account.
+
+
+### B4.8.4 — Scheduling and demo-reset boundary
+
+- [x] Add cron-secret-protected source for export processing, approved deletion processing and approved retention.
+- [x] Keep every scheduled endpoint independently authenticated with `CRON_SECRET`; the browser-facing download endpoint continues to require a Supabase JWT.
+- [ ] Do not schedule any job until each function is deployed, secrets are configured, missing/invalid-secret checks pass, and controlled smoke tests pass.
+- [ ] Proposed cadence after release gates: export/deletion workers every five minutes; retention once daily during the low-traffic Harare window. This is a recommendation, not an installed schedule.
+- [ ] Demo reset is deferred to B5. The repository currently has no canonical `seed.sql` or idempotent demo reset script, so a reset operation cannot safely restore the brief's fictional Greenfield demo dataset yet. B5 must first create and verify the deterministic demo seed; only then can a reset worker be restricted to the explicit `schools.is_demo = true` school and a separate high-entropy `DEMO_RESET_SECRET`.
+- [ ] Do not reset/delete Auth users globally, do not accept a caller-supplied school ID as authority, and do not reset any school where `is_demo` is false.
+
+**Operational boundary:** zero pg_cron jobs remain installed. No Edge Functions are deployed and no secrets are configured. Demo reset is not implemented until B5 establishes the canonical dataset and a safe transactional reset contract.
