@@ -32,6 +32,17 @@ async function digest(
   return toHex(new Uint8Array(result));
 }
 
+export async function computePaynowHash(
+  signingValues: readonly string[],
+  integrationKey: string,
+): Promise<string> {
+  if (!integrationKey.trim()) {
+    throw new Error("PAYNOW_INTEGRATION_KEY_MISSING");
+  }
+  return (await digest("SHA-512", signingValues.join("") + integrationKey))
+    .toUpperCase();
+}
+
 function constantTimeHexEqual(left: string, right: string): boolean {
   if (
     !PAYNOW_HASH_PATTERN.test(left) ||
@@ -109,10 +120,6 @@ export async function verifyPaynowCallback(
   rawBody: string,
   integrationKey: string,
 ): Promise<VerifiedPaynowCallback> {
-  if (!integrationKey.trim()) {
-    throw new Error("PAYNOW_INTEGRATION_KEY_MISSING");
-  }
-
   const params = new URLSearchParams(rawBody);
   const entries = Array.from(params.entries());
 
@@ -142,12 +149,9 @@ export async function verifyPaynowCallback(
     throw new TypeError("PAYNOW_HASH_MISSING_OR_INVALID");
   }
 
-  const expectedHash = await digest(
-    "SHA-512",
-    signingValues.join("") + integrationKey,
-  );
+  const expectedHash = await computePaynowHash(signingValues, integrationKey);
 
-  if (!constantTimeHexEqual(expectedHash.toUpperCase(), hashValues[0].toUpperCase())) {
+  if (!constantTimeHexEqual(expectedHash, hashValues[0].toUpperCase())) {
     throw new TypeError("PAYNOW_SIGNATURE_INVALID");
   }
 
