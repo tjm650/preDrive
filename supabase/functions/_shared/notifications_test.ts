@@ -4,6 +4,8 @@ import {
   escapeHtml,
   isExpoPushToken,
   notificationContent,
+  expoCollapseId,
+  parseExpoPushTicket,
   retryDelayMs,
 } from "./notifications.ts";
 
@@ -100,5 +102,63 @@ Deno.test("Expo receipts distinguish handoff success and unregistered devices", 
 
   if (classifyExpoReceipt(undefined, undefined) !== null) {
     throw new Error("An incomplete receipt must remain unclassified.");
+  }
+});
+
+
+Deno.test("English regional locales use English while unsupported locales stay suppressed", () => {
+  const regional = notificationContent({
+    locale: "en-ZW",
+    title: "School notice",
+    message: "Please check the trip update.",
+  });
+  if (!regional) throw new Error("en-ZW should use the reviewed English template.");
+  if (notificationContent({ locale: "sn-ZW", title: "Alert", message: "Text" }) !== null) {
+    throw new Error("Shona regional locales must remain suppressed.");
+  }
+  if (notificationContent({ locale: "nd-ZW", title: "Alert", message: "Text" }) !== null) {
+    throw new Error("Ndebele regional locales must remain suppressed.");
+  }
+});
+
+Deno.test("Expo delivery collapse identifiers are stable and bounded", () => {
+  const id = "8f5c1a2b-3d4e-4f50-9a6b-7c8d9e0f1a2b";
+  const first = expoCollapseId(id);
+  const second = expoCollapseId(id);
+  if (first !== second || first !== "pd-" + id || first.length > 64) {
+    throw new Error("Expo collapse identifier is not stable or bounded.");
+  }
+  let rejected = false;
+  try {
+    expoCollapseId("not-a-uuid");
+  } catch {
+    rejected = true;
+  }
+  if (!rejected) throw new Error("Invalid delivery IDs must be rejected.");
+});
+
+Deno.test("Expo ticket parser accepts exactly one valid ticket and rejects malformed responses", () => {
+  const objectTicket = parseExpoPushTicket({
+    data: { status: "ok", id: "ticket-123" },
+  });
+  if (objectTicket?.status !== "ok" || objectTicket.id !== "ticket-123") {
+    throw new Error("Single-object Expo ticket was not parsed.");
+  }
+
+  const arrayTicket = parseExpoPushTicket({
+    data: [{ status: "error", details: { error: "DeviceNotRegistered" } }],
+  });
+  if (arrayTicket?.status !== "error" || arrayTicket.error !== "DeviceNotRegistered") {
+    throw new Error("Single-item Expo ticket array was not parsed.");
+  }
+
+  if (parseExpoPushTicket({ data: [] }) !== null) {
+    throw new Error("Empty ticket arrays must be rejected.");
+  }
+  if (parseExpoPushTicket({ data: [{ status: "ok", id: "one" }, { status: "ok", id: "two" }] }) !== null) {
+    throw new Error("Unexpected multi-ticket response must be rejected.");
+  }
+  if (parseExpoPushTicket({ data: { status: "ok", id: "" } }) !== null) {
+    throw new Error("Empty ticket IDs must be rejected.");
   }
 });
