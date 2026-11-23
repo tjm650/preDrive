@@ -210,6 +210,26 @@ Shared dependency versions are pinned to `npm:@supabase/supabase-js@2.119.2` and
 
 **Operational boundary:** B4.4 is source-only. No migration, payment intent, payment attempt, provider request, settlement, Edge Function deployment or cron job was created. The existing finance RPC grants were read-only verified: authenticated callers may invoke `initiate_payment()`; anon cannot; only `service_role` may invoke `apply_payment_result()`. Security Advisor output is unchanged in scope: 20 deliberate deny-by-default tables, the Supabase-owned `pg_net` platform warning, and existing authenticated SECURITY DEFINER RPC notices. Those existing notices are not newly introduced by B4.4.
 
+## B4.5 — Paynow webhook verification and inbox processing (source authored; deployment pending)
+
+- [x] Confirm the actual Paynow Zimbabwe callback contract against its official Developer Hub: standard status updates are form-encoded POSTs containing `reference`, `paynowreference`, `amount`, `status`, `pollurl` and `hash`; signature is SHA-512 over decoded field values in original order, excluding `hash`, followed by the integration key.
+- [x] Add bounded form-body reading (16 KiB), duplicate-field rejection, strict required-field/amount validation and constant-time SHA-512 hash comparison.
+- [x] Add a Paynow callback receiver with Supabase JWT verification disabled only for this endpoint; cryptographic Paynow hash verification is mandatory before any field is trusted or persisted.
+- [x] Persist only a sanitized callback projection in the existing `webhook_events` table after signature verification. The raw body, hash, integration key, poll URL and optional instrument token fields are not persisted or logged.
+- [x] Use SHA-256 of the exact callback body as the provider event ID; the existing unique provider/event constraint suppresses exact duplicate callbacks.
+- [x] Settle only a uniquely matched `provider='paynow'` payment with an exact amount match and Paynow status `Paid`, using the existing service-role-only `apply_payment_result()` RPC.
+- [x] Ignore unmatched references and non-Paid statuses; retain amount mismatches as failed events. Already-succeeded payment callbacks are idempotent; other terminal payment states are not reopened.
+- [x] Add Deno tests including Paynow's published SHA-512 example, a signed callback, modified hash, duplicate fields and amount precision.
+- [x] Extend the Deno CI workflow to check the Paynow webhook entrypoint.
+- [x] Configure `supabase/config.toml` with `verify_jwt = false` only for `paynow-webhook`; the handler independently verifies Paynow's signature.
+- [ ] Verify a successful GitHub Actions Deno check/test run for the complete B4.5 source.
+- [ ] Configure `PAYNOW_INTEGRATION_KEY` in Supabase Function secrets only after the school owns a Paynow integration and has securely received its key.
+- [ ] Deploy and test with Paynow-issued test credentials and an actual Paynow callback before enabling a live result URL.
+- [ ] Add a reviewed Paynow initiation adapter that creates `provider='paynow'` payments and merchant references. B4.4 currently creates simulated EcoCash and manual-bank intents only, so no current payment can be settled by this receiver.
+- [ ] Define currency mapping and test exact amount/currency behavior for the Paynow integration before real transactions.
+
+**Operational boundary:** B4.5 is source-only. No migration, payment, webhook event, credential, provider request, settlement or function deployment was created. Read-only remote verification found `webhook_events` already has RLS enabled, a unique `(provider, provider_event_id)` constraint and service-role-only table grants; the existing `apply_payment_result()` RPC is executable by `service_role` and not by `authenticated`. The remote ledger remains at 29 migrations and the webhook inbox contains zero rows. Supabase currently reports no deployed Edge Functions.
+
 ## B5 — Demo data and scripts (4 batches)
 
 1. Idempotent seed for the single Greenfield Early Learning Centre demo school.
