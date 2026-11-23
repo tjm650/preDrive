@@ -53,6 +53,7 @@ begin
       'public.request_data_export(uuid,text)',
       'public.request_child_record_deletion(uuid,uuid,text)',
       'public.review_deletion_request(uuid,uuid,text,text,text)',
+      'public.complete_deletion_request(uuid,uuid,text)',
       'public.bulk_create_children(uuid,jsonb)',
       'public.assign_child_route_stop(uuid,uuid,uuid,uuid)',
       'public.cancel_scheduled_trip(uuid,uuid,text)'
@@ -108,6 +109,7 @@ begin
         'request_refund', 'apply_refund_result', 'request_data_export',
         'request_child_record_deletion', 'review_deletion_request',
         'record_consent', 'withdraw_consent', 'request_account_deletion',
+        'complete_deletion_request',
         'reorder_route_stops', 'bulk_create_children', 'assign_child_route_stop', 'cancel_scheduled_trip'
       )
       and p.prosecdef
@@ -161,6 +163,12 @@ begin
      or has_function_privilege('authenticated', 'public.apply_refund_result(uuid,boolean,text)', 'EXECUTE')
      or not has_function_privilege('service_role', 'public.apply_refund_result(uuid,boolean,text)', 'EXECUTE') then
     raise exception 'Refund settlement must be service_role-only';
+  end if;
+
+  if has_function_privilege('anon', 'public.complete_deletion_request(uuid,uuid,text)', 'EXECUTE')
+     or has_function_privilege('authenticated', 'public.complete_deletion_request(uuid,uuid,text)', 'EXECUTE')
+     or not has_function_privilege('service_role', 'public.complete_deletion_request(uuid,uuid,text)', 'EXECUTE') then
+    raise exception 'Deletion completion must be service_role-only';
   end if;
 
   if has_function_privilege('anon', 'public.verify_handover(uuid,uuid,uuid,uuid,text)', 'EXECUTE')
