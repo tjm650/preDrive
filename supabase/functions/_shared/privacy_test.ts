@@ -1,6 +1,7 @@
 import { assertEquals, assertFalse } from "jsr:@std/assert@1.0.14";
 import {
   dataExportObjectPath,
+  isValidDataExportObjectPath,
   isValidDeletionRequestId,
   utf8ByteLength,
 } from "./privacy.ts";
@@ -34,6 +35,21 @@ Deno.test("deletion request identifiers must be UUIDs", () => {
     true,
   );
   assertFalse(isValidDeletionRequestId("../private/export.json"));
+  assertEquals(
+    isValidDataExportObjectPath(
+      "a1111111-1111-4111-8111-111111111111",
+      "b2222222-2222-4222-8222-222222222222",
+      "a1111111-1111-4111-8111-111111111111/privacy/b2222222-2222-4222-8222-222222222222/c3333333-3333-4333-8333-333333333333.json",
+    ),
+    true,
+  );
+  assertFalse(
+    isValidDataExportObjectPath(
+      "a1111111-1111-4111-8111-111111111111",
+      "b2222222-2222-4222-8222-222222222222",
+      "a1111111-1111-4111-8111-111111111111/privacy/b2222222-2222-4222-8222-222222222222/../private.json",
+    ),
+  );
   assertFalse(isValidDeletionRequestId("not-a-uuid"));
 });
 
