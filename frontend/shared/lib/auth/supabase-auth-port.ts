@@ -61,7 +61,7 @@ export interface SupabaseAuthClient {
   rpc(
     functionName: string,
     args?: Record<string, unknown>,
-  ): Promise<SupabaseResult<unknown>>;
+  ): PromiseLike<SupabaseResult<unknown>>;
   from(table: string): {
     select(columns: string): QueryBuilder<unknown>;
   };
