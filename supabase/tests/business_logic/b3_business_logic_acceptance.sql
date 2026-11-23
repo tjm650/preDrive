@@ -101,7 +101,10 @@ begin
         'raise_sos', 'report_trip_delay', 'acknowledge_alert',
         'complete_vehicle_check', 'resolve_incident', 'resolve_sos',
         'set_guardian_notification_radius',
-        'get_child_trip_eta', 'evaluate_trip_geofences', 'initiate_payment', 'apply_payment_result',
+        'get_child_trip_eta', 'evaluate_trip_geofences',
+        'create_invoice', 'issue_invoice', 'void_invoice',
+        'submit_bank_transfer', 'review_bank_transfer',
+        'initiate_payment', 'apply_payment_result',
         'request_refund', 'apply_refund_result', 'request_data_export',
         'request_child_record_deletion', 'review_deletion_request',
         'record_consent', 'withdraw_consent', 'request_account_deletion',
@@ -163,6 +166,17 @@ begin
   if has_function_privilege('anon', 'public.verify_handover(uuid,uuid,uuid,uuid,text)', 'EXECUTE')
      or not has_function_privilege('authenticated', 'public.verify_handover(uuid,uuid,uuid,uuid,text)', 'EXECUTE') then
     raise exception 'Handover verification grants are incorrect';
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where n.nspname = 'public' and t.relname = 'route_stops'
+      and c.conname = 'route_stops_route_order_key'
+      and c.contype = 'u' and c.condeferrable and c.condeferred
+  ) then
+    raise exception 'Route stop order constraint must be deferrable for atomic reordering';
   end if;
 
   if has_table_privilege('authenticated', 'public.child_route_assignments', 'INSERT')
