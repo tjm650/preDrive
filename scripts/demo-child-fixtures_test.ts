@@ -77,3 +77,17 @@ Deno.test("all children use the reserved Greenfield tenant class IDs", () => {
     throw new Error("Child fixtures contain a non-canonical tenant or class ID.");
   }
 });
+
+Deno.test("Greenfield route assignments never exceed the seeded bus capacities", () => {
+  const counts = new Map<string, number>();
+  for (const child of GREENFIELD_CHILDREN) {
+    counts.set(child.routeCode, (counts.get(child.routeCode) ?? 0) + 1);
+  }
+  if (
+    counts.get("A") !== 24 ||
+    counts.get("B") !== 22 ||
+    counts.get("C") !== 18
+  ) {
+    throw new Error("Expected route passenger counts of 24, 22 and 18 for bus capacities 28, 24 and 18.");
+  }
+});
