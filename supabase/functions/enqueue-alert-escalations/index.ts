@@ -4,7 +4,7 @@ import { requireCronSecret } from "../_shared/auth.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
 import {
   isValidProcessedAlertCount,
-  MAX_ESCALATION_MAX_ESCALATION_BATCH_SIZE,
+  MAX_ESCALATION_BATCH_SIZE,
 } from "../_shared/escalations.ts";
 
 const handler = createEdgeHandler(async (request) => {
