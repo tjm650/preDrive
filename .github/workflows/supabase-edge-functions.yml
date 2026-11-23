@@ -4,22 +4,20 @@ on:
   push:
     paths:
       - "supabase/functions/**"
-      - "scripts/seed-auth-users.ts"
-      - "scripts/seed-auth-users_test.ts"
-      - "scripts/demo-child-fixtures.ts"
-      - "scripts/demo-child-fixtures_test.ts scripts/demo-identity-fixtures_test.ts scripts/seed-greenfield-households_test.ts scripts/seed-greenfield-households_test.ts"
-      - "scripts/demo-identity-fixtures.ts"
-      - "scripts/demo-identity-fixtures_test.ts"
-      - "scripts/seed-greenfield-households.ts"
-      - "scripts/seed-greenfield-households_test.ts"
-      - "scripts/demo-history-fixtures.ts"
-      - "scripts/demo-history-fixtures_test.ts"
+      - "supabase/tests/seed/**"
+      - "scripts/**"
+      - "supabase/seed.sql"
+      - "supabase/config.toml"
+      - "docs/BACKEND-BATCHES.md"
       - ".github/workflows/supabase-edge-functions.yml"
   pull_request:
     paths:
       - "supabase/functions/**"
-      - "scripts/seed-auth-users.ts"
-      - "scripts/seed-auth-users_test.ts"
+      - "supabase/tests/seed/**"
+      - "scripts/**"
+      - "supabase/seed.sql"
+      - "supabase/config.toml"
+      - "docs/BACKEND-BATCHES.md"
       - ".github/workflows/supabase-edge-functions.yml"
   workflow_dispatch:
 
