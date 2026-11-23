@@ -163,8 +163,12 @@ class GreenfieldSeedApi {
     return result.access_token;
   }
 
-  async rows<T>(table: string, query: Record<string, string>): Promise<T[]> {
-    const params = new URLSearchParams({ select: "*", ...query });
+  async rows<T>(
+    table: string,
+    query: Record<string, string>,
+    select = "*",
+  ): Promise<T[]> {
+    const params = new URLSearchParams({ select, ...query });
     return await this.request<T[]>("/rest/v1/" + table + "?" + params.toString());
   }
 
@@ -377,10 +381,14 @@ async function ensureCollectors(
   childIndex: number,
   pin: string,
 ): Promise<number> {
-  const existing = await api.rows<CollectorRow>("approved_collectors", {
-    school_id: "eq." + GREENFIELD_DEMO_SCHOOL_ID,
-    child_id: "eq." + childId,
-  });
+  const existing = await api.rows<CollectorRow>(
+    "approved_collectors",
+    {
+      school_id: "eq." + GREENFIELD_DEMO_SCHOOL_ID,
+      child_id: "eq." + childId,
+    },
+    "id,child_id,full_name,phone,active",
+  );
   let created = 0;
   for (let sequence = 0; sequence < GREENFIELD_COLLECTORS_PER_CHILD; sequence += 1) {
     const suffix = String(childIndex * 2 + sequence + 1).padStart(6, "0");
@@ -532,9 +540,16 @@ async function main(): Promise<void> {
   const staffIds: string[] = [];
   for (const route of staffEmailByRoute) {
     for (const email of [route.supervisor, route.driver]) {
-      const userId = email.endsWith("route-a@greenfield.predrive-demo.invalid")
-        ? (await api.rows<Profile>("profiles", { email: "eq." + email }))[0]?.id
-        : fixtureIds.get(email);
+      let userId: string | undefined;
+      if (email.endsWith("route-a@greenfield.predrive-demo.invalid")) {
+        const primaryProfiles = await api.rows<Profile>("profiles", { email: "eq." + email });
+        if (primaryProfiles.length !== 1) {
+          throw new Error("A primary route staff profile is missing or duplicated: " + email);
+        }
+        userId = primaryProfiles[0].id;
+      } else {
+        userId = fixtureIds.get(email);
+      }
       if (!userId) throw new Error("A canonical route staff profile is missing: " + email);
       const staff = await api.rows<Staff>("staff_members", {
         school_id: "eq." + GREENFIELD_DEMO_SCHOOL_ID,
