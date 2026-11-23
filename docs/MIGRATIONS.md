@@ -219,6 +219,6 @@ The migration was applied after explicit user approval. Supabase recorded it as 
 
 ## B4.6 payment reminder alert source — authored, approval pending
 
-`supabase/migrations/20261123110000_predrive_payment_reminder_alert_source.sql` extends the existing `alerts_source_type_check` constraint to permit the dedicated `payment_reminder` source type. It preserves every existing allowed source value and does not alter alert rows, recipients, policies or grants. The reminder generator uses the existing school-scoped alert deduplication and alert-recipient uniqueness indexes.
+`supabase/migrations/20261123061404_predrive_payment_reminder_alert_source.sql` extends the existing `alerts_source_type_check` constraint to permit the dedicated `payment_reminder` source type. It preserves every existing allowed source value and does not alter alert rows, recipients, policies or grants. The reminder generator uses the existing school-scoped alert deduplication and alert-recipient uniqueness indexes.
 
-The migration has been committed but **has not been applied** to the existing development project. Do not deploy or invoke `generate-payment-reminders` until the user explicitly approves this exact migration and the read-only acceptance suite `supabase/tests/automation/b4_finance_acceptance.sql` passes.
+The migration was applied to the existing development project after explicit user approval. The read-only acceptance suite `supabase/tests/automation/b4_finance_acceptance.sql` passed. Function deployment and invocation remain gated on secure secrets and runtime smoke tests.
