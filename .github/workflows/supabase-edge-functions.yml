@@ -10,8 +10,7 @@ on:
       - "scripts/**"
       - "supabase/seed.sql"
       - "supabase/config.toml"
-      - "docs/BACKEND-BATCHES.md"
-      - "docs/MIGRATIONS.md"
+      - "docs/**"
       - ".github/workflows/supabase-edge-functions.yml"
   pull_request:
     paths:
@@ -22,8 +21,7 @@ on:
       - "scripts/**"
       - "supabase/seed.sql"
       - "supabase/config.toml"
-      - "docs/BACKEND-BATCHES.md"
-      - "docs/MIGRATIONS.md"
+      - "docs/**"
       - ".github/workflows/supabase-edge-functions.yml"
   workflow_dispatch:
 
