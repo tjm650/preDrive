@@ -283,8 +283,24 @@ begin
   ) then
     raise exception using errcode = '42501', message = 'FORBIDDEN';
   end if;
-  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) <> 8
-     or p_checked_at is null or p_checked_at > now() + interval '2 minutes' then
+  if p_items is null or jsonb_typeof(p_items) <> 'array'
+     or jsonb_array_length(p_items) <> 8
+     or p_checked_at is null or p_checked_at > now() + interval '2 minutes'
+     or p_safe_to_operate is null
+     or exists (
+       select 1 from jsonb_array_elements(p_items) as item(value)
+       where jsonb_typeof(item.value) <> 'object'
+         or jsonb_typeof(item.value -> 'key') is distinct from 'string'
+         or jsonb_typeof(item.value -> 'label') is distinct from 'string'
+         or jsonb_typeof(item.value -> 'passed') is distinct from 'boolean'
+         or char_length(coalesce(item.value ->> 'key', '')) not between 1 and 80
+         or char_length(coalesce(item.value ->> 'label', '')) not between 1 and 160
+     )
+     or (select count(distinct item.value ->> 'key') from jsonb_array_elements(p_items) as item(value)) <> 8
+     or p_safe_to_operate is distinct from (
+       select bool_and((item.value ->> 'passed')::boolean)
+       from jsonb_array_elements(p_items) as item(value)
+     ) then
     raise exception using errcode = '22023', message = 'VALIDATION';
   end if;
   if not exists (
