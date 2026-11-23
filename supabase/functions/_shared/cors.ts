@@ -28,12 +28,16 @@ export function parseAllowedOrigins(value: string | undefined): Set<string> {
       throw new Error("APP_ALLOWED_ORIGINS contains an invalid URL.");
     }
 
+    const isLocalDevelopmentOrigin =
+      parsed.protocol === "http:" &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname);
+
     if (
-      !["https:", "http:"].includes(parsed.protocol) ||
+      (parsed.protocol !== "https:" && !isLocalDevelopmentOrigin) ||
       parsed.origin !== candidate.replace(/\/$/, "")
     ) {
       throw new Error(
-        "APP_ALLOWED_ORIGINS entries must be exact HTTP(S) origins without paths.",
+        "APP_ALLOWED_ORIGINS must use HTTPS, except for localhost development origins, and must not include paths.",
       );
     }
 
