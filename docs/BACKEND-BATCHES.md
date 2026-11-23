@@ -471,3 +471,32 @@ B4 implementation is complete at the repository and development-schema level. Th
 - [ ] Add staff, Auth users, children and guardians in later B5 stages after the canonical IDs and service-role Auth provisioning path are reviewed.
 
 **Safety boundary:** no remote seed was run. No school, bus, route, class, setting or fee data has been inserted. The SQL seed does not create Auth users, passwords, profiles, memberships, child records, trip history or invoices. It never deletes data and refuses to modify a non-demo school. The existing remote project remains empty of application records.
+
+## B5.2 — Greenfield demo Auth identities (source complete; provisioning pending)
+
+- [x] Read the product brief, Supabase Auth Admin documentation and the live Auth/profile/membership/staff schema before implementing provisioning.
+- [x] Add `scripts/seed-auth-users.ts`, a Deno TypeScript server-side provisioning script using the Supabase Auth Admin REST endpoint and service-role PostgREST access.
+- [x] Define exactly five primary demo identities matching the brief: school admin, guardian, supervisor, driver and teacher.
+- [x] Use reserved `.invalid` email domains so the demo identities cannot accidentally receive real email.
+- [x] Auto-confirm only these non-deliverable demo Auth identities; no invitation emails are sent.
+- [x] Store a provisioning marker in Auth `app_metadata` for idempotency only. No role or school authorization is derived from user metadata.
+- [x] Rely on the existing `private.sync_auth_user_profile()` Auth trigger, then update and verify each profile's full name, phone and language.
+- [x] Create/verify one school-scoped membership per identity; create staff rows only for supervisor, driver and teacher.
+- [x] Fail closed on an existing reserved email not marked by this seed, mismatched/inactive membership, mismatched staff row or membership in another school.
+- [x] Preflight all reserved email collisions and passwords before the first Auth mutation. Re-runs do not reset existing demo passwords.
+- [x] Require a unique 16–128 character password from a server environment variable for each newly-created account. No password, service-role key or credential file is stored or printed.
+- [x] Add six Deno tests for role coverage, reserved domains, Zimbabwean phone shape, password variable names, password policy and fixed tenant ID.
+- [x] Extend the Supabase Edge Function workflow to type-check and run the demo Auth seed tests.
+- [ ] Run Deno CI and address any type/test failures before provisioning.
+- [ ] Apply B5.1 SQL seed first, then run Auth provisioning with secure environment variables after explicit authorization for remote Auth user and membership creation.
+- [ ] Run read-only Auth/profile/membership/staff acceptance checks and sign in once per role; test RLS isolation with the B5 synthetic tenant fixtures.
+
+**Provisioning command (run only in a trusted server environment):**
+
+```sh
+deno run --allow-env --allow-net scripts/seed-auth-users.ts
+```
+
+Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and (for each account that does not already exist) `PREDRIVE_DEMO_ADMIN_PASSWORD`, `PREDRIVE_DEMO_GUARDIAN_PASSWORD`, `PREDRIVE_DEMO_SUPERVISOR_PASSWORD`, `PREDRIVE_DEMO_DRIVER_PASSWORD`, `PREDRIVE_DEMO_TEACHER_PASSWORD`. Set them in the execution environment or a trusted secret manager; never commit them, paste them into chat, or expose them to browser/mobile builds.
+
+**Safety boundary:** the script has not been run. No Auth users, profiles, memberships or staff rows were created. The remote development database remains unchanged. Existing user passwords are never reset on rerun. If provisioning stops partway due to a network/database failure, rerun after resolving the cause; the marker and conflict checks allow safe continuation without deleting users.
