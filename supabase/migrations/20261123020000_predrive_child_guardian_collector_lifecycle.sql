@@ -163,12 +163,58 @@ begin
 end;
 $function$;
 
+create or replace function public.list_approved_collectors(
+  p_school_id uuid,
+  p_child_id uuid
+)
+returns table (
+  id uuid,
+  school_id uuid,
+  child_id uuid,
+  full_name text,
+  relationship public.collector_relationship,
+  phone text,
+  active boolean,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select
+    ac.id, ac.school_id, ac.child_id, ac.full_name,
+    ac.relationship, ac.phone, ac.active, ac.created_at, ac.updated_at
+  from public.approved_collectors ac
+  where ac.school_id = p_school_id
+    and ac.child_id = p_child_id
+    and ac.active
+    and (
+      private.has_role(p_school_id, 'school_admin'::public.user_role)
+      or private.is_guardian_of(p_child_id)
+      or exists (
+        select 1
+        from public.trips t
+        join public.trip_children tc
+          on tc.trip_id = t.id and tc.school_id = t.school_id
+        join public.staff_members sm
+          on sm.id = t.supervisor_id and sm.school_id = t.school_id
+        where t.school_id = p_school_id and t.status = 'active'::public.trip_status
+          and tc.child_id = p_child_id
+          and sm.user_id = auth.uid() and sm.active and sm.role = 'supervisor'
+      )
+    );
+$function$;
+
 revoke all on function public.create_child(uuid, text, text, date, uuid) from public, anon;
 revoke all on function public.link_guardian_to_child(uuid, uuid, uuid, public.collector_relationship, boolean) from public, anon;
 revoke all on function public.create_approved_collector(uuid, uuid, text, public.collector_relationship, text, text) from public, anon;
+revoke all on function public.list_approved_collectors(uuid, uuid) from public, anon;
 grant execute on function public.create_child(uuid, text, text, date, uuid) to authenticated;
 grant execute on function public.link_guardian_to_child(uuid, uuid, uuid, public.collector_relationship, boolean) to authenticated;
 grant execute on function public.create_approved_collector(uuid, uuid, text, public.collector_relationship, text, text) to authenticated;
+grant execute on function public.list_approved_collectors(uuid, uuid) to authenticated;
 
      or p_pin !~ '^[0-9]{4,8}$' then
     raise exception using errcode = '22023', message = 'VALIDATION';
