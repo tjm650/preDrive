@@ -183,7 +183,8 @@ begin
   if v_actor is null then
     raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
   end if;
-  if p_longitude not between -180 and 180 or p_latitude not between -90 and 90
+  if p_longitude is null or p_latitude is null
+     or p_longitude not between -180 and 180 or p_latitude not between -90 and 90
      or p_recorded_at is null or p_idempotency_key is null
      or p_recorded_at > now() + interval '2 minutes'
      or p_recorded_at < now() - interval '10 minutes'
