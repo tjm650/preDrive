@@ -240,3 +240,10 @@ The migration was applied after explicit approval and Supabase recorded remote v
 The two B4.7.2 migrations are now present in the repository under the exact versions recorded by the development project's migration ledger: `20261123093600_predrive_notification_delivery_cycles_escalation.sql` and `20261123093624_predrive_notification_delivery_cycles_hardening.sql`. Their implementation and verification record is in [B4.7.2 Notification Cycles](./B4.7.2-NOTIFICATION-CYCLES.md). The read-only catalog acceptance suite is `supabase/tests/automation/b4_notification_cycles_acceptance.sql`.
 
 The acceptance suite passed against the connected development database after correcting its empty-search-path catalog assertion. No migration was applied during this reconciliation. The verified read-only snapshot reported 33 migration versions, zero notification deliveries, zero alerts, zero scheduled repeat alerts, and RLS enabled on the outbox. A full clean-room replay remains deferred; this source synchronization does not certify a fresh replay.
+
+
+## B4.8 controlled privacy withdrawal migration — source authored, remote approval pending
+
+`supabase/migrations/20261123120000_predrive_privacy_deletion_worker.sql` adds a service-role-only transactional RPC for approved child-record withdrawal and supporting bounded-worker indexes. Child withdrawal marks the child `withdrawn`, disables school-scoped guardian/collector/route access, and retains financial, safety, consent, trip and audit history. Active trips and unresolved incidents create a retention hold with no child-data changes. Account-wide deletion requests are held for coordinated cross-school/Auth review; no Auth user is deleted or banned.
+
+The migration is committed on `main` but has **not** been applied to the development database. Apply only after explicit user approval. The read-only acceptance suite is `supabase/tests/automation/b4_privacy_acceptance.sql`.
