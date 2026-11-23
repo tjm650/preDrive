@@ -29,7 +29,7 @@ jobs:
           deno-version: v2.9.8
 
       - name: Type-check shared Edge Function modules and tests
-        run: deno check supabase/functions/_shared/*.ts supabase/functions/generate-daily-trips/index.ts
+        run: deno check supabase/functions/_shared/*.ts supabase/functions/generate-daily-trips/index.ts supabase/functions/invite-school-member/index.ts
 
       - name: Run shared Edge Function tests
         run: deno test --allow-net supabase/functions/_shared
