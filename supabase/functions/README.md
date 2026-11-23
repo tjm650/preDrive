@@ -156,3 +156,15 @@ The worker accepts exactly one valid Expo ticket for its single-recipient reques
 
 
 B4.7.5 verification: GitHub Actions run [45158947154](https://github.com/tjm650/preDrive/actions/runs/45158947154) passed Deno type-checking and all 50 shared tests. The two remote read-only notification acceptance SQL suites passed. The current development project has no deployed Edge Functions, no matching cron jobs, and no notification/alert/broadcast rows. No remote schema or data changes were made during B4.7.5.
+
+
+## Personal data export (B4.8.1)
+
+- A school member requests an export through the existing authenticated `request_data_export(school_id, reason)` RPC. A school administrator must review the request and move it to `processing`; the worker never self-approves requests.
+- `process-data-exports` is POST-only and protected by `CRON_SECRET`. It processes only `data_export` requests already in `processing`, with no retention hold, and requires `requested_by = subject_user_id`.
+- The export is scoped to the authenticated subject's profile, memberships, staff record, guardian-child links, linked children, approved collector details (never PIN hashes or PIN lock counters), consent history, invoices, payments, trip-child attendance and related trip metadata. It excludes GPS coordinates, device tokens, credentials, other guardians' profiles and internal idempotency hashes.
+- The JSON artifact is stored in the private `exports` bucket under a school/request-scoped object path. It is limited to 20 MiB. The worker marks the request completed only after upload succeeds.
+- `download-data-export` requires the original authenticated requester, a completed export request and no retention hold. It returns a signed URL valid for 60 seconds; the retention worker removes export files after seven days.
+- The worker does not email the export or expose a public bucket URL. The service-role key remains server-only.
+- This first export version intentionally does not claim to export every school operational or safety record. It covers the subject-centred personal categories listed above; financial records are included as a copy for the subject and are never deleted by export processing.
+- Both functions are source-only until secrets are configured, CI passes, and controlled authenticated/cron tests are completed.
