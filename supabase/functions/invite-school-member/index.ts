@@ -71,10 +71,10 @@ const handler = createEdgeHandler(async (request) => {
     );
   }
 
-  const emailPattern = body.email.replace(/[\\%_]/g, "\\  const { data: profile, error: profileError } = await client
-    .from("profiles")
-    .select("id")
-    .ilike("email", body.email)");
+  const emailPattern = body.email.replace(
+    /[\\%_]/g,
+    (character) => "\\" + character,
+  );
   const { data: profile, error: profileError } = await client
     .from("profiles")
     .select("id")
