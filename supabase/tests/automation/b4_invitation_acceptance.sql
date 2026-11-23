@@ -17,6 +17,15 @@ begin
     raise exception 'B4.3: invitation staff detail columns are missing';
   end if;
 
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.school_invitations'::regclass
+      and conname = 'school_invitations_staff_details_check'
+      and contype = 'c'
+  ) then
+    raise exception 'B4.3: staff invitation details constraint is missing';
+  end if;
+
   v_function := to_regprocedure('public.accept_school_invitation()');
   if v_function is null then
     raise exception 'B4.3: invitation acceptance RPC is missing';
