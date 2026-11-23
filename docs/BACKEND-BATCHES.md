@@ -442,3 +442,6 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 
 
 **B4.8.5 hardening note:** Export objects now use a unique per-lease path recorded on the completed request. Download signs only that recorded, validated path; retention removes that exact object. This prevents a stale worker from overwriting a newer export, even if the earlier worker's lease expires while it is uploading. The updated export-lease migration includes `export_object_path` and the completion RPC validates the exact school/request/lease path.
+
+
+B4.8.5 source verification: Deno 2.9.8 type-check passed and all 55 shared tests passed (0 failures) in [GitHub Actions run 45169371867](https://github.com/tjm650/preDrive/actions/runs/45169371867). The rollback-only SQL lease scenarios are ready but require the lease migration to be applied before execution.
