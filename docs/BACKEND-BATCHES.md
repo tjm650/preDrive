@@ -594,6 +594,7 @@ B5 source foundations now cover the Greenfield school/fleet/fee catalogue, five 
 2. The demo-only historical/finance writer exists as migration source but has not been SQL-executed or applied remotely. Existing trip lifecycle RPCs correctly prevent creating trips weeks in the past; do not bypass them with direct REST inserts.
 3. The product brief requires at least 30 real-road-path coordinates per route. The current database/API stores route metadata and ordered stop points only; it has no typed route geometry field. Do not fabricate straight-line/interpolated roads or hide polylines in settings. A typed route-geometry schema and shared API contract must be reviewed in B6 before route polylines can be persisted and consumed.
 4. Shona/Ndebele notification copy still requires native-speaker review before notification delivery can be enabled.
+5. A `scripts/reset-demo.ts` workflow is not implemented. The approved B4.8 retention baseline preserves financial, safety and audit records; a reset that deletes or rewrites those records would contradict that policy. Define a demo-specific reset boundary first. Any reset must be fixed-school, `is_demo=true` guarded, use a separate high-entropy `DEMO_RESET_SECRET`, and never delete Auth users globally.
 
 **B5 must not be described as production-ready or fully runtime-verified until the remote seed is authorized, the dedicated history/finance writer is reviewed, all acceptance tests pass against populated synthetic records, and the route-geometry contract is implemented.**
 
