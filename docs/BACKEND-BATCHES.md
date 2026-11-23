@@ -277,10 +277,10 @@ The current API contract has no Realtime subscription methods or payloads. Do no
 - [x] Add tests for refund/receipt request validation, Harare local-date conversion, date boundaries, reminder stages and USD/ZiG minor-unit formatting.
 - [x] Add read-only catalog acceptance SQL at `supabase/tests/automation/b4_finance_acceptance.sql`.
 - [x] Extend Deno CI to type-check all three new Edge Function entrypoints and run the expanded shared tests.
-- [ ] Apply migration `20261123110000_predrive_payment_reminder_alert_source.sql` only after explicit user approval. It extends the `alerts_source_type_check` constraint with the dedicated `payment_reminder` value; no rows are changed.
-- [ ] Run the B4.6 catalog acceptance SQL after migration approval/application.
+- [x] Apply migration `20261123061404_predrive_payment_reminder_alert_source.sql` after explicit user approval. It extends the `alerts_source_type_check` constraint with the dedicated `payment_reminder` value; no rows were changed.
+- [x] Run the B4.6 catalog acceptance SQL; all catalog checks passed.
 - [ ] Configure `CRON_SECRET` and `APP_ALLOWED_ORIGINS`, deploy the functions and run authenticated guardian/admin and cron smoke tests.
 - [ ] Add native-reviewed Shona and Ndebele reminder copy and email/push delivery in B4.7.
 - [ ] Add a trusted refund settlement adapter and verify partial/full refund accounting against a controlled test payment before live refunds.
 
-**Operational boundary:** source and tests only. No migration was applied, no functions were deployed, no cron job was scheduled, and no payment/refund/receipt/alert data was created. The reminder function intentionally fails closed until the new source-type constraint migration is applied. B4.6 cannot be marked accepted until that migration is explicitly approved and its catalog/runtime checks pass.
+**Operational boundary:** the approved migration is applied and catalog acceptance passed. No functions were deployed, no cron job was scheduled, and no payment/refund/receipt/alert data was created. Runtime authentication and cron tests remain gated on secure secrets and deployment.
