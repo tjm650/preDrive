@@ -83,7 +83,8 @@ export const GREENFIELD_CHILDREN: readonly DemoChildFixture[] =
       DEMO_CLASS_IDS.littleStars,
       DEMO_CLASS_IDS.explorers,
     ][classIndex];
-    const route = ROUTES[index % ROUTES.length];
+    const routeIndex = index < 2 ? 0 : ((index - 2) < 60 ? (index - 2) % 3 : index - 61);
+    const route = ROUTES[routeIndex];
     const stopIndex = Math.floor(index / ROUTES.length) % route.stopIds.length;
 
     // The first two records are the guardian demo account's children.
