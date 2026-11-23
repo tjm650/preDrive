@@ -524,3 +524,32 @@ Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
 **Important idempotency rule:** `assign_child_route_stop` deactivates any current assignment and inserts a new row. The runner must compare the existing active route/stop before invoking it; it must not call the RPC unconditionally on each seed run.
 
 **Safety boundary:** fixture source and CI wiring only. No remote seed, Auth user, child, guardian link, collector, staff row, route assignment, PIN hash, trip or finance record was created. No remote schema changes were made.
+
+
+## B5.3.2 — Authenticated household, collector and route provisioning (source complete; execution pending)
+
+- [x] Add 31 supporting guardian identities for 32 total households; Chipo Moyo remains the single showcased guardian login and is linked to Tendai and Tadiwa Moyo.
+- [x] Add nine supporting staff identities so the canonical staff roster totals three supervisors, three drivers and six teachers. Supporting accounts use reserved `.invalid` emails and random in-memory passwords that are never displayed or persisted by the seed script.
+- [x] Keep role and school authorization in `school_memberships` and `staff_members`, not user-editable Auth metadata.
+- [x] Add `scripts/seed-greenfield-households.ts` to provision supporting Auth identities and profiles, then use the school-admin JWT for child creation, guardian linking, collector creation, route assignment and schedule-staff assignment RPCs.
+- [x] Use the service-role key only for Auth Admin, profile/membership/staff fixture provisioning and read-only verification. Business child, guardian, collector and route-assignment records are created through authenticated, school-admin RPCs.
+- [x] Create two approved collectors per child through `create_approved_collector`; the database hashes the PIN. The seed requires `PREDRIVE_DEMO_COLLECTOR_PIN` and never logs it.
+- [x] Make child creation, guardian linking, route assignment and collector creation repeat-safe by checking canonical records before invoking non-idempotent RPCs.
+- [x] Add six weekday route schedules (to-school 07:00, from-school 15:00) and assign the correct route driver/supervisor through `assign_route_schedule_staff`.
+- [x] Fail closed if a reserved Auth email, child identity tuple, schedule ID, membership, staff row or active route assignment conflicts with the canonical fixture.
+- [x] Add `supabase/tests/seed/b5_demo_operational_acceptance.sql` to verify 64 children, 32 guardian households, Chipo's two children, 128 hashed collectors, route-stop assignments, the 12-person staff roster, six assigned schedules and school isolation.
+- [ ] Complete Deno CI on the latest runner commit.
+- [ ] Run B5.1 foundation seed, B5.2 primary Auth provisioning and B5.3 operational provisioning against the development database only after explicit written approval for those remote inserts and Auth account creation.
+- [ ] Run B5.1, B5.2 and B5.3 read-only acceptance SQL and verify a second operational seed run makes no duplicate children, links, collectors, assignments or schedules.
+
+**Provisioning command (trusted server environment only):**
+
+```sh
+deno run --allow-env --allow-net scripts/seed-greenfield-households.ts
+```
+
+Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `PREDRIVE_DEMO_ADMIN_PASSWORD`, and `PREDRIVE_DEMO_COLLECTOR_PIN`. The five primary demo accounts must already have been provisioned by `scripts/seed-auth-users.ts`; the Greenfield foundation must already exist. Never expose the service-role key, admin password or collector PIN to a browser/mobile bundle or commit them.
+
+**Important fixture-account boundary:** 31 additional guardian accounts and nine additional staff accounts exist only to make the fictional dataset relationally complete. Their emails use the reserved `.invalid` domain, passwords are random and intentionally not displayed, and they are not advertised as demo sign-in accounts. The only supported demo sign-in identities remain the five primary role accounts.
+
+**Operational boundary:** no Auth users, profiles, memberships, staff, children, guardian links, collectors, route assignments or schedules were created remotely. No remote data mutation was performed. The script and acceptance suite are source-only pending explicit authorization.
