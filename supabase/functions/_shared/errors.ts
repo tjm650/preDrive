@@ -76,7 +76,30 @@ const SAFE_DATABASE_MESSAGES: Record<string, {
     message: "Too many attempts. Please wait before trying again.",
     status: 429,
   },
+  CONFLICT: {
+    code: "CONFLICT",
+    message: "The requested operation conflicts with the current record state.",
+    status: 409,
+  },
 };
+
+const CONFLICT_MESSAGES = new Set([
+  "TRIP_NOT_STARTABLE",
+  "TRIP_NOT_CANCELLABLE",
+  "ACTIVE_ASSIGNED_TRIP_REQUIRED",
+  "ACTIVE_SUPERVISOR_TRIP_REQUIRED",
+  "IDEMPOTENCY_KEY_REUSED",
+  "PIN_INVALID",
+  "PIN_LOCKED",
+  "PIN_EXPIRED",
+  "COLLECTOR_INACTIVE",
+  "COLLECTOR_EXPIRED",
+  "MEMBERSHIP_ROLE_CONFLICT",
+  "INVITATION_NOT_FOUND",
+  "DELETION_REQUEST_NOT_COMPLETABLE",
+  "PAYMENT_ALREADY_SETTLED",
+  "REFUND_NOT_AVAILABLE",
+]);
 
 export function toHttpError(error: unknown): HttpError {
   if (error instanceof HttpError) return error;
@@ -100,6 +123,14 @@ export function toHttpError(error: unknown): HttpError {
       safeMessage.code,
       safeMessage.message,
       safeMessage.status,
+    );
+  }
+
+  if (CONFLICT_MESSAGES.has(message)) {
+    return new HttpError(
+      "CONFLICT",
+      "The requested operation conflicts with the current record state.",
+      409,
     );
   }
 
