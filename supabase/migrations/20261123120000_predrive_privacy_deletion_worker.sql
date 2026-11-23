@@ -12,6 +12,7 @@ set search_path = ''
 as $function$
 declare
   v_request public.deletion_requests%rowtype;
+  v_child_id uuid;
   v_has_active_trip boolean;
   v_has_open_incident boolean;
 begin
@@ -47,13 +48,13 @@ begin
     raise exception using errcode = '22023', message = 'VALIDATION';
   end if;
 
-  if not exists (
-    select 1
-    from public.children c
-    where c.id = v_request.child_id
-      and c.school_id = p_school_id
-    for update
-  ) then
+  select c.id into v_child_id
+  from public.children c
+  where c.id = v_request.child_id
+    and c.school_id = p_school_id
+  for update;
+
+  if not found then
     raise exception using errcode = 'P0002', message = 'CHILD_NOT_FOUND';
   end if;
 
