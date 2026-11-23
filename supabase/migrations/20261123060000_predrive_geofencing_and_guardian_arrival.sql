@@ -77,7 +77,7 @@ begin
   if auth.uid() is null then
     raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
   end if;
-  if p_radius_meters not in (500, 1000, 2000) then
+  if p_radius_meters is null or p_radius_meters not in (500, 1000, 2000) then
     raise exception using errcode = '22023', message = 'VALIDATION';
   end if;
 
