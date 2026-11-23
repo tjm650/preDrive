@@ -249,9 +249,14 @@ The acceptance suite passed against the connected development database after cor
 The migration is committed on `main` but has **not** been applied to the development database. Apply only after explicit user approval. The read-only acceptance suite is `supabase/tests/automation/b4_privacy_acceptance.sql`.
 
 
-## B4.8 export concurrency lease migration — source authored, remote approval pending
+## B4.8 export concurrency lease migrations — applied
 
-`supabase/migrations/20261123133000_predrive_privacy_export_leases.sql` adds a paired lease ID/expiry to `deletion_requests`, an export-queue index, and service-role-only RPCs to claim, complete and release export requests. Claiming uses row locks with `SKIP LOCKED`; completion requires the same unexpired lease. A worker that loses its lease cannot remove a newer worker's export artifact. No remote migration has been applied for this lease change.
+`supabase/migrations/20261123122532_predrive_privacy_export_leases.sql` adds a paired lease ID/expiry and stored export object path to `deletion_requests`, an export-queue index, and service-role-only RPCs to claim, complete and release export requests. Claiming uses row locks with `SKIP LOCKED`; completion requires the same unexpired lease. A worker that loses its lease cannot remove a newer worker's export artifact.
+
+The initial object-path check was over-escaped and rejected valid `.json` paths. Corrective migration `20261123122938_predrive_privacy_export_path_constraint_fix.sql` replaced the check with the correct expression. Remote verification confirmed canonical UUID-based object paths match and malformed suffixes do not. Both migrations are applied to the development database; the migration ledger contains 36 versions.
 
 
 The export-lease migration also stores the exact lease-specific object path on completion. The authenticated download endpoint reads only that recorded path, and retention validates/removes the stored path. This avoids shared-path overwrite races between an expired worker and a replacement worker.
+
+
+B4.8 export-lease acceptance: the lease columns, queue index, SECURITY DEFINER functions, empty search paths and service-role-only execution were verified against the remote catalog. The valid/invalid path expression was tested directly. No export requests or storage objects exist. Populated concurrency tests remain gated on B5 synthetic identity fixtures.
