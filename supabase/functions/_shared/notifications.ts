@@ -38,7 +38,10 @@ export function notificationContent(input: {
   title: string;
   message: string;
 }): NotificationContent | null {
-  if (input.locale.toLowerCase() !== "en") return null;
+  const locale = input.locale.trim().replaceAll("_", "-").toLowerCase();
+  // English regional variants use the same reviewed English copy. Shona and
+  // Ndebele remain suppressed until their own native-reviewed templates exist.
+  if (locale !== "en" && !locale.startsWith("en-")) return null;
 
   return {
     title: input.title,
@@ -49,6 +52,52 @@ export function notificationContent(input: {
       "<p style=\"color:#526477;font-size:13px\">preDrive school notifications</p>" +
       "</body></html>",
   };
+}
+
+export function expoCollapseId(deliveryId: string): string {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(deliveryId)
+  ) {
+    throw new Error("Invalid notification delivery identifier.");
+  }
+  // 39 characters: safely below Expo/APNs collapse identifier limits.
+  return "pd-" + deliveryId;
+}
+
+export interface ExpoPushTicket {
+  status: "ok" | "error";
+  id?: string;
+  error?: string;
+}
+
+export function parseExpoPushTicket(payload: unknown): ExpoPushTicket | null {
+  if (!payload || typeof payload !== "object") return null;
+  const data = (payload as { data?: unknown }).data;
+  const tickets = Array.isArray(data) ? data : [data];
+  if (tickets.length !== 1 || !tickets[0] || typeof tickets[0] !== "object") {
+    return null;
+  }
+
+  const ticket = tickets[0] as {
+    status?: unknown;
+    id?: unknown;
+    details?: { error?: unknown };
+  };
+  if (ticket.status === "ok") {
+    if (typeof ticket.id !== "string" || !ticket.id.trim() || ticket.id.length > 200) {
+      return null;
+    }
+    return { status: "ok", id: ticket.id };
+  }
+  if (ticket.status === "error") {
+    const error = ticket.details?.error;
+    return {
+      status: "error",
+      error: typeof error === "string" && error.length <= 100 ? error : undefined,
+    };
+  }
+  return null;
 }
 
 export function escapeHtml(value: string): string {
