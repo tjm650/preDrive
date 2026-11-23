@@ -147,7 +147,7 @@ export async function verifyPaynowCallback(
     signingValues.join("") + integrationKey,
   );
 
-  if (!constantTimeHexEqual(expectedHash, hashValues[0])) {
+  if (!constantTimeHexEqual(expectedHash.toUpperCase(), hashValues[0].toUpperCase())) {
     throw new TypeError("PAYNOW_SIGNATURE_INVALID");
   }
 
