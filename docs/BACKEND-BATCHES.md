@@ -439,3 +439,6 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 - [ ] Run Deno CI and review the new export worker before deployment.
 
 **Operational boundary:** migration and worker changes are committed on `main`; the lease migration is not applied remotely. No export requests, lease rows, storage objects or user records were created.
+
+
+**B4.8.5 hardening note:** Export objects now use a unique per-lease path recorded on the completed request. Download signs only that recorded, validated path; retention removes that exact object. This prevents a stale worker from overwriting a newer export, even if the earlier worker's lease expires while it is uploading. The updated export-lease migration includes `export_object_path` and the completion RPC validates the exact school/request/lease path.
