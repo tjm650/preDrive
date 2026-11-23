@@ -16,6 +16,10 @@ declare
   v_request_hold uuid := 'f8100000-0000-4000-8000-000000000041';
   v_request_account uuid := 'f8100000-0000-4000-8000-000000000042';
   v_request_tenant uuid := 'f8100000-0000-4000-8000-000000000043';
+  v_request_export uuid := 'f8100000-0000-4000-8000-000000000044';
+  v_lease_id uuid;
+  v_second_claim_count integer;
+  v_released boolean;
   v_result text;
 begin
   insert into auth.users (
@@ -70,10 +74,11 @@ begin
   insert into public.deletion_requests (
     id, school_id, requested_by, subject_user_id, request_type, status,
     reviewed_by, reviewed_at
-  ) values (
-    v_request_account, v_school, v_user, v_user,
-    'account', 'processing', v_user, now()
-  );
+  ) values
+    (v_request_account, v_school, v_user, v_user,
+     'account', 'processing', v_user, now()),
+    (v_request_export, v_school, v_user, v_user,
+     'data_export', 'processing', v_user, now());
 
   -- Normal child withdrawal completes and preserves the child row.
   v_result := public.execute_approved_deletion_request(v_school, v_request_withdraw);
@@ -165,6 +170,56 @@ begin
       and retention_hold = false
   ) then
     raise exception 'Tenant mismatch changed the request';
+  end if;
+
+  -- The export worker must claim each request atomically and only once.
+  select claimed.processing_lease_id
+  into v_lease_id
+  from public.claim_data_export_requests(10, 900) claimed
+  where claimed.id = v_request_export;
+
+  if v_lease_id is null then
+    raise exception 'Export request was not claimed';
+  end if;
+
+  select count(*)::integer
+  into v_second_claim_count
+  from public.claim_data_export_requests(10, 900) claimed
+  where claimed.id = v_request_export;
+
+  if v_second_claim_count <> 0 then
+    raise exception 'An active export lease was claimed more than once';
+  end if;
+
+  v_released := public.release_data_export_request(
+    v_school, v_request_export, v_lease_id
+  );
+
+  if not v_released then
+    raise exception 'Current export lease could not be released';
+  end if;
+
+  select claimed.processing_lease_id
+  into v_lease_id
+  from public.claim_data_export_requests(10, 900) claimed
+  where claimed.id = v_request_export;
+
+  if v_lease_id is null then
+    raise exception 'Released export request could not be reclaimed';
+  end if;
+
+  perform public.complete_data_export_request(
+    v_school, v_request_export, v_lease_id
+  );
+
+  if not exists (
+    select 1 from public.deletion_requests
+    where id = v_request_export and status = 'completed'
+      and completed_at is not null
+      and processing_lease_id is null
+      and processing_lease_expires_at is null
+  ) then
+    raise exception 'Leased export completion did not clear the lease';
   end if;
 end;
 $test$;
