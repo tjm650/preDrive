@@ -1,6 +1,5 @@
--- Source-only B5 demo history writer.
--- Review and convert to a migration only after the user authorizes the schema change.
--- The routine creates fictional Greenfield history only. It never touches real schools.
+-- Review copy of migration 20261123131500_predrive_greenfield_demo_history_writer.sql.
+-- This file is not applied independently.
 
 create or replace function public.seed_greenfield_demo_history()
 returns jsonb
@@ -76,7 +75,8 @@ begin
     'completed'::public.trip_status,
     (d.service_date + rs.departure_time) at time zone 'Africa/Harare',
     ((d.service_date + rs.departure_time) at time zone 'Africa/Harare') + interval '4 minutes',
-    ((d.service_date + rs.departure_time) at time zone 'Africa/Harare') + interval '55 minutes',
+    ((d.service_date + rs.departure_time) at time zone 'Africa/Harare') +
+      make_interval(mins => r.estimated_duration_minutes),
     'greenfield-history:' || rs.id::text || ':' || d.service_date::text,
     supervisor.user_id,
     supervisor.user_id
@@ -274,7 +274,7 @@ begin
     'GF-DEMO-' || i.invoice_number,
     'SIMULATED-' || i.invoice_number,
     'simulated',
-    27.00,
+    null,
     i.guardian_user_id,
     timestamptz '2026-11-16 10:00:00+02',
     timestamptz '2026-11-16 09:55:00+02'
