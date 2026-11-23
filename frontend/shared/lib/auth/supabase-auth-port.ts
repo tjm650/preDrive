@@ -58,6 +58,10 @@ export interface SupabaseAuthClient {
       options?: { redirectTo?: string },
     ): Promise<{ error: SupabaseErrorLike | null }>;
   };
+  rpc(
+    functionName: string,
+    args?: Record<string, unknown>,
+  ): Promise<SupabaseResult<unknown>>;
   from(table: string): {
     select(columns: string): QueryBuilder<unknown>;
   };
@@ -226,6 +230,26 @@ export class SupabaseAuthPort implements AuthPort {
     }
 
     this.activeSchoolId = null;
+
+    // Accept only after Supabase has authenticated this exact email identity.
+    // The RPC derives user ID and email from auth.uid() and the verified profile.
+    const { data: acceptedSchoolId, error: invitationError } = await this.client
+      .rpc("accept_school_invitation");
+
+    if (
+      invitationError &&
+      !(
+        invitationError.code === "P0002" &&
+        invitationError.message === "INVITATION_NOT_FOUND"
+      )
+    ) {
+      assertNoError(invitationError);
+    }
+
+    if (typeof acceptedSchoolId === "string") {
+      this.activeSchoolId = acceptedSchoolId;
+    }
+
     return this.identityFromSession(data.session);
   }
 
