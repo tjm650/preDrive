@@ -153,3 +153,6 @@ English locale tags are normalized across regional variants (for example, `en-ZW
 Each Expo delivery sends a stable outbox-derived `collapseId` and Android `tag`. This helps supported devices collapse or replace a repeated notification from the same delivery row. A new escalation sequence has a different delivery ID and remains a distinct notification. These identifiers do not guarantee exactly-once delivery: a timeout can occur after Expo accepts a request, and Expo/APNs/FCM delivery is best-effort. The app must treat the in-app alert and acknowledgement record as authoritative.
 
 The worker accepts exactly one valid Expo ticket for its single-recipient request. Malformed, empty or unexpected multi-ticket responses are rejected with a safe provider error code. Provider response bodies, email addresses and push tokens are not logged.
+
+
+B4.7.5 verification: GitHub Actions run [45158947154](https://github.com/tjm650/preDrive/actions/runs/45158947154) passed Deno type-checking and all 50 shared tests. The two remote read-only notification acceptance SQL suites passed. The current development project has no deployed Edge Functions, no matching cron jobs, and no notification/alert/broadcast rows. No remote schema or data changes were made during B4.7.5.
