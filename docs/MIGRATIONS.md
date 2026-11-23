@@ -242,11 +242,11 @@ The two B4.7.2 migrations are now present in the repository under the exact vers
 The acceptance suite passed against the connected development database after correcting its empty-search-path catalog assertion. No migration was applied during this reconciliation. The verified read-only snapshot reported 33 migration versions, zero notification deliveries, zero alerts, zero scheduled repeat alerts, and RLS enabled on the outbox. A full clean-room replay remains deferred; this source synchronization does not certify a fresh replay.
 
 
-## B4.8 controlled privacy withdrawal migration — source authored, remote approval pending
+## B4.8 controlled privacy withdrawal migration — applied
 
 `supabase/migrations/20261123114538_predrive_privacy_deletion_worker.sql` adds a service-role-only transactional RPC for approved child-record withdrawal and supporting bounded-worker indexes. Child withdrawal marks the child `withdrawn`, disables school-scoped guardian/collector/route access, and retains financial, safety, consent, trip and audit history. Active trips and unresolved incidents create a retention hold with no child-data changes. Account-wide deletion requests are held for coordinated cross-school/Auth review; no Auth user is deleted or banned.
 
-The migration is committed on `main` but has **not** been applied to the development database. Apply only after explicit user approval. The read-only acceptance suite is `supabase/tests/automation/b4_privacy_acceptance.sql`.
+The migration was applied after explicit user approval. Read-only acceptance and rollback-only synthetic runtime scenarios were executed; no persistent child, account or request data was created. The read-only acceptance suite is `supabase/tests/automation/b4_privacy_acceptance.sql`.
 
 
 ## B4.8 export concurrency lease migrations — applied
@@ -260,3 +260,8 @@ The export-lease migration also stores the exact lease-specific object path on c
 
 
 B4.8 export-lease acceptance: the lease columns, queue index, SECURITY DEFINER functions, empty search paths and service-role-only execution were verified against the remote catalog. The valid/invalid path expression was tested directly. No export requests or storage objects exist. Populated concurrency tests remain gated on B5 synthetic identity fixtures.
+
+
+## B4.8.5 export lease path correction — applied
+
+`supabase/migrations/20261123122938_predrive_privacy_export_path_constraint_fix.sql` replaces the over-escaped export object-path constraint introduced with the lease migration. The corrected expression accepts the exact school/request/lease UUID `.json` path and rejects malformed suffixes. Remote PostgreSQL verification and the B4.8 privacy acceptance SQL both passed. The development migration ledger contains 36 versions.
