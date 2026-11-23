@@ -323,7 +323,7 @@ The current API contract has no Realtime subscription methods or payloads. Do no
 - [x] Add Expo receipt polling using the ticket ID returned by the send endpoint, after a 15-minute wait. Receipt checks are retried while Expo has not produced a receipt and expire after Expo's 24-hour receipt-retention window.
 - [x] Revoke a device registration on a receipt-level `DeviceNotRegistered` error. Receipt outcomes do not resend a delivery already accepted by Expo.
 - [x] Add shared unit tests for receipt outcome classification.
-- [ ] Confirm the GitHub Actions Deno type-check and shared test run for the latest commit.
+- [x] GitHub Actions run `45151098062` passed Deno type-check and all 46 shared tests on commit `c1b61584cfe6cce0dd293e60592206faee9aad88`.
 - [ ] Run controlled runtime tests against seeded device registrations and mocked/Expo-issued receipt IDs.
 - [ ] Deploy only after secrets and provider configuration are verified; no deployment or cron schedule is part of this batch.
 
