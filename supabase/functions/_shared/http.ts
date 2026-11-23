@@ -61,9 +61,10 @@ export function jsonError(
   );
 }
 
-export function createEdgeHandler(handler: EdgeHandler): (
-  request: Request,
-) => Promise<Response> {
+export function createEdgeHandler(
+  handler: EdgeHandler,
+  functionName = "unnamed-function",
+): (request: Request) => Promise<Response> {
   return async (request: Request): Promise<Response> => {
     const requestId = getRequestId(request);
     const startedAt = performance.now();
@@ -88,7 +89,7 @@ export function createEdgeHandler(handler: EdgeHandler): (
         requestId,
         outcome: "rejected",
         status: 403,
-        functionName: "edge-handler",
+        functionName,
       });
 
       return applyCors(
@@ -119,7 +120,7 @@ export function createEdgeHandler(handler: EdgeHandler): (
         status: response.status,
         durationMs: performance.now() - startedAt,
         outcome: response.ok ? "success" : "rejected",
-        functionName: "edge-handler",
+        functionName,
       });
 
       return applyCors(response, cors);
@@ -134,7 +135,7 @@ export function createEdgeHandler(handler: EdgeHandler): (
           durationMs: performance.now() - startedAt,
           errorCode: normalized.code,
           outcome: "failed",
-          functionName: "edge-handler",
+          functionName,
         },
       );
 
