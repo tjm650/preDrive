@@ -193,6 +193,23 @@ Shared dependency versions are pinned to `npm:@supabase/supabase-js@2.119.2` and
 7. Push/email delivery in English, Shona and Ndebele; broadcasts and escalation.
 8. Deletion/export, retention, demo reset, cron and function tests.
 
+## B4.4 — Payment creation and provider adapter (source authored; runtime verification pending)
+
+- [x] Add a guardian-only `create-payment-intent` Edge Function using the existing `initiate_payment()` RPC and the verified guardian JWT.
+- [x] Validate school membership and active school status before payment initiation; the database remains authoritative for invoice ownership, status, currency, outstanding balance and idempotency.
+- [x] Convert frontend major-unit amounts to integer minor units and reject values with more than two decimal places.
+- [x] Apply an atomic per-guardian payment initiation limit of five attempts per five minutes using the existing service-role rate-limit RPC and a SHA-256 subject hash.
+- [x] Add a provider adapter seam: EcoCash remains a simulated pending intent; CBZ and CABS remain manual-bank pending intents. Card is rejected.
+- [x] Preserve the existing `Payment` API result shape; no frontend contract changes and no provider credentials in source.
+- [x] Add Deno tests for request validation, minor-unit conversion, supported methods, provider routing and opaque rate-limit subjects.
+- [x] Extend the GitHub Actions Deno workflow to type-check the payment function and shared tests.
+- [ ] Verify a successful GitHub Actions Deno check/test run for the new function.
+- [ ] Deploy `create-payment-intent` only after the Deno workflow passes and required Supabase Function secrets/CORS origins are confirmed.
+- [ ] Run authenticated guardian runtime tests for valid invoice, wrong-school invoice, non-guardian role, inactive school, idempotent replay, reused idempotency key with changed payload, amount over balance, currency mismatch, rate limiting and card rejection.
+- [ ] Do not mark EcoCash intents successful in this batch. Trusted settlement remains restricted to the service role and belongs to verified B4.5 webhook processing or a separately controlled demo simulation.
+
+**Operational boundary:** B4.4 is source-only. No migration, payment intent, payment attempt, provider request, settlement, Edge Function deployment or cron job was created. The existing finance RPC grants were read-only verified: authenticated callers may invoke `initiate_payment()`; anon cannot; only `service_role` may invoke `apply_payment_result()`. Security Advisor output is unchanged in scope: 20 deliberate deny-by-default tables, the Supabase-owned `pg_net` platform warning, and existing authenticated SECURITY DEFINER RPC notices. Those existing notices are not newly introduced by B4.4.
+
 ## B5 — Demo data and scripts (4 batches)
 
 1. Idempotent seed for the single Greenfield Early Learning Centre demo school.
