@@ -170,3 +170,26 @@ This confirms the current development database inventory and type synchronizatio
 The repository-only `20261121124410_predrive_enable_pgcrypto.sql` remains unapplied to the development migration ledger. Since `extensions.pgcrypto` is already installed, do not apply it merely to make the ledger appear complete. Its behavior still needs to be verified in a genuinely isolated clean replay.
 
 **B1.6 remains open. B2 must not start until the outstanding migration-replay and security/platform acceptance items are resolved.**
+
+## B3 migration set — authored, not applied
+
+The following nine additive migrations were committed on 2026-11-23, in dependency order:
+
+1. `20261123010000_predrive_business_auth_lifecycle.sql`
+2. `20261123020000_predrive_child_guardian_collector_lifecycle.sql`
+3. `20261123025000_predrive_temporary_collector_lifecycle.sql`
+4. `20261123030000_predrive_handover_and_attendance_logic.sql`
+5. `20261123040000_predrive_trip_lifecycle_and_gps.sql`
+6. `20261123050000_predrive_safety_and_emergency_logic.sql`
+7. `20261123060000_predrive_geofencing_and_guardian_arrival.sql`
+8. `20261123070000_predrive_finance_lifecycle.sql`
+9. `20261123080000_predrive_privacy_bulk_and_admin_operations.sql`
+
+They add authenticated school/membership lifecycle functions; child, guardian and collector operations; hashed PIN handover and lockout; trip lifecycle and idempotent GPS; safety, incident and SOS workflows; guardian radius/geofencing/ETA; trusted payment/refund settlement; and consent, deletion/export, bulk, route and trip administration.
+
+The B3 catalog acceptance script is `supabase/tests/business_logic/b3_business_logic_acceptance.sql`. It is read-only and rolls back. It must be run after applying the migrations. It does not create Auth users or prove row-level behavior with multiple tenants.
+
+**Remote status check (2026-11-23):** a read-only `list_migrations` check against project `rjsdhgbjvghjnuiilizm` returned the original 18 B1/B2 migration versions only. None of the B3 versions is applied. No B3 remote DDL or data operation has been executed.
+
+Do not apply B3 until the exact nine-file operation is explicitly approved. After approval, apply sequentially with stop-on-first-error, then run the B3 catalog suite and role-based runtime tests. Regenerate database TypeScript types only after the remote schema is accepted. Do not claim B3 complete before those gates pass.
+
