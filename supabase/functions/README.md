@@ -134,3 +134,12 @@ B4.7.2 adds sequence-aware notification deliveries. Initial alert notifications 
 The `deliver-notifications` worker now polls Expo's documented `/push/getReceipts` endpoint using the ticket ID returned by `/push/send`. It waits at least 15 minutes, rechecks missing receipts periodically, and stops after Expo's 24-hour receipt retention. A receipt confirms handoff to APNs/FCM, not receipt by the person. Receipt-level `DeviceNotRegistered` revokes the associated device registration. Receipt failures are recorded separately and never cause a second send of a delivery already accepted by Expo.
 
 The worker remains source-only. No Edge Function is deployed, no cron job is scheduled, no provider credentials are configured and no messages have been sent. Shona and Ndebele remain suppressed until native-reviewed templates are available.
+
+
+## Urgent-alert escalation scheduler
+
+`enqueue-alert-escalations` is a POST-only Edge Function protected by the same high-entropy `CRON_SECRET` header as the delivery worker. It calls the existing service-role-only `enqueue_due_alert_escalations(p_batch_size)` database routine with a fixed batch size of 100. It does not accept a caller-selected school, alert ID or batch size, and it never sends a message itself.
+
+The database routine locks due urgent alerts with `FOR UPDATE SKIP LOCKED`, so concurrent scheduler invocations do not process the same alert row at once. It creates a new delivery sequence for each escalation rather than resetting previously sent records, queues one push per currently active Expo device and one email only when the recipient's current communications consent is granted, and advances the next escalation time by five minutes. Acknowledged recipients are excluded. The existing `deliver-notifications` worker is responsible for sending the resulting outbox rows.
+
+When release gates are met, schedule `enqueue-alert-escalations` at one-minute intervals and `deliver-notifications` at one-minute intervals. The enqueue routine itself only advances an alert when its five-minute due time has arrived. These are two distinct jobs: the escalation scheduler materializes deliveries, and the delivery worker sends them. Do not create either cron job until both functions are deployed, `CRON_SECRET` and provider settings are configured, and smoke tests pass. No cron job is currently scheduled.
