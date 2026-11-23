@@ -136,15 +136,19 @@ B4.1 shared source and the dedicated GitHub Actions Deno check workflow are comm
 - [x] Restrict inviteable roles to guardian, teacher, supervisor and driver; school-admin privilege cannot be granted through this endpoint.
 - [x] Normalize and validate email addresses, reject unknown request fields, prevent duplicate active memberships and rely on the existing pending-invitation unique index for race-safe duplicate prevention.
 - [x] Create seven-day pending school invitations and send Supabase Auth invitation emails for new accounts. Existing accounts can sign in and accept the pending invitation without creating a second Auth account.
+- [x] Rate-limit invitation creation to 10 attempts per administrator per school per 15 minutes using the existing atomic service-role rate limiter and a SHA-256 subject digest.
+- [x] Require staff full name and phone for driver/supervisor/teacher invitations; persist those fields on the invitation and create/reactivate the `staff_members` row atomically when the invite is accepted.
 - [x] Update the Supabase Auth port to call the existing `accept_school_invitation()` RPC only after successful password authentication. The RPC derives the user and email from `auth.uid()`; the client supplies no identity or role.
 - [x] Add unit tests for input normalization, role escalation rejection, strict request fields and invitation expiry.
 - [x] Extend the Deno workflow to type-check the new function.
 - [ ] Obtain a successful GitHub Actions Deno check and shared test run.
+- [ ] Obtain explicit approval to apply `20261123100000_predrive_invitation_staff_onboarding.sql`; it adds `school_invitations.full_name/phone` and extends `accept_school_invitation()` to provision staff records.
+- [ ] Run `supabase/tests/automation/b4_invitation_acceptance.sql` after migration approval and application.
 - [ ] Configure and verify Supabase Auth SMTP, Site URL and invite redirect allowlist in the development environment.
 - [ ] Deploy `invite-school-member` and test new-user and existing-user acceptance using controlled test identities.
 - [ ] Add the invitation operation to the shared frontend API and SupabaseAdapter in B6 before connecting the school-admin UI.
 
-**Operational boundary:** no new database migration was required; B3 already provides `school_invitations`, `register_school()` and `accept_school_invitation()`. The existing frontend API still has 30 methods and does not yet expose invitation creation. For an email that already belongs to an Auth account, this function creates the pending invitation but does not send a second Auth invite email; the school administrator must ask that person to sign in. Do not deploy until SMTP and redirect settings are verified. No remote Auth users, invitations, function deployments or email sends were created by this source-only batch.
+**Operational boundary:** B3 provides the invitation foundation, but B4.3 requires one additive migration to persist staff onboarding details and create `staff_members` during acceptance. The migration is committed but has not been applied; explicit approval is required. The existing frontend API still has 30 methods and does not yet expose invitation creation. For an email that already belongs to an Auth account, this function creates the pending invitation but does not send a second Auth invite email; the school administrator must ask that person to sign in. Do not deploy until the migration is applied and SMTP/redirect settings are verified. No remote Auth users, invitations, function deployments or email sends were created by this source-only batch. The frontend API still does not expose invitation creation; B6 must add the adapter operation before connecting the school-admin UI.
 
 ### B4.2 — Daily trip generation (migration applied; function deployment pending)
 
