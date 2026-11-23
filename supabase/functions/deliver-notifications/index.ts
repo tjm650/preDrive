@@ -7,6 +7,7 @@ import {
   type ServiceClient,
 } from "../_shared/supabase.ts";
 import {
+  classifyExpoReceipt,
   classifyProviderFailure,
   isExpoPushToken,
   notificationContent,
@@ -555,15 +556,23 @@ async function pollExpoReceipts(client: ServiceClient): Promise<number> {
         continue;
       }
 
-      const deviceNotRegistered =
-        receipt.status === "error" &&
-        receipt.details?.error === "DeviceNotRegistered";
-      const receiptStatus = receipt.status === "ok" ? "ok" : "error";
-      const receiptErrorCode = receiptStatus === "ok"
-        ? null
-        : deviceNotRegistered
-        ? "DEVICE_NOT_REGISTERED"
-        : "EXPO_RECEIPT_ERROR";
+      const classification = classifyExpoReceipt(
+        receipt.status,
+        receipt.details?.error,
+      );
+      if (!classification) {
+        const { error: updateError } = await client
+          .from("notification_deliveries")
+          .update({ receipt_checked_at: new Date().toISOString() })
+          .eq("id", row.id)
+          .eq("receipt_status", "pending");
+        if (updateError) throw updateError;
+        checked += 1;
+        continue;
+      }
+      const deviceNotRegistered = classification.revokeDevice;
+      const receiptStatus = classification.status;
+      const receiptErrorCode = classification.errorCode;
 
       const { error: updateError } = await client
         .from("notification_deliveries")
