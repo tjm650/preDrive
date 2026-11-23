@@ -188,3 +188,10 @@ B4.7.5 verification: GitHub Actions run [45158947154](https://github.com/tjm650/
 - Otherwise it marks the child `withdrawn` and deactivates guardian links, approved collectors, temporary collectors and route assignments. It preserves invoices, payments, refunds, receipts, consent history, incidents, alerts, trip/attendance history, GPS retention policy and audit records.
 - Account-wide deletion requests are automatically held for coordinated review across all linked schools and the Auth lifecycle. This worker never bans or deletes Auth users and never disables memberships in unrelated schools.
 - The migration adds bounded worker/retention indexes and grants the withdrawal RPC only to `service_role`. Apply the migration only after explicit approval; source presence is not evidence that the remote function exists.
+
+
+## Scheduling and demo reset release boundary
+
+The privacy workers are intended for pg_cron-to-Edge-Function invocation after deployment and secret verification. Suggested cadence is every five minutes for export/deletion processing and once daily for retention during a low-traffic Harare window. These are recommendations only: no cron job is installed. The scheduled invocations require the configured high-entropy `CRON_SECRET`.
+
+Demo reset is deferred until B5 creates the canonical idempotent Greenfield demo seed. A reset function must be limited to the explicitly flagged `schools.is_demo = true` record and use a separate `DEMO_RESET_SECRET`; it must not trust a caller-supplied school ID or delete Auth users globally.
