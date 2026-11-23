@@ -1,5 +1,5 @@
 -- B4.8 privacy workflow catalog acceptance.
--- Read-only: run only after migration 20261123120000 is applied.
+-- Read-only: run only after migration 20261123114538 is applied.
 
 do $$
 declare
