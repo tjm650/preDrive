@@ -177,6 +177,7 @@ set search_path = ''
 as $function$
 declare
   v_bus_id uuid;
+  v_existing_position public.bus_position_history%rowtype;
   v_actor uuid := auth.uid();
 begin
   if v_actor is null then
@@ -192,11 +193,23 @@ begin
     raise exception using errcode = '22023', message = 'VALIDATION';
   end if;
 
-  if exists (
-    select 1 from public.bus_position_history h
-    where h.school_id = p_school_id and h.idempotency_key = p_idempotency_key
-  ) then
-    return;
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_school_id::text || p_idempotency_key::text, 0)
+  );
+
+  select h.* into v_existing_position
+  from public.bus_position_history h
+  where h.school_id = p_school_id and h.idempotency_key = p_idempotency_key;
+  if found then
+    if v_existing_position.trip_id = p_trip_id
+       and v_existing_position.recorded_at = p_recorded_at
+       and extensions.st_distance(
+         v_existing_position.location,
+         extensions.st_setsrid(extensions.st_makepoint(p_longitude, p_latitude), 4326)::extensions.geography
+       ) <= 1 then
+      return;
+    end if;
+    raise exception using errcode = '23505', message = 'IDEMPOTENCY_KEY_REUSED';
   end if;
 
   select t.bus_id into v_bus_id
