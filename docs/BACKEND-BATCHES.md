@@ -424,3 +424,18 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 - [ ] Do not reset/delete Auth users globally, do not accept a caller-supplied school ID as authority, and do not reset any school where `is_demo` is false.
 
 **Operational boundary:** zero pg_cron jobs remain installed. No Edge Functions are deployed and no secrets are configured. Demo reset is not implemented until B5 establishes the canonical dataset and a safe transactional reset contract.
+
+ 
+### B4.8.5 — Export concurrency leases (source authored; remote migration approval pending)
+
+- [x] Add 15-minute per-request export leases with atomic `FOR UPDATE SKIP LOCKED` claiming, a maximum batch size of ten and a bounded lease duration.
+- [x] Add service-role-only RPCs to claim, complete and release an export lease.
+- [x] Make export completion conditional on the current unexpired lease.
+- [x] Prevent a stale worker from deleting a newer worker's artifact after losing its lease.
+- [x] Extend rollback-only runtime SQL to test single claim, duplicate claim rejection, lease release/reclaim and successful leased completion.
+- [x] Extend read-only acceptance SQL to verify lease columns, index, SECURITY DEFINER, empty search_path and service-role-only execution.
+- [ ] Obtain explicit approval before applying the export lease migration to the remote development database.
+- [ ] Run updated rollback-only runtime and catalog acceptance SQL after migration.
+- [ ] Run Deno CI and review the new export worker before deployment.
+
+**Operational boundary:** migration and worker changes are committed on `main`; the lease migration is not applied remotely. No export requests, lease rows, storage objects or user records were created.
