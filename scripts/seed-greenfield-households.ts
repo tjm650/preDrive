@@ -10,6 +10,13 @@ import {
 } from "./demo-identity-fixtures.ts";
 
 const SEED_MARKER = "greenfield-demo-fixture-v1";
+const COLLECTOR_FIRST_NAMES = [
+  "Rudo", "Tendai", "Memory", "Tapiwa", "Grace", "Blessing", "Kudzai", "Nomalanga",
+  "Farai", "Nomsa", "Tinashe", "Vimbai", "Lindiwe", "Nyasha", "Sihle", "Tawanda",
+] as const;
+const COLLECTOR_LAST_NAMES = [
+  "Moyo", "Dube", "Ndlovu", "Sibanda", "Ncube", "Chikwanha", "Chari", "Muchengeti",
+] as const;
 const ADMIN_EMAIL = "admin@greenfield.predrive-demo.invalid";
 const CHIPO_EMAIL = "chipo.moyo@greenfield.predrive-demo.invalid";
 
@@ -393,7 +400,10 @@ async function ensureCollectors(
   for (let sequence = 0; sequence < GREENFIELD_COLLECTORS_PER_CHILD; sequence += 1) {
     const suffix = String(childIndex * 2 + sequence + 1).padStart(6, "0");
     const phone = "+263772" + suffix;
-    const fullName = "Approved Collector " + String(childIndex + 1).padStart(2, "0") + (sequence === 0 ? "A" : "B");
+    const collectorIndex = childIndex * 2 + sequence;
+    const fullName =
+      COLLECTOR_FIRST_NAMES[collectorIndex % COLLECTOR_FIRST_NAMES.length] + " " +
+      COLLECTOR_LAST_NAMES[Math.floor(collectorIndex / COLLECTOR_FIRST_NAMES.length)];
     const current = existing.find((row) => row.phone === phone);
     if (current) {
       if (current.full_name !== fullName || !current.active) {
