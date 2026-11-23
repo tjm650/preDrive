@@ -18,10 +18,12 @@ on:
       - "supabase/functions/**"
       - "supabase/tests/seed/**"
       - "supabase/verification/**"
+      - "supabase/migrations/**"
       - "scripts/**"
       - "supabase/seed.sql"
       - "supabase/config.toml"
       - "docs/BACKEND-BATCHES.md"
+      - "docs/MIGRATIONS.md"
       - ".github/workflows/supabase-edge-functions.yml"
   workflow_dispatch:
 
