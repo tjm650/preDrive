@@ -26,6 +26,7 @@ begin
     raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
   end if;
   if p_amount_minor is null or p_amount_minor <= 0
+     or p_currency is null or p_method is null
      or p_idempotency_key is null
      or char_length(btrim(p_idempotency_key)) not between 8 and 160
      or p_method = 'card'::public.payment_method then
