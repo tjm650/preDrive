@@ -77,11 +77,24 @@ export const DEMO_USERS: readonly DemoUser[] = [
 ] as const;
 
 export function isStrongDemoPassword(value: string | undefined): value is string {
-  return typeof value === "string" &&
-    value.length >= 16 &&
-    value.length <= 128 &&
-    value.trim().length >= 16 &&
-    !/[\u0000-\u001f\u007f]/.test(value);
+  if (
+    typeof value !== "string" ||
+    value.length < 16 ||
+    value.length > 128 ||
+    value.trim().length < 16 ||
+    /[\u0000-\u001f\u007f]/.test(value)
+  ) {
+    return false;
+  }
+
+  const characterClasses = [
+    /[a-z]/.test(value),
+    /[A-Z]/.test(value),
+    /[0-9]/.test(value),
+    /[^A-Za-z0-9]/.test(value),
+  ];
+
+  return characterClasses.filter(Boolean).length >= 3;
 }
 
 function requiredEnvironment(name: string): string {
