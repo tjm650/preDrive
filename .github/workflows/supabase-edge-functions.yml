@@ -29,7 +29,7 @@ jobs:
           deno-version: v2.9.8
 
       - name: Type-check shared Edge Function modules and tests
-        run: deno check --config=deno.json supabase/functions/_shared/*.ts supabase/functions/generate-daily-trips/index.ts supabase/functions/invite-school-member/index.ts supabase/functions/create-payment-intent/index.ts supabase/functions/paynow-webhook/index.ts supabase/functions/request-refund/index.ts supabase/functions/get-payment-receipt/index.ts supabase/functions/generate-payment-reminders/index.ts supabase/functions/deliver-notifications/index.ts supabase/functions/enqueue-alert-escalations/index.ts supabase/functions/process-data-exports/index.ts supabase/functions/download-data-export/index.ts supabase/functions/run-approved-retention/index.ts
+        run: deno check --config=deno.json supabase/functions/_shared/*.ts supabase/functions/generate-daily-trips/index.ts supabase/functions/invite-school-member/index.ts supabase/functions/create-payment-intent/index.ts supabase/functions/paynow-webhook/index.ts supabase/functions/request-refund/index.ts supabase/functions/get-payment-receipt/index.ts supabase/functions/generate-payment-reminders/index.ts supabase/functions/deliver-notifications/index.ts supabase/functions/enqueue-alert-escalations/index.ts supabase/functions/process-data-exports/index.ts supabase/functions/download-data-export/index.ts supabase/functions/run-approved-retention/index.ts supabase/functions/process-approved-deletions/index.ts
 
       - name: Run shared Edge Function tests
         run: deno test --config=deno.json --allow-net supabase/functions/_shared
