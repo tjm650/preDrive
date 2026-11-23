@@ -6,11 +6,11 @@ The SQL files in `supabase/migrations/` are the version-controlled source of tru
 
 This repository uses an online Supabase workflow. Do not require Docker, a local Supabase stack, or a local database reset as a prerequisite.
 
-## Current B1.6 status
+## Current B1.6 status (B3 applied incrementally; clean-room replay still deferred)
 
 - Supabase development project: `rjsdhgbjvghjnuiilizm` (`eu-west-1`).
 - PostgreSQL: 17.12.
-- Remote migration ledger contains 18 applied versions: the original 12 B1 versions and six B2 versions applied on 2026-11-22.
+- Remote migration ledger contains 27 applied versions: the original 12 B1 versions, six B2 versions applied on 2026-11-22, and nine B3 versions applied on 2026-11-23.
 - All 12 original B1 SQL files are present in `supabase/migrations/`; the historical reset SQL was recovered from the remote migration ledger and restored to GitHub. A direct comparison confirms the reset file is byte-for-byte identical to its ledger `statements[0]` (2,281 bytes). A read-only comparison of all 12 applied migration records against their repository files confirms normalized SQL text matches for every version; six files are byte-exact and six differ only in comments/whitespace.
 - An additional repository-only migration `20261121124410_predrive_enable_pgcrypto.sql` explicitly declares `pgcrypto` in the `extensions` schema. Its timestamp places it before `20261121124422_predrive_children_guardians.sql`, the first migration that calls `crypt()` and `gen_salt()` for handover PIN hashing. It is not applied to the remote development database and must be included in the clean hosted replay before it is promoted.
 - Historical version `20261120112956` (`predrive_full_application_reset`) was recovered from the remote `supabase_migrations.schema_migrations.statements` array and restored as `supabase/migrations/20261120112956_predrive_full_application_reset.sql`.
