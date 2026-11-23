@@ -503,3 +503,22 @@ A subsequent read-only verification confirmed:
 - Health Advisor returned no findings.
 - B1.6 clean-room replay remains deferred and is not certified by these incremental B2 migrations.
 
+
+
+## B3 business-logic schema additions — repository only (2026-11-23)
+
+B3 adds the following schema/function surface in the repository migration chain; it is not yet part of the remote development schema:
+
+- School registration and invitation acceptance.
+- Approved and temporary collector lifecycle with pgcrypto PIN hashes and three-attempt/15-minute lockout.
+- Child boarding/absence, handover, trip start/end, active-trip GPS and offline idempotency.
+- Automatic incidents/alerts for unaccounted children and failed vehicle checks; SOS, delay, incident resolution and alert acknowledgement.
+- Guardian-selected pickup radius, child-to-route-stop assignment, geofence alert deduplication and distance/speed ETA.
+- Pending payment initiation and trusted service-role-only payment/refund settlement.
+- Append-only consent history, deletion/export request workflows, child bulk creation, route assignment/reordering and scheduled-trip cancellation.
+
+The new `child_route_assignments` and `temporary_collectors` tables have RLS enabled. Direct authenticated DML is withheld; writes use role-checked RPCs. Temporary collector PIN hashes are never returned by listing functions. Payment/refund settlement and geofence evaluation are service-role-only.
+
+The new catalog suite is `supabase/tests/business_logic/b3_business_logic_acceptance.sql`. It must be executed after application. Real multi-tenant row-level tests, Storage tests, webhook verification, push delivery and retention execution remain separate acceptance work.
+
+The remote project migration ledger was checked read-only on 2026-11-23 and still contains 18 B1/B2 migrations. B3 migrations have not been applied. Do not use this repository schema as proof of live database behavior until the exact migration set is approved, applied and runtime-tested.
