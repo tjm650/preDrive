@@ -77,9 +77,9 @@ begin
     join public.child_route_assignments a on a.route_id = r.id and a.school_id = r.school_id and a.active
     where r.school_id = v_school_id
     group by r.id, b.capacity
-    having count(a.child_id) > b.capacity
+    having count(a.child_id) + 2 > b.capacity
   ) then
-    raise exception 'B5.3: a route has more assigned children than its bus capacity';
+    raise exception 'B5.3: a route exceeds bus capacity after reserving seats for its driver and supervisor';
   end if;
 
   if (
