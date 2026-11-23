@@ -244,6 +244,6 @@ The acceptance suite passed against the connected development database after cor
 
 ## B4.8 controlled privacy withdrawal migration — source authored, remote approval pending
 
-`supabase/migrations/20261123120000_predrive_privacy_deletion_worker.sql` adds a service-role-only transactional RPC for approved child-record withdrawal and supporting bounded-worker indexes. Child withdrawal marks the child `withdrawn`, disables school-scoped guardian/collector/route access, and retains financial, safety, consent, trip and audit history. Active trips and unresolved incidents create a retention hold with no child-data changes. Account-wide deletion requests are held for coordinated cross-school/Auth review; no Auth user is deleted or banned.
+`supabase/migrations/20261123114538_predrive_privacy_deletion_worker.sql` adds a service-role-only transactional RPC for approved child-record withdrawal and supporting bounded-worker indexes. Child withdrawal marks the child `withdrawn`, disables school-scoped guardian/collector/route access, and retains financial, safety, consent, trip and audit history. Active trips and unresolved incidents create a retention hold with no child-data changes. Account-wide deletion requests are held for coordinated cross-school/Auth review; no Auth user is deleted or banned.
 
 The migration is committed on `main` but has **not** been applied to the development database. Apply only after explicit user approval. The read-only acceptance suite is `supabase/tests/automation/b4_privacy_acceptance.sql`.
