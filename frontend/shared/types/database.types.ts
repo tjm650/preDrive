@@ -424,6 +424,7 @@ export type Database = {
           bus_id: string
           heading_degrees: number | null
           id: number
+          idempotency_key: string | null
           location: unknown
           received_at: string
           recorded_at: string
@@ -436,6 +437,7 @@ export type Database = {
           bus_id: string
           heading_degrees?: number | null
           id?: never
+          idempotency_key?: string | null
           location: unknown
           received_at?: string
           recorded_at: string
@@ -448,6 +450,7 @@ export type Database = {
           bus_id?: string
           heading_degrees?: number | null
           id?: never
+          idempotency_key?: string | null
           location?: unknown
           received_at?: string
           recorded_at?: string
@@ -581,6 +584,78 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "schools"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      child_route_assignments: {
+        Row: {
+          active: boolean
+          assigned_at: string
+          assigned_by: string | null
+          child_id: string
+          id: string
+          route_id: string
+          route_stop_id: string
+          school_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
+          child_id: string
+          id?: string
+          route_id: string
+          route_stop_id: string
+          school_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
+          child_id?: string
+          id?: string
+          route_id?: string
+          route_stop_id?: string
+          school_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_route_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_route_assignments_child_school_fkey"
+            columns: ["child_id", "school_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id", "school_id"]
+          },
+          {
+            foreignKeyName: "child_route_assignments_route_school_fkey"
+            columns: ["route_id", "school_id"]
+            isOneToOne: false
+            referencedRelation: "transport_routes"
+            referencedColumns: ["id", "school_id"]
+          },
+          {
+            foreignKeyName: "child_route_assignments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_route_assignments_stop_route_school_fkey"
+            columns: ["route_stop_id", "school_id", "route_id"]
+            isOneToOne: false
+            referencedRelation: "route_stops"
+            referencedColumns: ["id", "school_id", "route_id"]
           },
         ]
       }
@@ -1097,6 +1172,7 @@ export type Database = {
           created_at: string
           guardian_user_id: string
           id: string
+          notification_radius_meters: number
           primary_contact: boolean
           relationship: Database["public"]["Enums"]["collector_relationship"]
           school_id: string
@@ -1108,6 +1184,7 @@ export type Database = {
           created_at?: string
           guardian_user_id: string
           id?: string
+          notification_radius_meters?: number
           primary_contact?: boolean
           relationship: Database["public"]["Enums"]["collector_relationship"]
           school_id: string
@@ -1119,6 +1196,7 @@ export type Database = {
           created_at?: string
           guardian_user_id?: string
           id?: string
+          notification_radius_meters?: number
           primary_contact?: boolean
           relationship?: Database["public"]["Enums"]["collector_relationship"]
           school_id?: string
@@ -2221,6 +2299,79 @@ export type Database = {
           },
         ]
       }
+      temporary_collectors: {
+        Row: {
+          active: boolean
+          child_id: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          full_name: string
+          id: string
+          phone: string
+          pin_failed_attempts: number
+          pin_hash: string
+          pin_locked_until: string | null
+          relationship: Database["public"]["Enums"]["collector_relationship"]
+          school_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          child_id: string
+          created_at?: string
+          created_by: string
+          expires_at: string
+          full_name: string
+          id?: string
+          phone: string
+          pin_failed_attempts?: number
+          pin_hash: string
+          pin_locked_until?: string | null
+          relationship: Database["public"]["Enums"]["collector_relationship"]
+          school_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          child_id?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          full_name?: string
+          id?: string
+          phone?: string
+          pin_failed_attempts?: number
+          pin_hash?: string
+          pin_locked_until?: string | null
+          relationship?: Database["public"]["Enums"]["collector_relationship"]
+          school_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temporary_collectors_child_school_fkey"
+            columns: ["child_id", "school_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id", "school_id"]
+          },
+          {
+            foreignKeyName: "temporary_collectors_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporary_collectors_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transport_routes: {
         Row: {
           assigned_bus_id: string | null
@@ -2757,6 +2908,63 @@ export type Database = {
       }
     }
     Functions: {
+      accept_school_invitation: { Args: never; Returns: string }
+      acknowledge_alert: {
+        Args: { p_alert_id: string; p_school_id: string }
+        Returns: undefined
+      }
+      apply_payment_result: {
+        Args: {
+          p_payment_id: string
+          p_provider_reference?: string
+          p_succeeded: boolean
+        }
+        Returns: string
+      }
+      apply_refund_result: {
+        Args: {
+          p_provider_reference?: string
+          p_refund_id: string
+          p_succeeded: boolean
+        }
+        Returns: undefined
+      }
+      assign_child_route_stop: {
+        Args: {
+          p_child_id: string
+          p_route_id: string
+          p_route_stop_id: string
+          p_school_id: string
+        }
+        Returns: string
+      }
+      bulk_create_children: {
+        Args: { p_rows: Json; p_school_id: string }
+        Returns: number
+      }
+      cancel_scheduled_trip: {
+        Args: { p_reason: string; p_school_id: string; p_trip_id: string }
+        Returns: undefined
+      }
+      complete_deletion_request: {
+        Args: {
+          p_completion_note?: string
+          p_request_id: string
+          p_school_id: string
+        }
+        Returns: undefined
+      }
+      complete_vehicle_check: {
+        Args: {
+          p_bus_id: string
+          p_checked_at: string
+          p_items: Json
+          p_safe_to_operate: boolean
+          p_school_id: string
+          p_trip_id: string
+        }
+        Returns: string
+      }
       consume_rate_limit: {
         Args: {
           p_action: string
@@ -2766,6 +2974,381 @@ export type Database = {
           p_window_seconds: number
         }
         Returns: boolean
+      }
+      create_approved_collector: {
+        Args: {
+          p_child_id: string
+          p_full_name: string
+          p_phone: string
+          p_pin: string
+          p_relationship: Database["public"]["Enums"]["collector_relationship"]
+          p_school_id: string
+        }
+        Returns: string
+      }
+      create_child: {
+        Args: {
+          p_class_group_id: string
+          p_date_of_birth: string
+          p_first_name: string
+          p_last_name: string
+          p_school_id: string
+        }
+        Returns: string
+      }
+      create_incident: {
+        Args: {
+          p_child_id?: string
+          p_description: string
+          p_school_id: string
+          p_severity: Database["public"]["Enums"]["incident_severity"]
+          p_title: string
+          p_trip_id?: string
+        }
+        Returns: string
+      }
+      create_invoice: {
+        Args: {
+          p_child_id: string
+          p_currency: Database["public"]["Enums"]["currency_code"]
+          p_due_date: string
+          p_guardian_user_id: string
+          p_invoice_number: string
+          p_lines: Json
+          p_school_id: string
+        }
+        Returns: string
+      }
+      create_temporary_collector: {
+        Args: {
+          p_child_id: string
+          p_expires_at: string
+          p_full_name: string
+          p_phone: string
+          p_pin: string
+          p_relationship: Database["public"]["Enums"]["collector_relationship"]
+          p_school_id: string
+        }
+        Returns: string
+      }
+      end_trip: {
+        Args: { p_ended_at: string; p_school_id: string; p_trip_id: string }
+        Returns: {
+          bus_id: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          created_at: string
+          direction: Database["public"]["Enums"]["trip_direction"]
+          driver_id: string
+          ended_at: string | null
+          ended_by: string | null
+          generation_key: string | null
+          id: string
+          route_id: string
+          schedule_id: string | null
+          scheduled_at: string
+          school_id: string
+          service_date: string
+          started_at: string | null
+          started_by: string | null
+          status: Database["public"]["Enums"]["trip_status"]
+          supervisor_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trips"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      evaluate_trip_geofences: {
+        Args: { p_school_id: string; p_trip_id: string }
+        Returns: number
+      }
+      get_child_trip_eta: {
+        Args: { p_child_id: string; p_school_id: string; p_trip_id: string }
+        Returns: number
+      }
+      initiate_payment: {
+        Args: {
+          p_amount_minor: number
+          p_currency: Database["public"]["Enums"]["currency_code"]
+          p_idempotency_key: string
+          p_invoice_id: string
+          p_method: Database["public"]["Enums"]["payment_method"]
+          p_school_id: string
+        }
+        Returns: {
+          amount_minor: number
+          cancelled_at: string | null
+          created_at: string
+          created_by: string
+          currency: Database["public"]["Enums"]["currency_code"]
+          exchange_rate_snapshot: number | null
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          invoice_id: string
+          method: Database["public"]["Enums"]["payment_method"]
+          provider: string
+          provider_reference: string | null
+          reference: string | null
+          refunded_at: string | null
+          request_hash: string
+          school_id: string
+          status: Database["public"]["Enums"]["payment_status"]
+          succeeded_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      issue_invoice: {
+        Args: { p_invoice_id: string; p_school_id: string }
+        Returns: undefined
+      }
+      link_guardian_to_child: {
+        Args: {
+          p_child_id: string
+          p_guardian_user_id: string
+          p_primary_contact?: boolean
+          p_relationship: Database["public"]["Enums"]["collector_relationship"]
+          p_school_id: string
+        }
+        Returns: string
+      }
+      list_approved_collectors: {
+        Args: { p_child_id: string; p_school_id: string }
+        Returns: {
+          active: boolean
+          child_id: string
+          created_at: string
+          full_name: string
+          id: string
+          phone: string
+          relationship: Database["public"]["Enums"]["collector_relationship"]
+          school_id: string
+          updated_at: string
+        }[]
+      }
+      list_temporary_collectors: {
+        Args: { p_child_id: string; p_school_id: string }
+        Returns: {
+          active: boolean
+          child_id: string
+          created_at: string
+          expires_at: string
+          full_name: string
+          id: string
+          phone: string
+          relationship: Database["public"]["Enums"]["collector_relationship"]
+          school_id: string
+        }[]
+      }
+      raise_sos: {
+        Args: { p_school_id: string; p_trip_id?: string }
+        Returns: string
+      }
+      record_bus_position: {
+        Args: {
+          p_accuracy_meters: number
+          p_heading_degrees: number
+          p_idempotency_key: string
+          p_latitude: number
+          p_longitude: number
+          p_recorded_at: string
+          p_school_id: string
+          p_speed_kph: number
+          p_trip_id: string
+        }
+        Returns: undefined
+      }
+      record_child_status: {
+        Args: {
+          p_child_id: string
+          p_idempotency_key: string
+          p_recorded_at: string
+          p_school_id: string
+          p_status?: Database["public"]["Enums"]["trip_child_status"]
+          p_trip_id: string
+        }
+        Returns: undefined
+      }
+      record_consent: {
+        Args: {
+          p_child_id: string
+          p_evidence?: Json
+          p_policy_version: string
+          p_purpose: string
+          p_school_id: string
+          p_status: string
+          p_subject_user_id: string
+        }
+        Returns: string
+      }
+      register_school: {
+        Args: {
+          p_address: string
+          p_indicative_zig_per_usd: number
+          p_name: string
+        }
+        Returns: string
+      }
+      reorder_route_stops: {
+        Args: { p_route_id: string; p_school_id: string; p_stop_ids: string[] }
+        Returns: undefined
+      }
+      report_trip_delay: {
+        Args: {
+          p_description?: string
+          p_estimated_delay_minutes?: number
+          p_reason: Database["public"]["Enums"]["delay_reason"]
+          p_school_id: string
+          p_trip_id: string
+        }
+        Returns: string
+      }
+      request_account_deletion: {
+        Args: { p_reason?: string; p_school_id: string }
+        Returns: string
+      }
+      request_child_record_deletion: {
+        Args: { p_child_id: string; p_reason?: string; p_school_id: string }
+        Returns: string
+      }
+      request_data_export: {
+        Args: { p_reason?: string; p_school_id: string }
+        Returns: string
+      }
+      request_refund: {
+        Args: {
+          p_amount_minor: number
+          p_payment_id: string
+          p_reason: string
+          p_school_id: string
+        }
+        Returns: string
+      }
+      resolve_incident: {
+        Args: {
+          p_incident_id: string
+          p_resolution_notes: string
+          p_school_id: string
+        }
+        Returns: undefined
+      }
+      resolve_sos: {
+        Args: {
+          p_resolution_notes: string
+          p_school_id: string
+          p_sos_event_id: string
+        }
+        Returns: undefined
+      }
+      review_bank_transfer: {
+        Args: {
+          p_decision: string
+          p_review_note?: string
+          p_school_id: string
+          p_submission_id: string
+        }
+        Returns: undefined
+      }
+      review_deletion_request: {
+        Args: {
+          p_decision: string
+          p_decision_note?: string
+          p_request_id: string
+          p_retention_hold_reason?: string
+          p_school_id: string
+        }
+        Returns: undefined
+      }
+      revoke_temporary_collector: {
+        Args: { p_school_id: string; p_temporary_collector_id: string }
+        Returns: undefined
+      }
+      set_guardian_notification_radius: {
+        Args: {
+          p_child_id: string
+          p_radius_meters: number
+          p_school_id: string
+        }
+        Returns: undefined
+      }
+      start_trip: {
+        Args: { p_school_id: string; p_started_at: string; p_trip_id: string }
+        Returns: {
+          bus_id: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          created_at: string
+          direction: Database["public"]["Enums"]["trip_direction"]
+          driver_id: string
+          ended_at: string | null
+          ended_by: string | null
+          generation_key: string | null
+          id: string
+          route_id: string
+          schedule_id: string | null
+          scheduled_at: string
+          school_id: string
+          service_date: string
+          started_at: string | null
+          started_by: string | null
+          status: Database["public"]["Enums"]["trip_status"]
+          supervisor_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trips"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_bank_transfer: {
+        Args: {
+          p_bank_reference: string
+          p_depositor_name: string
+          p_payment_id: string
+          p_proof_storage_path?: string
+          p_school_id: string
+        }
+        Returns: string
+      }
+      verify_handover: {
+        Args: {
+          p_child_id: string
+          p_collector_id: string
+          p_pin: string
+          p_school_id: string
+          p_trip_id: string
+        }
+        Returns: boolean
+      }
+      verify_temporary_handover: {
+        Args: {
+          p_child_id: string
+          p_pin: string
+          p_school_id: string
+          p_temporary_collector_id: string
+          p_trip_id: string
+        }
+        Returns: boolean
+      }
+      void_invoice: {
+        Args: { p_invoice_id: string; p_reason: string; p_school_id: string }
+        Returns: undefined
+      }
+      withdraw_consent: {
+        Args: { p_consent_record_id: string; p_school_id: string }
+        Returns: string
       }
     }
     Enums: {
