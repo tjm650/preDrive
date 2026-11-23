@@ -209,7 +209,11 @@ begin
   end if;
 
   perform public.complete_data_export_request(
-    v_school, v_request_export, v_lease_id
+    v_school,
+    v_request_export,
+    v_lease_id,
+    v_school::text || '/privacy/' || v_request_export::text || '/' ||
+      v_lease_id::text || '.json'
   );
 
   if not exists (
@@ -218,6 +222,9 @@ begin
       and completed_at is not null
       and processing_lease_id is null
       and processing_lease_expires_at is null
+      and export_object_path =
+        v_school::text || '/privacy/' || v_request_export::text || '/' ||
+        v_lease_id::text || '.json'
   ) then
     raise exception 'Leased export completion did not clear the lease';
   end if;
