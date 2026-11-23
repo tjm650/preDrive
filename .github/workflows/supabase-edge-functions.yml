@@ -7,7 +7,7 @@ on:
       - "scripts/seed-auth-users.ts"
       - "scripts/seed-auth-users_test.ts"
       - "scripts/demo-child-fixtures.ts"
-      - "scripts/demo-child-fixtures_test.ts scripts/demo-identity-fixtures_test.ts scripts/seed-greenfield-households_test.ts"
+      - "scripts/demo-child-fixtures_test.ts scripts/demo-identity-fixtures_test.ts scripts/seed-greenfield-households_test.ts scripts/seed-greenfield-households_test.ts"
       - "scripts/demo-identity-fixtures.ts"
       - "scripts/demo-identity-fixtures_test.ts"
       - "scripts/seed-greenfield-households.ts"
