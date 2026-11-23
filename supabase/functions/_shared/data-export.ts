@@ -199,9 +199,10 @@ export async function storePersonalDataExport(
   client: ServiceClient,
   schoolId: string,
   requestId: string,
+  leaseId: string,
   payload: Record<string, unknown>,
 ): Promise<string> {
-  const path = dataExportObjectPath(schoolId, requestId);
+  const path = dataExportObjectPath(schoolId, requestId, leaseId);
   const serialized = JSON.stringify(payload, null, 2);
   if (utf8ByteLength(serialized) > MAX_DATA_EXPORT_BYTES) {
     throw new HttpError("VALIDATION", "The export is too large to store.", 413);
