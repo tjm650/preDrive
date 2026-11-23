@@ -72,6 +72,27 @@ export function validateCollectorPinSecret(value: string): boolean {
   return value.length >= 32 && !/[\u0000-\u001f\u007f]/.test(value);
 }
 
+export async function buildDemoCollectorPins(secret: string): Promise<string[][]> {
+  if (!validateCollectorPinSecret(secret)) {
+    throw new Error("Invalid demo collector PIN derivation secret.");
+  }
+  const pins: string[][] = [];
+  const unique = new Set<string>();
+  for (let childIndex = 0; childIndex < 64; childIndex += 1) {
+    const childPins: string[] = [];
+    for (let sequence = 0; sequence < GREENFIELD_COLLECTORS_PER_CHILD; sequence += 1) {
+      const pin = await deriveDemoCollectorPin(secret, childIndex, sequence);
+      if (unique.has(pin)) {
+        throw new Error("Collector PIN derivation collision detected; no fixture mutation was started.");
+      }
+      unique.add(pin);
+      childPins.push(pin);
+    }
+    pins.push(childPins);
+  }
+  return pins;
+}
+
 export async function deriveDemoCollectorPin(
   secret: string,
   childIndex: number,
@@ -417,8 +438,12 @@ async function ensureCollectors(
   adminToken: string,
   childId: string,
   childIndex: number,
-  pinSecret: string,
+  childPins: readonly string[],
 ): Promise<number> {
+  if (childPins.length !== GREENFIELD_COLLECTORS_PER_CHILD ||
+    childPins.some((pin) => !validateCollectorPin(pin))) {
+    throw new Error("Canonical collector PIN set is incomplete.");
+  }
   const existing = await api.rows<CollectorRow>(
     "approved_collectors",
     {
@@ -448,7 +473,7 @@ async function ensureCollectors(
       p_full_name: fullName,
       p_relationship: sequence === 0 ? "relative" : "authorised_caregiver",
       p_phone: phone,
-      p_pin: await deriveDemoCollectorPin(pinSecret, childIndex, sequence),
+      p_pin: childPins[sequence],
     });
     created += 1;
   }
@@ -540,6 +565,7 @@ async function main(): Promise<void> {
   }
 
   const api = new GreenfieldSeedApi(config);
+  const collectorPins = await buildDemoCollectorPins(config.collectorPinSecret);
   await ensureDemoFoundation(api);
   const users = await api.listAuthUsers();
   const userByEmail = new Map(
@@ -616,7 +642,7 @@ async function main(): Promise<void> {
 
     await ensureGuardianLink(api, adminToken, guardianId, childId);
     await ensureRouteAssignment(api, adminToken, childId, fixture.routeId, fixture.routeStopId);
-    collectorsCreated += await ensureCollectors(api, adminToken, childId, index, config.collectorPinSecret);
+    collectorsCreated += await ensureCollectors(api, adminToken, childId, index, collectorPins[index]);
   }
 
   const staffAssignment = {
