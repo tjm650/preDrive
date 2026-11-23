@@ -44,7 +44,7 @@ type RuntimeConfig = {
   serviceKey: string;
   anonKey: string;
   adminPassword: string;
-  collectorPin: string;
+  collectorPinSecret: string;
 };
 
 function required(name: string): string {
@@ -66,6 +66,37 @@ function projectOrigin(value: string): string {
 
 export function validateCollectorPin(value: string): boolean {
   return /^[0-9]{4,8}$/.test(value);
+}
+
+export function validateCollectorPinSecret(value: string): boolean {
+  return value.length >= 32 && !/[\\u0000-\\u001f\\u007f]/.test(value);
+}
+
+export async function deriveDemoCollectorPin(
+  secret: string,
+  childIndex: number,
+  sequence: number,
+): Promise<string> {
+  if (!validateCollectorPinSecret(secret) || !Number.isInteger(childIndex) ||
+    childIndex < 0 || childIndex >= 64 || !Number.isInteger(sequence) ||
+    sequence < 0 || sequence >= GREENFIELD_COLLECTORS_PER_CHILD) {
+    throw new Error("Invalid demo collector PIN derivation input.");
+  }
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const digest = new Uint8Array(await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode("greenfield-collector:" + childIndex + ":" + sequence),
+  ));
+  const value = new DataView(digest.buffer, digest.byteOffset, digest.byteLength).getUint32(0, false);
+  return String(value % 100000000).padStart(8, "0");
 }
 
 function randomFixturePassword(): string {
@@ -386,7 +417,7 @@ async function ensureCollectors(
   adminToken: string,
   childId: string,
   childIndex: number,
-  pin: string,
+  pinSecret: string,
 ): Promise<number> {
   const existing = await api.rows<CollectorRow>(
     "approved_collectors",
@@ -417,7 +448,7 @@ async function ensureCollectors(
       p_full_name: fullName,
       p_relationship: sequence === 0 ? "relative" : "authorised_caregiver",
       p_phone: phone,
-      p_pin: pin,
+      p_pin: await deriveDemoCollectorPin(pinSecret, childIndex, sequence),
     });
     created += 1;
   }
@@ -502,10 +533,10 @@ async function main(): Promise<void> {
     serviceKey: required("SUPABASE_SERVICE_ROLE_KEY"),
     anonKey: required("SUPABASE_ANON_KEY"),
     adminPassword: required("PREDRIVE_DEMO_ADMIN_PASSWORD"),
-    collectorPin: required("PREDRIVE_DEMO_COLLECTOR_PIN"),
+    collectorPinSecret: required("PREDRIVE_DEMO_COLLECTOR_PIN_SECRET"),
   };
-  if (!validateCollectorPin(config.collectorPin)) {
-    throw new Error("PREDRIVE_DEMO_COLLECTOR_PIN must contain 4–8 digits.");
+  if (!validateCollectorPinSecret(config.collectorPinSecret)) {
+    throw new Error("PREDRIVE_DEMO_COLLECTOR_PIN_SECRET must contain at least 32 characters.");
   }
 
   const api = new GreenfieldSeedApi(config);
@@ -585,7 +616,7 @@ async function main(): Promise<void> {
 
     await ensureGuardianLink(api, adminToken, guardianId, childId);
     await ensureRouteAssignment(api, adminToken, childId, fixture.routeId, fixture.routeStopId);
-    collectorsCreated += await ensureCollectors(api, adminToken, childId, index, config.collectorPin);
+    collectorsCreated += await ensureCollectors(api, adminToken, childId, index, config.collectorPinSecret);
   }
 
   const staffAssignment = {
