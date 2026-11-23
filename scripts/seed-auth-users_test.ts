@@ -31,8 +31,16 @@ Deno.test("demo Auth seed has stable role-specific password environment names", 
 });
 
 Deno.test("demo Auth seed password policy rejects weak or malformed values", () => {
-  const accepted = ["Long-Unique-Demo-Passphrase-2026!", "1234567890123456"];
-  const rejected = ["short", "               ", "123456789012345", "x".repeat(129), "validpassword\u0000hidden"];
+  const accepted = ["Long-Unique-Demo-Passphrase-2026!", "1234567890Abcdef!"];
+  const rejected = [
+    "short",
+    "               ",
+    "123456789012345",
+    "1234567890123456",
+    "abcdefghijklmnop",
+    "x".repeat(129),
+    "validpassword\u0000hidden",
+  ];
   if (accepted.some((password) => !isStrongDemoPassword(password))) {
     throw new Error("A valid demo password was rejected.");
   }
