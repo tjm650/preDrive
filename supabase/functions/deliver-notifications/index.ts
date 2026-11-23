@@ -11,6 +11,8 @@ import {
   classifyProviderFailure,
   isExpoPushToken,
   notificationContent,
+  expoCollapseId,
+  parseExpoPushTicket,
   retryDelayMs,
   type NotificationErrorCode,
 } from "../_shared/notifications.ts";
@@ -261,6 +263,7 @@ async function loadEligibleContext(
 }
 
 async function sendExpoPush(
+  delivery: DeliveryRow,
   token: TokenRow,
   content: { title: string; body: string },
 ): Promise<ProviderResult> {
@@ -279,6 +282,10 @@ async function sendExpoPush(
         body: content.body,
         priority: "high",
         ttl: 3600,
+        // Repeated attempts for this same outbox row replace/collapse where
+        // supported; escalation sequences have distinct delivery UUIDs.
+        collapseId: expoCollapseId(delivery.id),
+        tag: expoCollapseId(delivery.id),
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
@@ -291,22 +298,19 @@ async function sendExpoPush(
     throw new ProviderFailure(failure.code, failure.retryable);
   }
 
-  let payload: {
-    data?: { status?: string; id?: string; details?: { error?: string } } |
-      Array<{ status?: string; id?: string; details?: { error?: string } }>;
-  };
+  let payload: unknown;
   try {
     payload = await response.json();
   } catch {
     throw new ProviderFailure("EXPO_PROVIDER_RESPONSE_INVALID", true);
   }
 
-  const ticket = Array.isArray(payload.data) ? payload.data[0] : payload.data;
-  if (!ticket || typeof ticket.status !== "string") {
+  const ticket = parseExpoPushTicket(payload);
+  if (!ticket) {
     throw new ProviderFailure("EXPO_PROVIDER_RESPONSE_INVALID", true);
   }
   if (ticket.status === "error") {
-    const providerError = ticket.details?.error;
+    const providerError = ticket.error;
     if (providerError === "DeviceNotRegistered") {
       throw new ProviderFailure("DEVICE_NOT_REGISTERED", false, token.id);
     }
@@ -669,7 +673,7 @@ const handler = createEdgeHandler(async (request) => {
       }
 
       const result = delivery.channel === "push"
-        ? await sendExpoPush(context.pushToken!, content)
+        ? await sendExpoPush(delivery, context.pushToken!, content)
         : await sendEmail(delivery, context.email!, content);
 
       await finishDelivery(client, delivery, workerId, result);
