@@ -171,25 +171,35 @@ The repository-only `20261121124410_predrive_enable_pgcrypto.sql` remains unappl
 
 **B1.6 remains open. B2 must not start until the outstanding migration-replay and security/platform acceptance items are resolved.**
 
-## B3 migration set — authored, not applied
+## B3 migration set — applied to development
 
-The following nine additive migrations were committed on 2026-11-23, in dependency order:
+Nine additive B3 migration files were applied sequentially to the existing development project `rjsdhgbjvghjnuiilizm` on 2026-11-23. No reset migration, seed, account deletion, project creation or branch creation was performed.
 
-1. `20261123010000_predrive_business_auth_lifecycle.sql`
-2. `20261123020000_predrive_child_guardian_collector_lifecycle.sql`
-3. `20261123025000_predrive_temporary_collector_lifecycle.sql`
-4. `20261123030000_predrive_handover_and_attendance_logic.sql`
-5. `20261123040000_predrive_trip_lifecycle_and_gps.sql`
-6. `20261123050000_predrive_safety_and_emergency_logic.sql`
-7. `20261123060000_predrive_geofencing_and_guardian_arrival.sql`
-8. `20261123070000_predrive_finance_lifecycle.sql`
-9. `20261123080000_predrive_privacy_bulk_and_admin_operations.sql`
+| Remote version | Repository migration file |
+|---|---|
+| 20261123033037 | `20261123010000_predrive_business_auth_lifecycle.sql` |
+| 20261123033044 | `20261123020000_predrive_child_guardian_collector_lifecycle.sql` |
+| 20261123033051 | `20261123025000_predrive_temporary_collector_lifecycle.sql` |
+| 20261123033132 | `20261123030000_predrive_handover_and_attendance_logic.sql` |
+| 20261123033140 | `20261123040000_predrive_trip_lifecycle_and_gps.sql` |
+| 20261123033146 | `20261123050000_predrive_safety_and_emergency_logic.sql` |
+| 20261123033152 | `20261123060000_predrive_geofencing_and_guardian_arrival.sql` |
+| 20261123033159 | `20261123070000_predrive_finance_lifecycle.sql` |
+| 20261123033205 | `20261123080000_predrive_privacy_bulk_and_admin_operations.sql` |
 
-They add authenticated school/membership lifecycle functions; child, guardian and collector operations; hashed PIN handover and lockout; trip lifecycle and idempotent GPS; safety, incident and SOS workflows; guardian radius/geofencing/ETA; trusted payment/refund settlement; and consent, deletion/export, bulk, route and trip administration.
+The nine migrations add 45 public RPC functions, two school-scoped tables (`temporary_collectors` and `child_route_assignments`), the guardian notification-radius column, GPS and trip-event idempotency indexes, an alert deduplication index, and a deferrable route-stop ordering constraint. All 45 RPCs are SECURITY DEFINER with an empty search path. No B3 function is executable by `anon`; four trusted automation/settlement functions are service-role-only.
 
-The B3 catalog acceptance script is `supabase/tests/business_logic/b3_business_logic_acceptance.sql`. It is read-only and rolls back. It must be run after applying the migrations. It does not create Auth users or prove row-level behavior with multiple tenants.
+The first B3.3 application attempt failed while parsing the attendance function. Its preceding idempotent unique-index statement had already succeeded, but no B3.3 migration ledger row was recorded. The committed function expression was simplified, then the migration was reapplied successfully. Only after B3.3 succeeded were B3.4–B3.8 applied. The final remote ledger contains 27 versions (12 B1, six B2, nine B3).
 
-**Remote status check (2026-11-23):** a read-only `list_migrations` check against project `rjsdhgbjvghjnuiilizm` returned the original 18 B1/B2 migration versions only. None of the B3 versions is applied. No B3 remote DDL or data operation has been executed.
+## B3 catalog acceptance — passed 2026-11-23
 
-Do not apply B3 until the exact nine-file operation is explicitly approved. After approval, apply sequentially with stop-on-first-error, then run the B3 catalog suite and role-based runtime tests. Regenerate database TypeScript types only after the remote schema is accepted. Do not claim B3 complete before those gates pass.
+The read-only test `supabase/tests/business_logic/b3_business_logic_acceptance.sql` ran against the development database without SQL errors. It validates the expected function signatures, SECURITY DEFINER empty search paths, new-table RLS, direct table grants, service-role-only execution and deferrable route-stop uniqueness. Independent catalog verification confirmed:
+- 45/45 expected B3 function signatures resolve and have the required SECURITY DEFINER/empty-search-path configuration.
+- No B3 RPC has effective `anon` EXECUTE.
+- `evaluate_trip_geofences`, `apply_payment_result`, `apply_refund_result` and `complete_deletion_request` are service-role-only.
+- Both new tables have `school_id` and RLS enabled. `temporary_collectors` has no authenticated direct table privileges; `child_route_assignments` has SELECT only, with writes routed through checked RPCs.
+- The notification-radius column, GPS/trip idempotency indexes, alert deduplication index and deferred route-stop uniqueness are present.
+- All 44 public application tables retain RLS.
+
+This is catalog acceptance, not a substitute for real-user runtime acceptance. No Auth users or business records were seeded. B5 must test row visibility and role boundaries with real school-admin, guardian, supervisor, driver and teacher identities. B4 must provide verified payment webhooks, push delivery, geofence scheduling, deletion/export execution and retention automation. The clean-room replay remains deferred under B1.6; incremental application to the existing development project does not certify an empty-database replay.
 
