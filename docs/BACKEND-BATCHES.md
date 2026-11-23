@@ -139,10 +139,10 @@ B4.1 shared source and the dedicated GitHub Actions Deno check workflow are comm
 - [x] Add a cron-secret-protected Edge Function entrypoint; it accepts POST only and does not accept a caller-selected service date.
 - [x] Add read-only catalog acceptance SQL and extend the Deno workflow to type-check the entrypoint.
 - [ ] Obtain a successful GitHub Actions Deno check (the Vercel status currently reports a build-rate-limit failure, which is not the Deno workflow result).
-- [ ] Apply migration `20261123051100_predrive_daily_trip_generation.sql` to the development project after explicit written approval. **Complete:** applied as remote version `20261123051100` after approval.
+- [x] Apply migration `20261123051100_predrive_daily_trip_generation.sql` to the development project after explicit written approval; applied as remote version `20261123051100` after approval.
 - [ ] Configure `CRON_SECRET` and `APP_ALLOWED_ORIGINS` in Supabase Function secrets; values must not be committed.
 - [ ] Deploy `generate-daily-trips` with platform JWT verification disabled only because the function independently verifies a high-entropy cron secret; do not schedule it until deployment and function smoke tests pass.
-- [ ] Run `supabase/tests/automation/b4_daily_trip_generation.sql` after the migration is applied. **Complete:** read-only acceptance suite and catalog verification passed; no trip or demo data was generated.
+- [x] Run `supabase/tests/automation/b4_daily_trip_generation.sql` after the migration is applied; read-only acceptance suite and catalog verification passed, with no trip or demo data generated.
 
 **Design dependency discovered:** the existing route-schedule schema did not identify a driver or supervisor, while `trips.driver_id` is mandatory. B4.2 adds those schedule assignments explicitly instead of guessing which of multiple active drivers belongs to a route. Existing schedules remain valid but are skipped by generation until an administrator assigns a driver and the route has an active bus. The current 30-method frontend API does not yet expose this new assignment RPC; B6 must add the approved adapter surface before the admin UI can manage it.
 
