@@ -512,7 +512,7 @@ Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
 - [x] Use plausible age-band birth years and Zimbabwean Shona/Ndebele/mixed name patterns; these are synthetic identities, not real pupils.
 - [x] Add six Deno fixture-integrity tests for count, class distribution, unique identity tuples, route/stop pairing, Chipo's two children and tenant/class IDs.
 - [x] Add fixture source and tests to the Supabase Deno CI workflow.
-- [ ] Run CI and verify all fixture tests pass before building the authenticated provisioning runner.
+- [x] Deno 2.9.8 type-check passed and all 67 shared/seed tests passed (0 failures) in [GitHub Actions run 45177565308](https://github.com/tjm650/preDrive/actions/runs/45177565308).
 - [ ] Add an admin-JWT runner that calls `create_child`, `assign_child_route_stop`, `link_guardian_to_child` and `create_approved_collector`; never bypass the database's admin and guardian authorization checks.
 - [ ] Provision one to three collectors per child using an environment-supplied demo PIN; only the database RPC may hash/store it.
 - [ ] Complete guardian identities and links for all 64 children. The brief's "one demo account per role" means the single Chipo guardian login is the showcased guardian; supporting guardian identities for other families must be treated as non-showcase fixture accounts, not additional public demo entry points.
