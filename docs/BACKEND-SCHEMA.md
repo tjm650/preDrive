@@ -4,8 +4,8 @@
 
 - Supabase project: `preDrive` (`rjsdhgbjvghjnuiilizm`), region `eu-west-1`.
 - PostgreSQL 17.12.
-- 42 application tables in `public`; all 42 have RLS enabled. A static inventory of the B1 application migrations matches the live catalog for all 42 table names, 23 public enum names and five public view names; B2 adds policies, helper functions, Storage buckets and the rate-limit RPC without changing those counts.
-- 19 tables currently have no RLS policies after B2. These remain deliberately deny-by-default pending their dedicated business workflows and access policies. All 42 tables have RLS enabled (none currently uses `FORCE ROW LEVEL SECURITY`). The `anon` role has no privileges on public application tables. `authenticated` retains the narrow profile/school column UPDATE grants from B1; B2 adds scoped CRUD table grants on `class_groups`, `fee_items`, `settings` and `setup_progress`, SELECT-only grants on `children` and `guardian_children`, and SELECT-only grants on the approved fleet/trip/GPS/operational tables. RLS policies constrain these privileges to verified school roles, guardian-child links and active trip assignments; sensitive history, handover and event tables remain unavailable through direct authenticated reads. No authenticated direct write grants are added to child, guardian-link, fleet, trip, GPS or operational records.
+- 44 application tables in `public`; all 44 have RLS enabled. A static inventory of the B1 application migrations matches the live catalog for all 42 table names, 23 public enum names and five public view names; B2 adds policies, helper functions, Storage buckets and the rate-limit RPC without changing those counts.
+- 20 tables currently have no RLS policies after B3. These remain deliberately deny-by-default pending their dedicated business workflows and access policies. All 42 tables have RLS enabled (none currently uses `FORCE ROW LEVEL SECURITY`). The `anon` role has no privileges on public application tables. `authenticated` retains the narrow profile/school column UPDATE grants from B1; B2 adds scoped CRUD table grants on `class_groups`, `fee_items`, `settings` and `setup_progress`, SELECT-only grants on `children` and `guardian_children`, and SELECT-only grants on the approved fleet/trip/GPS/operational tables. RLS policies constrain these privileges to verified school roles, guardian-child links and active trip assignments; sensitive history, handover and event tables remain unavailable through direct authenticated reads. No authenticated direct write grants are added to child, guardian-link, fleet, trip, GPS or operational records.
 - No application rows were inserted by B1.1–B1.6.
 - All 51 foreign keys flagged as unindexed by Supabase Performance Advisor were given covering indexes in migration `20261121124613`. A follow-up advisor run no longer reports unindexed foreign keys. A static inventory finds 160 explicit `CREATE INDEX` declarations across the 19 repository migrations; every one exists in the live `public` catalog. The catalog contains 257 public indexes in total, with the remaining 97 created for primary-key/unique/constraint enforcement. The live catalog reports 384 public constraints.
 - The 149 unused-index notices are expected in an empty development database and must be reassessed after representative workload tests; do not drop indexes merely to silence the advisor.
@@ -28,6 +28,21 @@
 | 20261121124444 | predrive_finance |
 | 20261121124451 | predrive_settings_privacy_audit_analytics |
 | 20261121124613 | predrive_foreign_key_indexes |
+| 20261122204630 | predrive_security_helpers |
+| 20261122204634 | predrive_admin_staff_rls |
+| 20261122204639 | predrive_guardian_child_rls |
+| 20261122204644 | predrive_transport_trip_access_rls |
+| 20261122204649 | predrive_storage_buckets_rls |
+| 20261122204654 | predrive_atomic_rate_limiting |
+| 20261123033037 | predrive_business_auth_lifecycle |
+| 20261123033044 | predrive_child_guardian_collector_lifecycle |
+| 20261123033051 | predrive_temporary_collector_lifecycle |
+| 20261123033132 | predrive_handover_and_attendance_logic |
+| 20261123033140 | predrive_trip_lifecycle_and_gps |
+| 20261123033146 | predrive_safety_and_emergency_logic |
+| 20261123033152 | predrive_geofencing_and_guardian_arrival |
+| 20261123033159 | predrive_finance_lifecycle |
+| 20261123033205 | predrive_privacy_bulk_and_admin_operations |
 
 ## Migration-chain exception
 
@@ -35,14 +50,14 @@ The remote migration ledger contains historical version `20261120112956` (`predr
 
 ## Static migration security review
 
-- The live catalog contains 11 application routines, all in the `private` schema; there are no `public` application RPCs, and the generated public client types expose no RPC functions. The Supabase API exposed-schema configuration itself still requires dashboard verification. Seven are `SECURITY DEFINER`, and all 11 routines have an empty `search_path`. The migration history contains eight `SECURITY DEFINER` declarations; one historical helper (`private.can_view_profile`) was subsequently dropped/replaced. The two superseded policies (`profiles_select_self_or_school_colleague` and `staff_members_select_school_member`) are dropped by later migrations; the live seven-policy inventory matches the final policy declarations.
+- B1's original live catalog contained 11 private application routines. B2 and B3 subsequently added authenticated helper/RPC functions; see the current B3 verification section below. The Supabase API exposed-schema configuration itself still requires dashboard verification. Seven are `SECURITY DEFINER`, and all 11 routines have an empty `search_path`. The migration history contains eight `SECURITY DEFINER` declarations; one historical helper (`private.can_view_profile`) was subsequently dropped/replaced. The two superseded policies (`profiles_select_self_or_school_colleague` and `staff_members_select_school_member`) are dropped by later migrations; the live seven-policy inventory matches the final policy declarations.
 - A read-only privilege audit found no `anon` or `service_role` EXECUTE grants on these 11 routines. Only the two intended authenticated RLS helpers (`private.has_school_role` and `private.can_admin_view_profile`) are executable by `authenticated`. `authenticated` has `USAGE` on `private`; `anon` and `service_role` do not. Trigger helper functions remain callable through their installed triggers and are not granted as client RPCs.
 - There are 36 enabled application triggers on `public` tables and one application-owned profile-sync trigger on `auth.users`. The public set comprises 26 explicit trigger declarations plus ten timestamp triggers created by two migration `DO` loops (six in B1.4 and four in B1.5). The other 11 observed `storage` triggers are Supabase-managed and are not application migrations. All 36 public triggers and the Auth profile-sync trigger are enabled.
 - `service_role` has SELECT and INSERT on all 42 application tables, UPDATE and DELETE on 36; it is deliberately denied UPDATE/DELETE on `audit_log`, `consent_records`, `delay_reports`, `receipts`, `trip_events` and `vehicle_checks`. It remains a trusted server-only role and bypasses RLS; never expose its key to a client.
 - Default-privilege audit and disposition (read-only, 2026-11-22): Supabase's [KB on `supabase_admin` default privileges](https://supabase.com/kb/troubleshooting/cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema-448af9) confirms these grants apply only to objects created by `supabase_admin`; they cannot be changed by project roles, and the `Automatically expose new tables` setting changes `postgres` defaults, not `supabase_admin` defaults. The live catalog confirms broad `supabase_admin` defaults for future `public` tables, sequences and functions, but `postgres` has no default grants to `anon`, `authenticated` or `service_role` for its `public` tables, sequences or functions (the foundation migration also revokes default function EXECUTE from `PUBLIC`). The connected `current_user`/`session_user` is `postgres`, and `postgres` is not a member of `supabase_admin`. Current ownership inventory: 50 non-extension public relations (42 application tables, five views, three sequences) are owned by `postgres`; zero public relations or routines are owned by `supabase_admin`. The `pg_net` extension namespace is `public`, but its objects are in `net`, so it is not a current public-object instance of this default-ACL issue. Decision: accept the `supabase_admin` default ACLs as a documented Supabase platform exception, with a strict ownership invariant: all application migrations and application objects must be created as `postgres`; never `SET ROLE supabase_admin`; install relocatable extensions explicitly in `extensions` (and respect required extension schemas); after extension changes, restores and platform upgrades, re-run the owner/default-ACL inventory and inspect any new `supabase_admin`-owned objects in exposed schemas. Do not attempt to alter the platform-managed defaults. The clean-room preflight now fails unless `current_user = postgres` and `postgres` is not a member of `supabase_admin`.
 - The reviewed function bodies schema-qualify application relations and private helper calls; this reduces object-shadowing risk. The review is static and does not replace executable privilege/RLS tests in B2.
 - The reset migration is intentionally outside this security-function count; it contains anonymous `DO` blocks and destructive DDL.
-- The current schema migrations do not create the B2 tenant authorization helper set or the B3 handover verification RPC. These remain planned work, not missing implementation claimed complete.
+- B2 tenant authorization helpers and B3 business-logic RPCs are now applied to the development project; see the current B3 verification section below.
 
 ## Current Supabase advisor and generated-type observations
 
@@ -522,3 +537,28 @@ The new `child_route_assignments` and `temporary_collectors` tables have RLS ena
 The new catalog suite is `supabase/tests/business_logic/b3_business_logic_acceptance.sql`. It must be executed after application. Real multi-tenant row-level tests, Storage tests, webhook verification, push delivery and retention execution remain separate acceptance work.
 
 The remote project migration ledger was checked read-only on 2026-11-23 and still contains 18 B1/B2 migrations. B3 migrations have not been applied. Do not use this repository schema as proof of live database behavior until the exact migration set is approved, applied and runtime-tested.
+
+
+## Current B3 schema additions and verification — 2026-11-23
+
+B3 is applied to the development database. The remote ledger contains 27 migrations: 12 B1, six B2 and nine B3. The current public application schema has 44 tables, all with RLS enabled; none uses FORCE RLS. Twenty RLS-enabled tables have no policies and remain deny-by-default. No data was seeded or modified by B3.
+
+B3 adds two school-scoped tables:
+- `temporary_collectors`: RLS enabled, no direct authenticated table privileges; access is through guarded RPCs. PIN hashes are never returned by list functions.
+- `child_route_assignments`: RLS enabled, authenticated SELECT only; INSERT/UPDATE/DELETE are routed through the checked assignment RPC.
+
+It also adds `guardian_children.notification_radius_meters` (default 1,000; allowed values 500/1,000/2,000), trip-event and GPS idempotency indexes, a per-school alert deduplication index, and deferrable/initially-deferred route-stop order uniqueness.
+
+The 45 B3 public RPC signatures all resolve. Every B3 RPC is SECURITY DEFINER with an empty search path. No B3 function has effective EXECUTE for `anon`. The four trusted automation/settlement functions — `evaluate_trip_geofences`, `apply_payment_result`, `apply_refund_result` and `complete_deletion_request` — are executable by `service_role` and not by `authenticated`. The other authenticated RPCs perform their role/ownership checks inside the function.
+
+The read-only B3 acceptance suite `supabase/tests/business_logic/b3_business_logic_acceptance.sql` completed without SQL errors. Independent catalog checks confirmed the 45 signatures, function security configuration, table RLS/grants, required indexes, notification-radius column, deferred route ordering and all 44 application-table RLS flags. This does not prove real multi-tenant row visibility or business-path behavior with real Auth users; that seeded runtime verification is a B5 gate.
+
+### Current Supabase Advisor findings after B3
+
+- **Security:** 20 RLS-enabled tables have no policies; they remain deny-by-default. The pre-existing `pg_net`-in-`public` warning remains a Supabase platform exception; do not attempt relocation. Advisor also reports 41 authenticated-executable SECURITY DEFINER RPCs. These are intended application entry points with empty search paths and in-function authorization checks; continue reviewing each function as part of B7 security testing. The four trusted-only operations are not included in authenticated execution.
+- **Performance:** six unindexed foreign-key findings were introduced by the two new B3 tables (four on `child_route_assignments`, two on `temporary_collectors`). Add covering indexes in a reviewed forward migration before representative load testing. The Advisor also reports two multiple-permissive-SELECT-policy warnings (`child_route_assignments` and the pre-existing `class_groups` policies) and 150 unused-index notices. Do not remove indexes based only on low-traffic unused-index notices.
+- **Health:** no findings.
+
+The live PostgREST exposed-schema allowlist is still not inferable from SQL catalogs. Before B1.6 sign-off and before frontend integration, verify in Supabase Dashboard → Settings → API → Exposed schemas that `private` and `net` are not exposed and that the application schema exposure is intentional. Supabase's October 2026 Data API change means new public tables are not automatically exposed by default; table grants and RLS remain independently required.
+
+B1.6 clean-room migration replay remains deferred and is not certified by incremental B2/B3 application. The repository-only pgcrypto migration remains outside the remote migration ledger because pgcrypto was already installed in the development project.
