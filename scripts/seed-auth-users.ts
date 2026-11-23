@@ -363,23 +363,31 @@ export async function provisionDemoUsers(
       .map((user) => [user.email!.toLowerCase(), user]),
   );
 
+  // Validate every reserved email and every password needed for a new account
+  // before the first Auth mutation, avoiding preventable partial provisioning.
   for (const demoUser of DEMO_USERS) {
-    let authUser = byEmail.get(demoUser.email);
-    if (authUser) {
-      if (
-        authUser.app_metadata?.predrive_demo_seed !== DEMO_SEED_MARKER
-      ) {
+    const existing = byEmail.get(demoUser.email);
+    if (existing) {
+      if (existing.app_metadata?.predrive_demo_seed !== DEMO_SEED_MARKER) {
         throw new Error(
           "A reserved demo email is already owned by an account not marked for this seed. Refusing to adopt it.",
         );
       }
-    } else {
+      await api.assertNoOtherDemoMembership(existing.id);
+    } else if (!isStrongDemoPassword(passwords.get(demoUser.passwordEnv))) {
+      throw new Error(
+        "A strong password of 16–128 characters is required in " +
+          demoUser.passwordEnv + " for a new demo account.",
+      );
+    }
+  }
+
+  for (const demoUser of DEMO_USERS) {
+    let authUser = byEmail.get(demoUser.email);
+    if (!authUser) {
       const password = passwords.get(demoUser.passwordEnv);
       if (!isStrongDemoPassword(password)) {
-        throw new Error(
-          "A strong password of 16–128 characters is required in " +
-            demoUser.passwordEnv + " for a new demo account.",
-        );
+        throw new Error("Demo password preflight unexpectedly failed.");
       }
       authUser = await api.createUser(demoUser, password);
       if (!authUser.id || authUser.email?.toLowerCase() !== demoUser.email) {
