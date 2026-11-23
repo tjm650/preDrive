@@ -148,6 +148,17 @@ begin
     and processing_lease_expires_at > now();
 
   if not found then
+    if exists (
+      select 1 from public.deletion_requests dr
+      where dr.id = p_request_id
+        and dr.school_id = p_school_id
+        and dr.request_type = 'data_export'
+        and dr.status = 'completed'
+        and dr.export_object_path = p_object_path
+    ) then
+      return;
+    end if;
+
     raise exception using errcode = '40001', message = 'DATA_EXPORT_LEASE_LOST';
   end if;
 end;
