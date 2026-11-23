@@ -3,7 +3,8 @@ import {
   GPS_HISTORY_TTL_DAYS,
   RETENTION_BATCH_SIZE,
   TERMINAL_DELIVERY_TTL_DAYS,
-  dataExportObjectPath,
+  isValidDataExportObjectPath,
+  legacyDataExportObjectPath,
 } from "./privacy.ts";
 import type { ServiceClient } from "./supabase.ts";
 
@@ -71,7 +72,7 @@ export async function runApprovedRetention(
   const exportCutoff = retentionCutoff(DATA_EXPORT_TTL_DAYS, now);
   const { data: expiredExports, error: exportSelectError } = await client
     .from("deletion_requests")
-    .select("id,school_id")
+    .select("id,school_id,export_object_path")
     .eq("request_type", "data_export")
     .eq("status", "completed")
     .eq("retention_hold", false)
@@ -82,7 +83,15 @@ export async function runApprovedRetention(
   if (exportSelectError) throw exportSelectError;
 
   for (const item of expiredExports ?? []) {
-    const path = dataExportObjectPath(item.school_id, item.id);
+    const path = item.export_object_path ??
+      legacyDataExportObjectPath(item.school_id, item.id);
+    if (
+      item.export_object_path !== null &&
+      !isValidDataExportObjectPath(item.school_id, item.id, path)
+    ) {
+      result.exportFilesFailed += 1;
+      continue;
+    }
     const { error } = await client.storage.from("exports").remove([path]);
     if (error) {
       result.exportFilesFailed += 1;
