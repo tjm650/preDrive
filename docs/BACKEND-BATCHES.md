@@ -10,11 +10,11 @@ This register tracks the backend implementation plan. B0 is planning/audit work 
 | B1 | Database foundation and schema | 6 | 5 | 1 |
 | B2 | Security and RLS | 6 | 6 | 0 |
 | B3 | Database business logic | 8 | 8 | 0 |
-| B4 | Edge Functions and automation | 8 | 0 | 8 |
-| B5 | Demo data and seed scripts | 4 | 0 | 4 |
+| B4 | Edge Functions and automation (source/schema complete; runtime gates open) | 8 | 8 | 0 |
+| B5 | Demo data and seed scripts | 4 | 1 | 3 |
 | B6 | Frontend integration | 6 | 0 | 6 |
 | B7 | QA, deployment and release | 8 | 0 | 8 |
-| **Total** | | **46** | **19** | **27** |
+| **Total** | | **46** | **28** | **18** |
 
 ## B1 — Database foundation and schema
 
@@ -455,3 +455,18 @@ B4.8.5 source verification: Deno 2.9.8 type-check passed and all 55 shared tests
 B4 implementation is complete at the repository and development-schema level. The remote database contains 36 migration versions. The export lease path constraint was corrected in remote migration `20261123122938`; canonical UUID-based object paths now match, while malformed suffixes are rejected. The export claim RPC remains service-role-only. No privacy requests or export artifacts were created.
 
 **Release gates that remain intentionally closed:** Supabase Edge Functions are not deployed; no `CRON_SECRET`, `APP_ALLOWED_ORIGINS`, Paynow, Expo or Resend credentials are configured; no pg_cron jobs are installed; no provider callback or real payment has been exercised. B4.4 still has simulated EcoCash/manual-bank intent creation, while Paynow webhook settlement requires a Paynow initiation adapter and account credentials. These are external configuration/provider-integration gates, not verified production runtime. B5 seeded Auth identities and demo records are required for realistic tenant-isolation and populated-worker tests. Do not describe B4 as production-live until these gates pass.
+
+## B5.1 — Greenfield demo foundation seed (source complete; remote seed pending)
+
+- [x] Read the current root `BRIEF.md` and inspect the live development schema before authoring seed records.
+- [x] Add `supabase/seed.sql` with deterministic UUIDs and school-scoped idempotent upserts.
+- [x] Reserve exactly one demo tenant: Greenfield Early Learning Centre, Borrowdale, Harare; fail closed if a different demo tenant exists or the reserved UUID belongs to a non-demo school.
+- [x] Seed three classes, three active buses, three active routes and fifteen approximate suburb stop locations (five per route).
+- [x] Seed four USD term-fee catalogue items and six allowed school settings, including guardian location visibility restricted to active trips.
+- [x] Mark all map coordinates and the 27.00 ZiG/USD rate as illustrative demo values; do not represent them as surveyed pickup coordinates or live FX data.
+- [x] Configure `[db.seed]` to load only `./seed.sql`.
+- [x] Add read-only acceptance SQL at `supabase/tests/seed/b5_demo_foundation_acceptance.sql`.
+- [ ] Apply the seed to the remote development project only after explicit user authorization; then run acceptance SQL and a second seed pass to verify idempotency.
+- [ ] Add staff, Auth users, children and guardians in later B5 stages after the canonical IDs and service-role Auth provisioning path are reviewed.
+
+**Safety boundary:** no remote seed was run. No school, bus, route, class, setting or fee data has been inserted. The SQL seed does not create Auth users, passwords, profiles, memberships, child records, trip history or invoices. It never deletes data and refuses to modify a non-demo school. The existing remote project remains empty of application records.
