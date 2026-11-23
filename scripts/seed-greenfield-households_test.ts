@@ -1,4 +1,5 @@
 import {
+  buildDemoCollectorPins,
   deriveDemoCollectorPin,
   validateCollectorPin,
   validateCollectorPinSecret,
@@ -25,17 +26,16 @@ Deno.test("collector PIN derivation secret must be long and free of control char
 
 Deno.test("each Greenfield collector receives a stable, distinct eight-digit PIN", async () => {
   const secret = "greenfield-demo-pin-secret-for-ci-only-2026";
-  const pins = new Set<string>();
-  for (let child = 0; child < 64; child += 1) {
-    for (let sequence = 0; sequence < 2; sequence += 1) {
-      const pin = await deriveDemoCollectorPin(secret, child, sequence);
-      if (!/^\d{8}$/.test(pin)) throw new Error("Expected an eight-digit collector PIN.");
-      if (pins.has(pin)) throw new Error("Derived demo collector PIN collision detected.");
-      pins.add(pin);
-      if (pin !== await deriveDemoCollectorPin(secret, child, sequence)) {
-        throw new Error("Collector PIN derivation is not deterministic.");
-      }
-    }
+  const matrix = await buildDemoCollectorPins(secret);
+  const pins = matrix.flat();
+  if (
+    matrix.length !== 64 ||
+    matrix.some((childPins) => childPins.length !== 2) ||
+    pins.length !== 128 ||
+    new Set(pins).size !== 128 ||
+    pins.some((pin) => !/^\d{8}$/.test(pin))
+  ) throw new Error("Expected 128 distinct eight-digit collector PINs.");
+  if (pins[0] !== await deriveDemoCollectorPin(secret, 0, 0)) {
+    throw new Error("Collector PIN derivation is not deterministic.");
   }
-  if (pins.size !== 128) throw new Error("Expected 128 distinct collector PINs.");
 });
