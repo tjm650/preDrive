@@ -1,5 +1,8 @@
 export const DATA_EXPORT_BUCKET = "exports";
 export const DATA_EXPORT_TTL_DAYS = 7;
+export const GPS_HISTORY_TTL_DAYS = 30;
+export const TERMINAL_DELIVERY_TTL_DAYS = 90;
+export const RETENTION_BATCH_SIZE = 5000;
 export const MAX_DATA_EXPORT_BYTES = 20 * 1024 * 1024;
 export const DATA_EXPORT_SIGNED_URL_SECONDS = 60;
 
