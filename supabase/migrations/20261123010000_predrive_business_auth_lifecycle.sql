@@ -84,6 +84,13 @@ begin
   if not found then
     raise exception using errcode = 'P0002', message = 'INVITATION_NOT_FOUND';
   end if;
+  if exists (
+    select 1 from public.schools s
+    where s.id = v_invitation.school_id
+      and s.status = 'suspended'::public.school_status
+  ) then
+    raise exception using errcode = '42501', message = 'SCHOOL_SUSPENDED';
+  end if;
 
   select m.* into v_existing_membership
   from public.school_memberships m
