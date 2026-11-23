@@ -24,6 +24,7 @@ All trusted application workflows run in Supabase Edge Functions (Deno/TypeScrip
 | `_shared/auth.ts` | JWT verification, active school-membership authorization and cron-secret verification |
 | `_shared/validation.ts` | Bounded JSON parsing and Zod validation |
 | `_shared/http_test.ts` | CORS and error-mapping tests |
+| `_shared/errors_test.ts` | Stable business-error mapping and safe-message tests |
 | `_shared/validation_test.ts` | Request-size and schema-validation tests |
 
 ## Required common environment
@@ -56,5 +57,7 @@ Each function added in later B4 batches must include its own `deno.json`, entryp
 4. Run the Deno tests for the shared modules with `deno test supabase/functions/_shared`.
 5. Run `deno check` on each function entrypoint before deployment.
 6. Deploy only after the matching function tests pass and the required secrets exist in the target Supabase environment.
+
+The repository workflow `.github/workflows/supabase-edge-functions.yml` runs `deno check` and the shared test suite on pushes and pull requests that change Edge Function files. Its first successful run is still pending.
 
 No Edge Function has been deployed by this batch. No remote database objects or scheduled jobs have been changed.
