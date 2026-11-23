@@ -9,9 +9,9 @@ import {
   buildPersonalDataExport,
   storePersonalDataExport,
 } from "../_shared/data-export.ts";
-import { dataExportObjectPath } from "../_shared/privacy.ts";
 
 const BATCH_SIZE = 10;
+const LEASE_SECONDS = 900;
 
 const handler = createEdgeHandler(async (request) => {
   if (request.method !== "POST") {
@@ -20,14 +20,13 @@ const handler = createEdgeHandler(async (request) => {
   await requireCronSecret(request);
 
   const client = createServiceClient();
-  const { data: requests, error } = await client
-    .from("deletion_requests")
-    .select("id,school_id,requested_by,subject_user_id,request_type,status,retention_hold")
-    .eq("request_type", "data_export")
-    .eq("status", "processing")
-    .eq("retention_hold", false)
-    .order("requested_at", { ascending: true })
-    .limit(BATCH_SIZE);
+  const { data: requests, error } = await client.rpc(
+    "claim_data_export_requests",
+    {
+      p_batch_size: BATCH_SIZE,
+      p_lease_seconds: LEASE_SECONDS,
+    },
+  );
 
   if (error) throw error;
 
@@ -35,21 +34,22 @@ const handler = createEdgeHandler(async (request) => {
   let failed = 0;
 
   for (const item of requests ?? []) {
-    if (
-      item.request_type !== "data_export" ||
-      item.status !== "processing" ||
-      item.retention_hold !== false ||
-      !item.subject_user_id ||
-      !item.requested_by ||
-      item.subject_user_id !== item.requested_by
-    ) {
-      failed += 1;
-      continue;
-    }
-
+    const leaseId = item.processing_lease_id as string;
     let objectPath: string | null = null;
+
     try {
-      const payload = await buildPersonalDataExport(client, item.subject_user_id);
+      if (
+        !item.subject_user_id ||
+        !item.requested_by ||
+        item.subject_user_id !== item.requested_by
+      ) {
+        throw new Error("EXPORT_SUBJECT_MISMATCH");
+      }
+
+      const payload = await buildPersonalDataExport(
+        client,
+        item.subject_user_id,
+      );
       objectPath = await storePersonalDataExport(
         client,
         item.school_id,
@@ -58,17 +58,28 @@ const handler = createEdgeHandler(async (request) => {
       );
 
       const { error: completionError } = await client.rpc(
-        "complete_deletion_request",
+        "complete_data_export_request",
         {
           p_school_id: item.school_id,
           p_request_id: item.id,
-          p_completion_note: "Personal data export prepared. Download is available for seven days.",
+          p_lease_id: leaseId,
         },
       );
       if (completionError) throw completionError;
       completed += 1;
     } catch {
-      if (objectPath) {
+      const { data: released, error: releaseError } = await client.rpc(
+        "release_data_export_request",
+        {
+          p_school_id: item.school_id,
+          p_request_id: item.id,
+          p_lease_id: leaseId,
+        },
+      );
+
+      // Only the worker that still owns the lease may remove its partial
+      // artifact. A stale worker must never delete a newer worker's upload.
+      if (objectPath && !releaseError && released === true) {
         await client.storage.from("exports").remove([objectPath]);
       }
       failed += 1;
