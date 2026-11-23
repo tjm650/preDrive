@@ -108,6 +108,18 @@ const handler = createEdgeHandler(async (request) => {
     }
   }
 
+  // Expire stale invitations before inserting so the partial unique index
+  // does not block a fresh invitation after the previous seven-day window.
+  const { error: expireError } = await client
+    .from("school_invitations")
+    .update({ status: "expired" })
+    .eq("school_id", actor.schoolId)
+    .eq("email", body.email)
+    .eq("status", "pending")
+    .lte("expires_at", new Date().toISOString());
+
+  if (expireError) throw expireError;
+
   const expiresAt = new Date(Date.now() + SCHOOL_INVITATION_TTL_MS).toISOString();
   const { data: invitation, error: insertError } = await client
     .from("school_invitations")
