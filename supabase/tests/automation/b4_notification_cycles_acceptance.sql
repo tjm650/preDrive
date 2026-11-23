@@ -59,7 +59,7 @@ begin
     into v_definer, v_search_path
   from pg_proc p
   where p.oid='private.enqueue_notification_deliveries()'::regprocedure;
-  if not v_definer or not ('search_path=' = any(v_search_path)) then
+  if not v_definer or not ('search_path=""' = any(v_search_path)) then
     raise exception 'notification enqueue trigger function must be SECURITY DEFINER with empty search_path';
   end if;
 
@@ -67,7 +67,7 @@ begin
     into v_definer, v_search_path
   from pg_proc p
   where p.oid='public.enqueue_due_alert_escalations(integer)'::regprocedure;
-  if not v_definer or not ('search_path=' = any(v_search_path)) then
+  if not v_definer or not ('search_path=""' = any(v_search_path)) then
     raise exception 'escalation function must be SECURITY DEFINER with empty search_path';
   end if;
 
