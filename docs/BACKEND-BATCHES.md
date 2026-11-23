@@ -302,8 +302,8 @@ The current API contract has no Realtime subscription methods or payloads. Do no
 - [x] Revoke Expo registrations when the provider returns `DeviceNotRegistered`; suppress deliveries when the recipient is no longer eligible.
 - [x] Add Deno tests for safe HTML, unsupported locales, retry bounds, provider error classification and Expo token validation.
 - [ ] Add native-reviewed Shona and Ndebele templates. Until reviewed copy is committed, non-English deliveries are suppressed rather than sent English copy.
-- [ ] Add per-device delivery records so all active devices can receive pushes and each Expo receipt can be tracked independently; current worker intentionally targets only the most recently seen active token.
-- [ ] Add a separately reviewed delivery-cycle model for urgent repeat-until-acknowledged escalation. The current `(alert_recipient_id, channel)` uniqueness constraint must not be bypassed by resetting sent rows.
+- [x] Add per-device delivery records so all active devices can receive pushes and each Expo receipt can be tracked independently; worker now uses the delivery's exact device-token reference.
+- [x] Add a separately reviewed delivery-cycle schema and service-role-only escalation enqueue RPC. The worker invocation/cron path and controlled escalation runtime tests remain pending.
 - [ ] Configure `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, optional `EXPO_ACCESS_TOKEN` and a verified Resend sender domain; deploy and smoke-test only after Deno CI passes.
 - [ ] Add controlled runtime tests for token revocation, consent withdrawal, duplicate jobs, provider failures, retries, worker lease expiry, broadcast role targeting and alert acknowledgement.
 - [ ] Schedule cron only after deployed function smoke tests and secure provider configuration.
