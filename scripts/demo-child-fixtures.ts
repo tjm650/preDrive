@@ -92,8 +92,8 @@ export const GREENFIELD_CHILDREN: readonly DemoChildFixture[] =
       : index === 1
       ? { firstName: "Tadiwa", lastName: "Moyo" }
       : {
-        firstName: FIRST_NAMES[(index - 2) % FIRST_NAMES.length],
-        lastName: LAST_NAMES[Math.floor((index - 2) / FIRST_NAMES.length)],
+        firstName: FIRST_NAMES[(index - 1) % FIRST_NAMES.length],
+        lastName: LAST_NAMES[Math.floor((index - 1) / FIRST_NAMES.length)],
       };
 
     return {
