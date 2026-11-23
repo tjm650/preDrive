@@ -204,7 +204,7 @@ begin
     v_school_id,
     c.id,
     gc.guardian_user_id,
-    'GF-2026-T4-' || lpad(row_number() over (order by c.id)::text, 3, '0'),
+    'GF-2026-T4-' || lpad(row_number() over (order by c.created_at, c.id)::text, 3, '0'),
     'USD'::public.currency_code,
     55500,
     0,
