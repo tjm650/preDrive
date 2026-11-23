@@ -222,3 +222,14 @@ The migration was applied after explicit user approval. Supabase recorded it as 
 `supabase/migrations/20261123061404_predrive_payment_reminder_alert_source.sql` extends the existing `alerts_source_type_check` constraint to permit the dedicated `payment_reminder` source type. It preserves every existing allowed source value and does not alter alert rows, recipients, policies or grants. The reminder generator uses the existing school-scoped alert deduplication and alert-recipient uniqueness indexes.
 
 The migration was applied to the existing development project after explicit user approval. The read-only acceptance suite `supabase/tests/automation/b4_finance_acceptance.sql` passed. Function deployment and invocation remain gated on secure secrets and runtime smoke tests.
+
+
+## B4.7 notification delivery outbox — applied
+
+`supabase/migrations/20261123074827_predrive_notification_delivery_outbox.sql` adds a school-scoped `notification_deliveries` outbox with separate push/email channel records, idempotency per alert recipient and channel, bounded attempt counts, retry timestamps, worker lease fields, provider message identifiers and sanitised error codes. It enables RLS, grants service-role select/insert/update only, and adds indexes for due jobs, stale processing leases and school/status operations.
+
+An `alert_recipients` insert enqueues push only when an active Expo device token exists. Email is enqueued only when the recipient has an email address and their latest effective `communications` consent is `granted`. Recipient language is captured for downstream English, Shona and Ndebele templates. No message content, token, email address or provider credential is copied into the outbox.
+
+Publishing a broadcast materialises one deduplicated `manual` alert and recipients for active memberships matching its target roles. Broadcast fan-out is transactional with publication; the recipient trigger then creates eligible outbox rows. Drafts, expired broadcasts and future-dated publications are not materialised by these triggers.
+
+The migration was applied after explicit approval and Supabase recorded remote version `20261123074827`. The read-only acceptance suite `supabase/tests/automation/b4_notification_outbox_acceptance.sql` passed. Catalog verification confirmed RLS, the two SECURITY DEFINER trigger functions with empty search paths, both trigger families, zero client privileges, service-role select/insert/update without delete, and zero outbox or business rows created. The remote ledger now contains 31 migrations. Delivery workers, provider configuration, secrets, cron scheduling and live notification tests remain separate B4.7 release gates.
