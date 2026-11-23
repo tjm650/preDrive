@@ -89,6 +89,13 @@ begin
     raise exception using errcode = '23503', message = 'CHILD_NOT_FOUND';
   end if;
 
+  if p_primary_contact then
+    update public.guardian_children
+    set primary_contact = false, updated_at = now()
+    where school_id = p_school_id and child_id = p_child_id
+      and active and primary_contact;
+  end if;
+
   insert into public.guardian_children (
     school_id, guardian_user_id, child_id, relationship, primary_contact, active
   ) values (
