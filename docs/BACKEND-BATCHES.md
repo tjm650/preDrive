@@ -396,7 +396,7 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 
 ### B4.8.3 — Controlled deletion and child withdrawal (source authored; migration approval pending)
 
-- [x] Add a transaction-safe `execute_approved_deletion_request(school_id, request_id)` RPC in migration `20261123120000_predrive_privacy_deletion_worker.sql`.
+- [x] Add a transaction-safe `execute_approved_deletion_request(school_id, request_id)` RPC in migration `20261123114538_predrive_privacy_deletion_worker.sql`.
 - [x] Lock and validate the approved `processing` request and child row before any state change.
 - [x] Place a retention hold without changing child data when an active trip or unresolved incident exists.
 - [x] Otherwise mark the child `withdrawn` and deactivate guardian links, approved collectors, temporary collectors and route assignments.
@@ -405,7 +405,7 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 - [x] Add bounded indexes for GPS retention, terminal notification retention and the deletion worker queue.
 - [x] Add `process-approved-deletions`, a cron-secret-protected worker that processes only reviewed `processing` requests.
 - [x] Add read-only catalog acceptance SQL at `supabase/tests/automation/b4_privacy_acceptance.sql`.
-- [x] User approved and remote migration `20261123120000` was applied to the existing development database.
+- [x] User approved and remote migration `20261123114538` was applied to the existing development database.
 - [x] Read-only catalog acceptance SQL passed: private exports bucket exists with required capacity; retention indexes exist; deletion RPC is SECURITY DEFINER with empty search_path and executable only by `service_role`.
 - [x] Remote migration ledger now contains 34 versions; zero deletion requests, GPS history rows and notification-delivery rows were present during verification.
 - [ ] Run controlled runtime tests for child withdrawal, active-trip hold, unresolved-incident hold, account-wide hold and tenant isolation using isolated synthetic fixtures.
