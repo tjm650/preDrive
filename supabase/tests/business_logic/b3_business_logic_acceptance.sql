@@ -29,11 +29,16 @@ begin
       'public.acknowledge_alert(uuid,uuid)',
       'public.complete_vehicle_check(uuid,uuid,uuid,jsonb,boolean,timestamptz)',
       'public.set_guardian_notification_radius(uuid,uuid,integer)',
+      'public.get_child_trip_eta(uuid,uuid,uuid)',
       'public.evaluate_trip_geofences(uuid,uuid)',
       'public.initiate_payment(uuid,uuid,bigint,public.currency_code,public.payment_method,text)',
       'public.apply_payment_result(uuid,boolean,text)',
       'public.request_refund(uuid,uuid,bigint,text)',
       'public.apply_refund_result(uuid,boolean,text)',
+      'public.record_consent(uuid,uuid,uuid,text,text,text,jsonb)',
+      'public.withdraw_consent(uuid,uuid)',
+      'public.request_account_deletion(uuid,text)',
+      'public.reorder_route_stops(uuid,uuid,uuid[])',
       'public.request_data_export(uuid,text)',
       'public.request_child_record_deletion(uuid,uuid,text)',
       'public.review_deletion_request(uuid,uuid,text,text,text)',
@@ -83,10 +88,11 @@ begin
         'start_trip', 'end_trip', 'record_bus_position', 'create_incident',
         'raise_sos', 'report_trip_delay', 'acknowledge_alert',
         'complete_vehicle_check', 'set_guardian_notification_radius',
-        'evaluate_trip_geofences', 'initiate_payment', 'apply_payment_result',
+        'get_child_trip_eta', 'evaluate_trip_geofences', 'initiate_payment', 'apply_payment_result',
         'request_refund', 'apply_refund_result', 'request_data_export',
         'request_child_record_deletion', 'review_deletion_request',
-        'bulk_create_children', 'assign_child_route_stop', 'cancel_scheduled_trip'
+        'record_consent', 'withdraw_consent', 'request_account_deletion',
+        'reorder_route_stops', 'bulk_create_children', 'assign_child_route_stop', 'cancel_scheduled_trip'
       )
       and p.prosecdef
   loop
