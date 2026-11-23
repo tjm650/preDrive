@@ -348,14 +348,17 @@ The remote acceptance SQL passed. The development database read-only snapshot re
 The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments the delivery sequence, and inserts per-device push/per-recipient consented email rows. The existing delivery worker performs the actual send and rechecks eligibility before delivery. No database migration, remote data write, deployment, secret configuration, or cron schedule was performed in this batch.
 
 
-### B4.7.5 — Notification template and provider hardening (source complete; CI and runtime acceptance pending)
+### B4.7.5 — Notification template and provider hardening (source, CI and read-only acceptance complete; live runtime pending)
 
 - [x] Normalize English locale tags so `en`, `en-ZW` and other regional English variants use the English template.
 - [x] Continue suppressing Shona and Ndebele until native-reviewed templates are supplied; regional variants do not bypass this rule.
 - [x] Add strict parsing for the single Expo ticket expected from each single-recipient request.
 - [x] Add stable delivery-specific Expo `collapseId` and Android `tag` values to reduce duplicate display after retries on supported platforms.
 - [x] Add tests for regional locale behavior, malformed ticket payloads, and stable/bounded collapse identifiers.
-- [ ] Complete Deno CI and both read-only remote notification acceptance suites.
+- [x] Deno 2.9.8 type-check passed and all 50 shared tests passed (0 failures) in GitHub Actions run [45158947154](https://github.com/tjm650/preDrive/actions/runs/45158947154).
+- [x] Both read-only remote acceptance suites passed after aligning the original outbox assertion with the B4.7.2 sequence-aware constraints/indexes.
 - [ ] Complete controlled provider and concurrent-worker runtime tests after B5 supplies isolated seeded identities and device records.
 
 **Delivery guarantee:** collapse/replacement identifiers reduce duplicate display but do not make Expo/APNs/FCM exactly-once. A timeout after the provider accepts a request can leave the sender uncertain whether it was accepted; the worker retries transient failures in accordance with Expo's documented guidance. Critical alert UX must therefore tolerate duplicate delivery and remain backed by the in-app alert record and acknowledgement state.
+
+**B4.7.5 verification:** both remote read-only acceptance suites passed. The development project still has 33 migrations, zero notification deliveries, zero alerts, zero alert recipients, zero broadcasts and zero related cron jobs. Supabase reports no deployed Edge Functions. No remote migration, data write, secret configuration, deployment or notification send occurred in B4.7.5.
