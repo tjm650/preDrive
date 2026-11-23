@@ -15,6 +15,7 @@ on:
     paths:
       - "supabase/functions/**"
       - "supabase/tests/seed/**"
+      - "supabase/verification/**"
       - "scripts/**"
       - "supabase/seed.sql"
       - "supabase/config.toml"
