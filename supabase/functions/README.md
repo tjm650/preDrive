@@ -99,7 +99,7 @@ The current B4.4 payment-intent function intentionally creates only simulated Ec
 5. Run `deno check` on each function entrypoint before deployment.
 6. Deploy only after the matching function tests pass and the required secrets exist in the target Supabase environment.
 
-The repository workflow `.github/workflows/supabase-edge-functions.yml` runs `deno check` on shared modules and all deployed function entrypoints, then runs the shared Deno tests. The Deno 2.9.8 type-check and all 33 shared tests passed on commit `1dbd0fa875562096eade9a554c01357214451164` (GitHub Actions run `45121405746`). Function deployment still requires the relevant secrets and provider configuration.
+The repository workflow `.github/workflows/supabase-edge-functions.yml` runs `deno check` on shared modules and all function entrypoints, then runs the shared Deno tests. The Deno 2.9.8 type-check and all 45 shared tests passed with the notification worker included on commit `68642408eec8d971085359dbf833cec2c21ca8ae` (GitHub Actions run [45139514983](https://github.com/tjm650/preDrive/actions/runs/45139514983)). Function deployment still requires the relevant secrets and provider configuration.
 
 B4.4 source does not require a database migration. No payment intents, provider requests, successful settlements, Edge Function deployments or scheduled jobs were created by the source-only batch.
 
