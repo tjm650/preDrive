@@ -112,6 +112,8 @@ const handler = createEdgeHandler(async (request) => {
       email: body.email,
       role: body.role,
       status: "pending",
+      full_name: body.fullName ?? null,
+      phone: body.phone ?? null,
       expires_at: expiresAt,
       invited_by: actor.userId,
     })
@@ -132,6 +134,7 @@ const handler = createEdgeHandler(async (request) => {
   if (!profile) {
     const { error: inviteError } = await client.auth.admin.inviteUserByEmail(
       body.email,
+      body.fullName ? { data: { full_name: body.fullName } } : undefined,
     );
 
     if (inviteError) {
