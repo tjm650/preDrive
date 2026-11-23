@@ -337,7 +337,7 @@ The remote acceptance SQL passed. The development database read-only snapshot re
 - [x] Validate the RPC result as an integer from 0 through 100 and return only aggregate processing counts.
 - [x] Configure `verify_jwt = false` only for this function because it independently verifies the high-entropy cron secret.
 - [x] Add Deno unit tests for bounded RPC result validation and add the function to CI type-checking.
-- [ ] Confirm the GitHub Actions type-check and complete shared test suite.
+- [x] GitHub Actions run `45153289661` completed Deno type-checking and all 47 shared tests passed (0 failures).
 - [ ] Run controlled database runtime tests for duplicate/concurrent invocations, sequence uniqueness, acknowledgement during enqueue, no active device, revoked token, withdrawn email consent, and the 1,000-cycle safety cap.
 - [ ] Deploy both `enqueue-alert-escalations` and `deliver-notifications` only after secure secrets and provider configuration are verified.
 - [ ] Only after both function smoke tests pass, schedule two independent one-minute jobs: one to materialize due escalation deliveries and one to send pending outbox deliveries. The database routine enforces the five-minute repeat interval itself.
