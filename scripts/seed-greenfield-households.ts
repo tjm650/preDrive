@@ -592,13 +592,53 @@ async function main(): Promise<void> {
     throw new Error("Chipo's primary guardian membership is missing or inactive.");
   }
 
+  const primaryStaffFixtures = [
+    { email: "supervisor.route-a@greenfield.predrive-demo.invalid", role: "supervisor" },
+    { email: "driver.route-a@greenfield.predrive-demo.invalid", role: "driver" },
+    { email: "teacher.sunbeams@greenfield.predrive-demo.invalid", role: "teacher" },
+  ];
+  for (const primary of primaryStaffFixtures) {
+    const profiles = await api.rows<Profile>("profiles", { email: "eq." + primary.email });
+    if (profiles.length !== 1) throw new Error("Primary staff profile is missing or duplicated: " + primary.email);
+    const memberships = await api.rows<Membership>("school_memberships", {
+      school_id: "eq." + GREENFIELD_DEMO_SCHOOL_ID,
+      user_id: "eq." + profiles[0].id,
+    });
+    if (memberships.length !== 1 || memberships[0].role !== primary.role || !memberships[0].active) {
+      throw new Error("Primary staff membership is missing or has the wrong role: " + primary.email);
+    }
+    const staff = await api.rows<Staff>("staff_members", {
+      school_id: "eq." + GREENFIELD_DEMO_SCHOOL_ID,
+      user_id: "eq." + profiles[0].id,
+    });
+    if (staff.length !== 1 || staff[0].role !== primary.role || !staff[0].active) {
+      throw new Error("Primary staff record is missing or inactive: " + primary.email);
+    }
+  }
+
   const users = await api.listAuthUsers();
   const userByEmail = new Map(
     users.filter((user) => user.email).map((user) => [user.email!.toLowerCase(), user]),
   );
+  const supportingIdentities = [...GREENFIELD_GUARDIAN_FIXTURES, ...GREENFIELD_STAFF_FIXTURES];
+  for (const identity of supportingIdentities) {
+    const existing = userByEmail.get(identity.email);
+    if (existing && existing.app_metadata?.predrive_demo_seed !== SEED_MARKER) {
+      throw new Error("A reserved fixture email belongs to an unmarked account; refusing all fixture creation.");
+    }
+    if (existing) {
+      const memberships = await api.rows<{ id: string }>("school_memberships", {
+        user_id: "eq." + existing.id,
+        school_id: "neq." + GREENFIELD_DEMO_SCHOOL_ID,
+      });
+      if (memberships.length) {
+        throw new Error("A reserved fixture identity is linked to another school; refusing all fixture creation.");
+      }
+    }
+  }
 
   const fixtureIds = new Map<string, string>();
-  for (const identity of [...GREENFIELD_GUARDIAN_FIXTURES, ...GREENFIELD_STAFF_FIXTURES]) {
+  for (const identity of supportingIdentities) {
     const id = await ensureFixtureIdentity(api, userByEmail, identity);
     fixtureIds.set(identity.email, id);
   }
