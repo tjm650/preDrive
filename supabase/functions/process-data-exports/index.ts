@@ -70,7 +70,11 @@ const handler = createEdgeHandler(async (request) => {
       if (completionError) throw completionError;
       completed += 1;
     } catch {
-      const { data: released, error: releaseError } = await client.rpc(
+      if (objectPath) {
+        await client.storage.from("exports").remove([objectPath]);
+      }
+
+      const { error: releaseError } = await client.rpc(
         "release_data_export_request",
         {
           p_school_id: item.school_id,
@@ -79,11 +83,7 @@ const handler = createEdgeHandler(async (request) => {
         },
       );
 
-      // Each lease has a unique object path, so cleanup cannot remove a
-      // newer worker's artifact even after this worker loses its lease.
-      if (objectPath) {
-        await client.storage.from("exports").remove([objectPath]);
-      }
+      if (releaseError) throw releaseError;
       failed += 1;
     }
   }
