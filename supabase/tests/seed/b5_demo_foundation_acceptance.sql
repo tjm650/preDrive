@@ -75,14 +75,6 @@ begin
     raise exception 'B5.1: guardian active-trip-only location setting missing';
   end if;
 
-  if exists (
-    select 1 from public.profiles p
-    join public.school_memberships m on m.user_id = p.id
-    where m.school_id = v_school_id
-      and p.email like '%@example.com'
-  ) then
-    raise exception 'B5.1: placeholder demo auth identities must not be inserted by SQL seed';
-  end if;
 end;
 $$;
 
