@@ -13,6 +13,25 @@ function asRows(value: unknown): Row[] {
   return Array.isArray(value) ? value as Row[] : [];
 }
 
+async function readAllRows(
+  queryForRange: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: unknown[] | null; error: unknown }>,
+): Promise<Row[]> {
+  const collected: Row[] = [];
+  const pageSize = 500;
+
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await queryForRange(offset, offset + pageSize - 1);
+    if (page.error) throw page.error;
+
+    const rows = asRows(page.data);
+    collected.push(...rows);
+    if (rows.length < pageSize) return collected;
+  }
+}
+
 async function requireQuery<T>(
   query: PromiseLike<{ data: T | null; error: unknown }>,
 ): Promise<T> {
@@ -37,82 +56,102 @@ export async function buildPersonalDataExport(
       .maybeSingle(),
   );
 
-  const memberships = asRows(await requireQuery(
+  const memberships = await readAllRows((from, to) =>
     client.from("school_memberships")
       .select("id,school_id,role,active,created_at,updated_at")
-      .eq("user_id", userId),
-  ));
+      .eq("user_id", userId)
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 
-  const staffMemberships = asRows(await requireQuery(
+  const staffMemberships = await readAllRows((from, to) =>
     client.from("staff_members")
       .select("id,school_id,role,full_name,phone,active,created_at,updated_at")
-      .eq("user_id", userId),
-  ));
+      .eq("user_id", userId)
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 
-  const guardianLinks = asRows(await requireQuery(
+  const guardianLinks = await readAllRows((from, to) =>
     client.from("guardian_children")
       .select("id,school_id,guardian_user_id,child_id,relationship,primary_contact,active,notification_radius_meters,created_at,updated_at")
-      .eq("guardian_user_id", userId),
-  ));
+      .eq("guardian_user_id", userId)
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 
   const childIds = [...new Set(guardianLinks
     .map((row) => row.child_id)
     .filter((value): value is string => typeof value === "string"))];
 
   const children = childIds.length
-    ? asRows(await requireQuery(
+    ? await readAllRows((from, to) =>
       client.from("children")
         .select("id,school_id,class_group_id,first_name,last_name,date_of_birth,status,profile_image_path,created_at,updated_at")
-        .in("id", childIds),
-    ))
+        .in("id", childIds)
+        .order("id", { ascending: true })
+        .range(from, to)
+    )
     : [];
 
   const collectors = childIds.length
-    ? asRows(await requireQuery(
+    ? await readAllRows((from, to) =>
       client.from("approved_collectors")
         .select("id,school_id,child_id,full_name,relationship,phone,active,created_at,updated_at")
-        .in("child_id", childIds),
-    ))
+        .in("child_id", childIds)
+        .order("id", { ascending: true })
+        .range(from, to)
+    )
     : [];
 
-  const ownConsents = asRows(await requireQuery(
+  const ownConsents = await readAllRows((from, to) =>
     client.from("consent_records")
       .select("id,school_id,subject_user_id,child_id,purpose,policy_version,status,captured_by,captured_at,effective_at,evidence,created_at")
-      .eq("subject_user_id", userId),
-  ));
+      .eq("subject_user_id", userId)
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 
   const childConsents = childIds.length
-    ? asRows(await requireQuery(
+    ? await readAllRows((from, to) =>
       client.from("consent_records")
         .select("id,school_id,subject_user_id,child_id,purpose,policy_version,status,captured_by,captured_at,effective_at,evidence,created_at")
-        .in("child_id", childIds),
-    ))
+        .in("child_id", childIds)
+        .order("id", { ascending: true })
+        .range(from, to)
+    )
     : [];
 
-  const invoices = asRows(await requireQuery(
+  const invoices = await readAllRows((from, to) =>
     client.from("invoices")
       .select("id,school_id,child_id,guardian_user_id,invoice_number,currency,subtotal_minor,credit_minor,total_minor,paid_minor,balance_minor,status,due_date,issued_at,paid_at,voided_at,notes,created_at,updated_at")
-      .eq("guardian_user_id", userId),
-  ));
+      .eq("guardian_user_id", userId)
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 
   const invoiceIds = invoices
     .map((row) => row.id)
     .filter((value): value is string => typeof value === "string");
 
   const payments = invoiceIds.length
-    ? asRows(await requireQuery(
+    ? await readAllRows((from, to) =>
       client.from("payments")
         .select("id,school_id,invoice_id,amount_minor,currency,method,status,reference,provider_reference,provider,exchange_rate_snapshot,succeeded_at,failed_at,cancelled_at,refunded_at,created_at,updated_at")
-        .in("invoice_id", invoiceIds),
-    ))
+        .in("invoice_id", invoiceIds)
+        .order("id", { ascending: true })
+        .range(from, to)
+    )
     : [];
 
   const tripChildren = childIds.length
-    ? asRows(await requireQuery(
+    ? await readAllRows((from, to) =>
       client.from("trip_children")
         .select("id,school_id,trip_id,child_id,status,boarded_at,handed_over_at,recorded_by,last_event_at,created_at,updated_at")
-        .in("child_id", childIds),
-    ))
+        .in("child_id", childIds)
+        .order("id", { ascending: true })
+        .range(from, to)
+    )
     : [];
 
   const tripIds = [...new Set(tripChildren
@@ -120,11 +159,13 @@ export async function buildPersonalDataExport(
     .filter((value): value is string => typeof value === "string"))];
 
   const trips = tripIds.length
-    ? asRows(await requireQuery(
+    ? await readAllRows((from, to) =>
       client.from("trips")
         .select("id,school_id,route_id,bus_id,direction,service_date,status,scheduled_at,started_at,ended_at,cancelled_at,created_at,updated_at")
-        .in("id", tripIds),
-    ))
+        .in("id", tripIds)
+        .order("id", { ascending: true })
+        .range(from, to)
+    )
     : [];
 
   const result = {
