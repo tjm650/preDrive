@@ -69,7 +69,7 @@ export function validateCollectorPin(value: string): boolean {
 }
 
 export function validateCollectorPinSecret(value: string): boolean {
-  return value.length >= 32 && !/[\\u0000-\\u001f\\u007f]/.test(value);
+  return value.length >= 32 && !/[\u0000-\u001f\u007f]/.test(value);
 }
 
 export async function deriveDemoCollectorPin(
