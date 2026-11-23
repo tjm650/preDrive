@@ -128,7 +128,7 @@ Known integration and acceptance boundaries:
 
 ## B4 — Edge Functions and automation (8 batches)
 
-B4.1 source implementation is committed on `main`. Runtime Deno tests and Edge Runtime type-checking remain unexecuted because the current workspace has no Deno runtime. Do not deploy functions or schedule jobs until their individual tests pass and the required project secrets are configured.
+B4.1 source implementation and a dedicated GitHub Actions Deno check workflow are committed on `main`. The current workspace has no Deno runtime, and GitHub has not yet reported a workflow run for the workflow commit. Treat runtime verification as pending until the new check completes successfully. Do not deploy functions or schedule jobs until their individual tests pass and the required project secrets are configured.
 
 ### B4.1 — Shared Deno Edge Function infrastructure (source authored; runtime verification pending)
 
@@ -141,7 +141,7 @@ B4.1 source implementation is committed on `main`. Runtime Deno tests and Edge R
 - [x] Dedicated high-entropy cron-secret verification helper.
 - [x] Bounded JSON parsing and Zod validation.
 - [x] Deno tests authored for CORS, error normalization and request validation.
-- [ ] Execute `deno test supabase/functions/_shared` and `deno check` in a Deno 2-compatible environment.
+- [ ] Obtain a successful run of `.github/workflows/supabase-edge-functions.yml` (Deno 2.9.8 type-check and shared tests).
 - [ ] Configure the real `APP_ALLOWED_ORIGINS` and `CRON_SECRET` secrets in the development project; do not commit secret values.
 - [ ] Deploy no Edge Functions in B4.1; deployment belongs to each function's implementation and acceptance batch.
 
