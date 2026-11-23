@@ -362,3 +362,19 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 **Delivery guarantee:** collapse/replacement identifiers reduce duplicate display but do not make Expo/APNs/FCM exactly-once. A timeout after the provider accepts a request can leave the sender uncertain whether it was accepted; the worker retries transient failures in accordance with Expo's documented guidance. Critical alert UX must therefore tolerate duplicate delivery and remain backed by the in-app alert record and acknowledgement state.
 
 **B4.7.5 verification:** both remote read-only acceptance suites passed. The development project still has 33 migrations, zero notification deliveries, zero alerts, zero alert recipients, zero broadcasts and zero related cron jobs. Supabase reports no deployed Edge Functions. No remote migration, data write, secret configuration, deployment or notification send occurred in B4.7.5.
+
+### B4.8.1 — Personal data export (source added; runtime pending)
+
+- [x] Reuse the existing `deletion_requests` workflow and `request_data_export()` RPC; the export worker processes only administrator-reviewed requests in `processing` state and never self-approves.
+- [x] Add `process-data-exports`, protected by `CRON_SECRET`, to generate subject-centred JSON exports in the existing private `exports` bucket.
+- [x] Scope export records to the requesting profile, school memberships, staff record, guardian-child links, linked children, approved collector details, consent history, invoices/payments, trip-child attendance and related trip metadata.
+- [x] Exclude PIN hashes/lock counters, device tokens, credentials, GPS coordinates, unrelated guardians and internal idempotency hashes.
+- [x] Enforce a 20 MiB export limit and use school/request-scoped object paths.
+- [x] Add `download-data-export`, which checks the authenticated requester, completed request and retention-hold state before issuing a 60-second signed URL.
+- [x] Add Deno tests for UUID path validation and UTF-8 byte accounting; add both functions to CI type-checking.
+- [x] Configure `verify_jwt=false` only for the cron-secret-protected export worker; the download endpoint retains JWT verification.
+- [ ] Run Deno CI and fix any type/test failures before continuing.
+- [ ] Configure `CRON_SECRET` and `APP_ALLOWED_ORIGINS` securely, deploy, and test admin approval, requester isolation, signed download expiry and failed-upload retry.
+- [ ] Complete export coverage review against the final product data inventory before representing the export as a complete legal data portability package.
+
+**Operational boundary:** source only. No remote migration, database write, export artifact, secret, function deployment or cron schedule was created. The export worker requires a school administrator to move a request into `processing`; it cannot approve or complete account/child deletion requests.
