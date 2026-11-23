@@ -29,10 +29,37 @@ export async function parseJsonBody<TSchema extends z.ZodType>(
     );
   }
 
-  let rawBody: string;
+  const reader = request.body?.getReader();
+  if (!reader) {
+    throw new HttpError(
+      "VALIDATION",
+      "A JSON request body is required.",
+      400,
+    );
+  }
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
   try {
-    rawBody = await request.text();
-  } catch {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBodyBytes) {
+        await reader.cancel();
+        throw new HttpError(
+          "VALIDATION",
+          "The request body is too large.",
+          413,
+        );
+      }
+
+      chunks.push(value);
+    }
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
     throw new HttpError(
       "VALIDATION",
       "The request body could not be read.",
@@ -40,11 +67,21 @@ export async function parseJsonBody<TSchema extends z.ZodType>(
     );
   }
 
-  if (new TextEncoder().encode(rawBody).byteLength > maxBodyBytes) {
+  const bodyBytes = new Uint8Array(totalBytes);
+  let byteOffset = 0;
+  for (const chunk of chunks) {
+    bodyBytes.set(chunk, byteOffset);
+    byteOffset += chunk.byteLength;
+  }
+
+  let rawBody: string;
+  try {
+    rawBody = new TextDecoder("utf-8", { fatal: true }).decode(bodyBytes);
+  } catch {
     throw new HttpError(
       "VALIDATION",
-      "The request body is too large.",
-      413,
+      "The request body must be valid UTF-8 JSON.",
+      400,
     );
   }
 
