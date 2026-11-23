@@ -189,11 +189,11 @@ Nine additive B3 migration files were applied sequentially to the existing devel
 
 The nine migrations add 45 public RPC functions, two school-scoped tables (`temporary_collectors` and `child_route_assignments`), the guardian notification-radius column, GPS and trip-event idempotency indexes, an alert deduplication index, and a deferrable route-stop ordering constraint. All 45 RPCs are SECURITY DEFINER with an empty search path. No B3 function is executable by `anon`; four trusted automation/settlement functions are service-role-only.
 
-The first B3.3 application attempt failed while parsing the attendance function. Its preceding idempotent unique-index statement had already succeeded, but no B3.3 migration ledger row was recorded. The committed function expression was simplified, then the migration was reapplied successfully. Only after B3.3 succeeded were B3.4–B3.8 applied. The final remote ledger contains 27 versions (12 B1, six B2, nine B3).
+The first B3.3 application attempt failed while parsing the attendance function. Its preceding idempotent unique-index statement had already succeeded, but no B3.3 migration ledger row was recorded. The committed function expression was simplified, then the migration was reapplied successfully. Only after B3.3 succeeded were B3.4–B3.8 applied. The final remote ledger contains 28 versions (12 B1, six B2, nine B3, one B4).
 
-## B4.2 migration — authored, not applied
+## B4.2 migration — applied and catalog-verified
 
-`supabase/migrations/20261123090000_predrive_daily_trip_generation.sql` is committed on `main`, but is not in the remote migration ledger. It adds nullable `driver_id` and `supervisor_id` assignments to `route_schedules`, composite school-scoped staff foreign keys, active-role validation, an admin assignment RPC, and the service-role-only `generate_daily_trips(date)` function. The generator is restricted to the current `Africa/Harare` date, is idempotent by school/schedule/date/direction, and creates trip-child rows from active child route assignments.
+`supabase/migrations/20261123051100_predrive_daily_trip_generation.sql` is committed on `main` and applied to the development project's remote migration ledger as version `20261123051100`. It adds nullable `driver_id` and `supervisor_id` assignments to `route_schedules`, composite school-scoped staff foreign keys, active-role validation, an admin assignment RPC, and the service-role-only `generate_daily_trips(date)` function. The generator is restricted to the current `Africa/Harare` date, is idempotent by school/schedule/date/direction, and creates trip-child rows from active child route assignments.
 
 The migration has not been applied because the previous explicit authorization covered B3 only. Obtain written approval before applying this B4.2 migration to the shared development database. The read-only acceptance suite is `supabase/tests/automation/b4_daily_trip_generation.sql` and must run after application.
 
