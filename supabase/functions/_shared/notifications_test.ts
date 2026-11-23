@@ -1,4 +1,5 @@
 import {
+  classifyExpoReceipt,
   classifyProviderFailure,
   escapeHtml,
   isExpoPushToken,
@@ -68,5 +69,36 @@ Deno.test("Expo token validation rejects arbitrary strings", () => {
   }
   if (isExpoPushToken("not-a-token")) {
     throw new Error("An arbitrary token was accepted.");
+  }
+});
+
+
+Deno.test("Expo receipts distinguish handoff success and unregistered devices", () => {
+  const success = classifyExpoReceipt("ok", undefined);
+  if (!success || success.status !== "ok" || success.revokeDevice) {
+    throw new Error("Successful receipt classification is incorrect.");
+  }
+
+  const unregistered = classifyExpoReceipt("error", "DeviceNotRegistered");
+  if (
+    !unregistered ||
+    unregistered.status !== "error" ||
+    unregistered.errorCode !== "DEVICE_NOT_REGISTERED" ||
+    !unregistered.revokeDevice
+  ) {
+    throw new Error("DeviceNotRegistered receipt must revoke the device.");
+  }
+
+  const otherError = classifyExpoReceipt("error", "ProviderError");
+  if (
+    !otherError ||
+    otherError.errorCode !== "EXPO_RECEIPT_ERROR" ||
+    otherError.revokeDevice
+  ) {
+    throw new Error("Other receipt errors must not revoke the device.");
+  }
+
+  if (classifyExpoReceipt(undefined, undefined) !== null) {
+    throw new Error("An incomplete receipt must remain unclassified.");
   }
 });
