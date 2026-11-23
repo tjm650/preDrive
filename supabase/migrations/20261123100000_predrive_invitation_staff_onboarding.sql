@@ -15,17 +15,27 @@ comment on column public.school_invitations.phone is
 
 -- NOT VALID preserves historical pending invitations while enforcing complete
 -- details on every new or updated non-guardian invitation.
-alter table public.school_invitations
-  add constraint school_invitations_staff_details_check
-  check (
-    role = 'guardian'::public.user_role
-    or (
-      full_name is not null
-      and char_length(btrim(full_name)) between 2 and 160
-      and phone is not null
-      and char_length(btrim(phone)) between 7 and 32
-    )
-  ) not valid;
+do $constraint$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.school_invitations'::regclass
+      and conname = 'school_invitations_staff_details_check'
+  ) then
+    alter table public.school_invitations
+      add constraint school_invitations_staff_details_check
+      check (
+        role = 'guardian'::public.user_role
+        or (
+          full_name is not null
+          and char_length(btrim(full_name)) between 2 and 160
+          and phone is not null
+          and char_length(btrim(phone)) between 7 and 32
+        )
+      ) not valid;
+  end if;
+end;
+$constraint$;
 
 create or replace function public.accept_school_invitation()
 returns uuid
