@@ -200,3 +200,6 @@ Demo reset is deferred until B5 creates the canonical idempotent Greenfield demo
 ## Export concurrency control (B4.8.5)
 
 The export worker claims requests through a service-role-only RPC using row-level locks and a 15-minute lease. A request cannot be claimed again while its lease is active. Completion requires the same unexpired lease. On failure, the worker releases its lease; it removes a partial object only if the release confirms that it still owns that lease. This prevents a stale overlapping worker from deleting a newer worker's completed artifact. The supporting migration must be applied before this worker version is deployed.
+
+
+Export objects are stored under a unique path for each lease. The completion RPC validates and persists that exact path; the download endpoint signs only the stored validated path, and retention deletes only that recorded object. A stale worker therefore cannot overwrite or remove a newer worker's artifact.
