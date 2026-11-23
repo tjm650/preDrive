@@ -1,5 +1,201 @@
 -- B3.8: privacy request lifecycle, child bulk creation and trip administration.
 
+-- Route-stop reordering is a single transaction. Deferring uniqueness allows
+-- safe swaps without exposing an intermediate duplicate order.
+alter table public.route_stops
+  drop constraint if exists route_stops_route_order_key;
+alter table public.route_stops
+  add constraint route_stops_route_order_key
+  unique (route_id, stop_order)
+  deferrable initially deferred;
+
+create or replace function public.record_consent(
+  p_school_id uuid,
+  p_subject_user_id uuid,
+  p_child_id uuid,
+  p_purpose text,
+  p_policy_version text,
+  p_status text,
+  p_evidence jsonb default '{}'::jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+  if ((p_subject_user_id is not null)::integer + (p_child_id is not null)::integer) <> 1
+     or p_policy_version is null
+     or char_length(btrim(p_policy_version)) not between 1 and 40
+     or p_status not in ('granted', 'denied')
+     or jsonb_typeof(coalesce(p_evidence, '{}'::jsonb)) <> 'object'
+     or pg_column_size(coalesce(p_evidence, '{}'::jsonb)) > 4096 then
+    raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+
+  if p_subject_user_id is not null and p_subject_user_id <> auth.uid() then
+    raise exception using errcode = '42501', message = 'SELF_CONSENT_ONLY';
+  end if;
+  if p_child_id is not null and not exists (
+    select 1 from public.guardian_children gc
+    where gc.school_id = p_school_id and gc.child_id = p_child_id
+      and gc.guardian_user_id = auth.uid() and gc.active
+  ) then
+    raise exception using errcode = '42501', message = 'GUARDIAN_CHILD_LINK_REQUIRED';
+  end if;
+
+  insert into public.consent_records (
+    school_id, subject_user_id, child_id, purpose, policy_version,
+    status, captured_by, evidence
+  ) values (
+    p_school_id, p_subject_user_id, p_child_id, p_purpose, btrim(p_policy_version),
+    p_status, auth.uid(), coalesce(p_evidence, '{}'::jsonb)
+  ) returning id into v_id;
+
+  return v_id;
+end;
+$function$;
+
+create or replace function public.withdraw_consent(
+  p_school_id uuid,
+  p_consent_record_id uuid
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_previous public.consent_records%rowtype;
+  v_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+
+  select cr.* into v_previous
+  from public.consent_records cr
+  where cr.id = p_consent_record_id and cr.school_id = p_school_id
+  for share;
+
+  if not found then
+    raise exception using errcode = 'P0002', message = 'CONSENT_RECORD_NOT_FOUND';
+  end if;
+
+  if not (
+    v_previous.subject_user_id = auth.uid()
+    or (
+      v_previous.child_id is not null
+      and exists (
+        select 1 from public.guardian_children gc
+        where gc.school_id = p_school_id and gc.child_id = v_previous.child_id
+          and gc.guardian_user_id = auth.uid() and gc.active
+      )
+    )
+  ) then
+    raise exception using errcode = '42501', message = 'FORBIDDEN';
+  end if;
+
+  insert into public.consent_records (
+    school_id, subject_user_id, child_id, purpose, policy_version,
+    status, captured_by, evidence
+  ) values (
+    p_school_id, v_previous.subject_user_id, v_previous.child_id,
+    v_previous.purpose, v_previous.policy_version, 'withdrawn',
+    auth.uid(), jsonb_build_object('withdraws_record_id', v_previous.id)
+  ) returning id into v_id;
+
+  return v_id;
+end;
+$function$;
+
+create or replace function public.request_account_deletion(
+  p_school_id uuid,
+  p_reason text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_id uuid;
+begin
+  if auth.uid() is null or not private.is_school_member(p_school_id) then
+    raise exception using errcode = '42501', message = 'FORBIDDEN';
+  end if;
+
+  insert into public.deletion_requests (
+    school_id, requested_by, subject_user_id, request_type, reason
+  ) values (
+    p_school_id, auth.uid(), auth.uid(), 'account', p_reason
+  ) returning id into v_id;
+
+  return v_id;
+end;
+$function$;
+
+create or replace function public.reorder_route_stops(
+  p_school_id uuid,
+  p_route_id uuid,
+  p_stop_ids uuid[]
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_total integer;
+  v_distinct integer;
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+  if not private.has_role(p_school_id, 'school_admin'::public.user_role) then
+    raise exception using errcode = '42501', message = 'FORBIDDEN';
+  end if;
+  if p_stop_ids is null or cardinality(p_stop_ids) < 1 or cardinality(p_stop_ids) > 200 then
+    raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+
+  select count(*) into v_total
+  from public.route_stops rs
+  where rs.school_id = p_school_id and rs.route_id = p_route_id and rs.active;
+
+  select count(distinct x.stop_id) into v_distinct
+  from unnest(p_stop_ids) as x(stop_id);
+
+  if v_total <> cardinality(p_stop_ids) or v_distinct <> cardinality(p_stop_ids)
+     or exists (
+       select 1
+       from unnest(p_stop_ids) as x(stop_id)
+       where not exists (
+         select 1 from public.route_stops rs
+         where rs.id = x.stop_id and rs.school_id = p_school_id
+           and rs.route_id = p_route_id and rs.active
+       )
+     ) then
+    raise exception using errcode = '22023', message = 'ROUTE_STOP_SET_MISMATCH';
+  end if;
+
+  set constraints route_stops_route_order_key deferred;
+
+  update public.route_stops rs
+  set stop_order = x.ordinality::smallint,
+      updated_at = now()
+  from unnest(p_stop_ids) with ordinality as x(stop_id, ordinality)
+  where rs.id = x.stop_id and rs.school_id = p_school_id
+    and rs.route_id = p_route_id;
+end;
+$function$;
+
+
 create or replace function public.request_data_export(p_school_id uuid, p_reason text default null)
 returns uuid
 language plpgsql
@@ -264,6 +460,15 @@ begin
   );
 end;
 $function$;
+
+revoke all on function public.record_consent(uuid,uuid,uuid,text,text,text,jsonb) from public, anon;
+revoke all on function public.withdraw_consent(uuid,uuid) from public, anon;
+revoke all on function public.request_account_deletion(uuid,text) from public, anon;
+revoke all on function public.reorder_route_stops(uuid,uuid,uuid[]) from public, anon;
+grant execute on function public.record_consent(uuid,uuid,uuid,text,text,text,jsonb) to authenticated;
+grant execute on function public.withdraw_consent(uuid,uuid) to authenticated;
+grant execute on function public.request_account_deletion(uuid,text) to authenticated;
+grant execute on function public.reorder_route_stops(uuid,uuid,uuid[]) to authenticated;
 
 revoke all on function public.request_data_export(uuid, text) from public, anon;
 revoke all on function public.request_child_record_deletion(uuid, uuid, text) from public, anon;
