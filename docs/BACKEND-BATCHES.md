@@ -488,7 +488,7 @@ B4 implementation is complete at the repository and development-schema level. Th
 - [x] Add six Deno tests for role coverage, reserved domains, Zimbabwean phone shape, password variable names, password policy and fixed tenant ID.
 - [x] Add read-only post-provision acceptance SQL at `supabase/tests/seed/b5_demo_auth_acceptance.sql` for Auth markers, profile language, exact roles, staff rows and school isolation.
 - [x] Extend the Supabase Edge Function workflow to type-check and run the demo Auth seed tests.
-- [ ] Run Deno CI and address any type/test failures before provisioning.
+- [x] Run Deno 2.9.8 type-check and the full shared test suite; all 61 tests passed (0 failures) in [GitHub Actions run 45176931410](https://github.com/tjm650/preDrive/actions/runs/45176931410).
 - [ ] Apply B5.1 SQL seed first, then run Auth provisioning with secure environment variables after explicit authorization for remote Auth user and membership creation.
 - [ ] Run read-only Auth/profile/membership/staff acceptance checks and sign in once per role; test RLS isolation with the B5 synthetic tenant fixtures.
 
