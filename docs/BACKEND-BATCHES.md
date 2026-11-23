@@ -572,7 +572,7 @@ Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SU
 
 **Finance boundary:** all 64 invoice plans are USD and are demo-only. Planned payment records are simulated; no Paynow, EcoCash, CBZ or CABS provider was contacted. The fixture source does not create or settle payments.
 
-**Operational boundary:** migration `20261123131500` is committed but not applied. Its SQL has not yet been executed against a database. No trips, attendance, incidents, delays, invoices, payments or receipts were created. The history runner will fail until its RPC is installed by an approved migration.
+**Operational boundary:** migration file `20261123131500` is applied remotely as ledger version `20261123133938`. Its RPC is installed and catalog-verified, but has not been invoked. No trips, attendance, incidents, delays, invoices, payments or receipts have been created. The history runner must wait until B5.2 and B5.3 fixtures pass their acceptance suites.
 
 ## B5.5 — Tenant-isolation runtime acceptance (test source complete; execution pending)
 
@@ -591,12 +591,12 @@ B5 source foundations now cover the Greenfield school/fleet/fee catalogue, five 
 
 **The following are not complete or live:**
 1. Remote B5 seed and Auth provisioning have not been authorized or run. The development project remains empty of application records.
-2. The demo-only historical/finance writer exists as migration source but has not been SQL-executed or applied remotely. Existing trip lifecycle RPCs correctly prevent creating trips weeks in the past; do not bypass them with direct REST inserts.
+2. The history/finance writer migration is applied remotely as version `20261123133938`, and its security/catalog acceptance passed. It has not been invoked because Auth, household, child, collector and schedule fixtures are still missing. Existing trip lifecycle RPCs correctly prevent creating trips weeks in the past; do not bypass them with direct REST inserts.
 3. The product brief requires at least 30 real-road-path coordinates per route. The current database/API stores route metadata and ordered stop points only; it has no typed route geometry field. Do not fabricate straight-line/interpolated roads or hide polylines in settings. A typed route-geometry schema and shared API contract must be reviewed in B6 before route polylines can be persisted and consumed.
 4. Shona/Ndebele notification copy still requires native-speaker review before notification delivery can be enabled.
 5. A `scripts/reset-demo.ts` workflow is not implemented. The approved B4.8 retention baseline preserves financial, safety and audit records; a reset that deletes or rewrites those records would contradict that policy. Define a demo-specific reset boundary first. Any reset must be fixed-school, `is_demo=true` guarded, use a separate high-entropy `DEMO_RESET_SECRET`, and never delete Auth users globally.
 
-**B5 must not be described as production-ready or fully runtime-verified until the remote seed is authorized, the dedicated history/finance writer is reviewed, all acceptance tests pass against populated synthetic records, and the route-geometry contract is implemented.**
+**B5 must not be described as production-ready or fully runtime-verified until Auth and operational fixtures are provisioned, the history writer is executed, all acceptance tests pass against populated synthetic records, tenant isolation is verified, and the route-geometry contract is implemented.**
 
 
 **B5.4 history runner (trusted server only; do not run before migration approval):**
