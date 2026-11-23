@@ -10,7 +10,7 @@ This repository uses an online Supabase workflow. Do not require Docker, a local
 
 - Supabase development project: `rjsdhgbjvghjnuiilizm` (`eu-west-1`).
 - PostgreSQL: 17.12.
-- Remote migration ledger contains 27 applied versions: the original 12 B1 versions, six B2 versions applied on 2026-11-22, and nine B3 versions applied on 2026-11-23.
+- Remote migration ledger contains 28 applied versions: the original 12 B1 versions, six B2 versions applied on 2026-11-22, and nine B3 versions applied on 2026-11-23.
 - All 12 original B1 SQL files are present in `supabase/migrations/`; the historical reset SQL was recovered from the remote migration ledger and restored to GitHub. A direct comparison confirms the reset file is byte-for-byte identical to its ledger `statements[0]` (2,281 bytes). A read-only comparison of all 12 applied migration records against their repository files confirms normalized SQL text matches for every version; six files are byte-exact and six differ only in comments/whitespace.
 - An additional repository-only migration `20261121124410_predrive_enable_pgcrypto.sql` explicitly declares `pgcrypto` in the `extensions` schema. Its timestamp places it before `20261121124422_predrive_children_guardians.sql`, the first migration that calls `crypt()` and `gen_salt()` for handover PIN hashing. It is not applied to the remote development database and must be included in the clean hosted replay before it is promoted.
 - Historical version `20261120112956` (`predrive_full_application_reset`) was recovered from the remote `supabase_migrations.schema_migrations.statements` array and restored as `supabase/migrations/20261120112956_predrive_full_application_reset.sql`.
@@ -195,7 +195,7 @@ The first B3.3 application attempt failed while parsing the attendance function.
 
 `supabase/migrations/20261123051100_predrive_daily_trip_generation.sql` is committed on `main` and applied to the development project's remote migration ledger as version `20261123051100`. It adds nullable `driver_id` and `supervisor_id` assignments to `route_schedules`, composite school-scoped staff foreign keys, active-role validation, an admin assignment RPC, and the service-role-only `generate_daily_trips(date)` function. The generator is restricted to the current `Africa/Harare` date, is idempotent by school/schedule/date/direction, and creates trip-child rows from active child route assignments.
 
-The migration has not been applied because the previous explicit authorization covered B3 only. Obtain written approval before applying this B4.2 migration to the shared development database. The read-only acceptance suite is `supabase/tests/automation/b4_daily_trip_generation.sql` and must run after application.
+The migration was applied on 2026-11-23 after the user's explicit B4.2 authorization. The read-only acceptance suite `supabase/tests/automation/b4_daily_trip_generation.sql` ran successfully, followed by independent catalog verification. The remote ledger now contains 28 versions: 12 B1, six B2, nine B3 and one B4.2. Supabase assigned remote version `20261123051100`; the repository migration filename uses the same version prefix.
 
 ## B3 catalog acceptance — passed 2026-11-23
 
