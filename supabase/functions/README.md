@@ -203,3 +203,12 @@ The export worker claims requests through a service-role-only RPC using row-leve
 
 
 Export objects are stored under a unique path for each lease. The completion RPC validates and persists that exact path; the download endpoint signs only the stored validated path, and retention deletes only that recorded object. A stale worker therefore cannot overwrite or remove a newer worker's artifact.
+
+
+## Export lease and object-path correction (B4.8.5)
+
+The export worker claims at most ten requests using a 15-minute database lease. Each attempt writes to a unique school/request/lease UUID path. Only the current unexpired lease can complete a request; the authenticated download endpoint signs the exact stored path for 60 seconds. The claim, completion and release RPCs are executable only by `service_role`.
+
+The initial database path constraint was over-escaped and rejected valid lease paths. Remote corrective migration `20261123122938_predrive_privacy_export_path_constraint_fix` now accepts the canonical UUID-based `.json` path and rejects malformed suffixes. This was verified against PostgreSQL and added to the read-only privacy acceptance suite and shared path tests.
+
+No export request or artifact exists. Populated concurrency tests require B5 synthetic school/Auth fixtures. Do not deploy the worker until current CI passes, secrets are configured, and authenticated/cron smoke tests have been completed.
