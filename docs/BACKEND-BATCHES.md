@@ -553,3 +553,44 @@ Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SU
 **Important fixture-account boundary:** 31 additional guardian accounts and nine additional staff accounts exist only to make the fictional dataset relationally complete. Their emails use the reserved `.invalid` domain, passwords are random and intentionally not displayed, and they are not advertised as demo sign-in accounts. The only supported demo sign-in identities remain the five primary role accounts.
 
 **Operational boundary:** no Auth users, profiles, memberships, staff, children, guardian links, collectors, route assignments or schedules were created remotely. No remote data mutation was performed. The script and acceptance suite are source-only pending explicit authorization.
+
+
+## B5.4 — Four-week demo history and finance fixture specification (fixture source complete; database writer pending)
+
+- [x] Add `scripts/demo-history-fixtures.ts` with a fixed, reproducible 20-weekday window from 26 October through 20 November 2026.
+- [x] Define 120 historical trip fixtures: three routes, two directions, 20 weekdays, each with only children assigned to that route.
+- [x] Define 64 USD term invoice plans using the four canonical fee items: 16 paid, 16 partially paid and 32 overdue. Each full invoice totals 55,500 minor units (US$555.00).
+- [x] Define two resolved fictional incidents and four historical delay reports.
+- [x] Add six Deno tests for the four-week window, route/direction coverage, child-to-route integrity, invoice status distribution, guardian mapping and safety fixture counts.
+- [x] Add read-only post-seed acceptance SQL at `supabase/tests/seed/b5_demo_history_acceptance.sql`.
+- [x] Deno 2.9.8 type-check passed and all 81 shared/seed tests passed (0 failures) in [GitHub Actions run 45179826510](https://github.com/tjm650/preDrive/actions/runs/45179826510).
+- [ ] Implement the reviewed demo-only historical writer. The existing `start_trip` RPC intentionally rejects trips older than 12 hours, so historical trip fixtures must not bypass it through ad-hoc service-role REST inserts. A dedicated service-role-only, `schools.is_demo=true` guarded database routine is required for synthetic history.
+- [ ] Implement a similarly constrained demo-only finance writer for simulated succeeded payments/receipts and overdue invoice states. Do not fake provider callbacks or create real payment activity.
+- [ ] Run the history acceptance SQL only after the writer and fixture dependencies have been reviewed and explicitly authorized.
+
+**Finance boundary:** all 64 invoice plans are USD and are demo-only. Planned payment records are simulated; no Paynow, EcoCash, CBZ or CABS provider was contacted. The fixture source does not create or settle payments.
+
+**Operational boundary:** no trips, attendance, incidents, delays, invoices, payments or receipts were created. The history/finance fixture is source-only pending a dedicated safe writer and explicit remote authorization.
+
+## B5.5 — Tenant-isolation runtime acceptance (test source complete; execution pending)
+
+- [x] Add `supabase/tests/seed/b5_tenant_isolation_rollback.sql`.
+- [x] The test creates a temporary second school, class, pupil and guardian membership inside a transaction, then verifies that the guardian sees only the second tenant and that the Greenfield admin sees only Greenfield.
+- [x] The script ends with `ROLLBACK`; it does not retain the synthetic tenant or test identities.
+- [ ] Review and execute the rollback-only RLS test only after B5.1–B5.3 data has been explicitly seeded.
+- [ ] Run authenticated sign-in checks for all five primary demo roles, guardian child visibility, supervisor trip operations, driver non-handover restrictions, and school-admin isolation.
+- [ ] Complete populated B4 export/retention/deletion and notification-worker tests using these synthetic identities, without sending external notifications or invoking real payment providers.
+
+**Operational boundary:** no rollback-only test was executed remotely. No temporary tenant, school, class, pupil or membership was created.
+
+## B5 completion gates and known brief dependency
+
+B5 source foundations now cover the Greenfield school/fleet/fee catalogue, five primary demo Auth identities, 64 child fixtures, 32 guardian households, 12 staff fixtures, 128 approved collector definitions, six route schedules, 120 historical trip definitions, 64 invoice/payment plans, two resolved incidents, four delays and acceptance tests.
+
+**The following are not complete or live:**
+1. Remote B5 seed and Auth provisioning have not been authorized or run. The development project remains empty of application records.
+2. Historical trip and finance fixtures have no database writer yet. Existing trip lifecycle RPCs correctly prevent creating trips weeks in the past; do not bypass them with direct REST inserts.
+3. The product brief requires at least 30 real-road-path coordinates per route. The current database/API stores route metadata and ordered stop points only; it has no typed route geometry field. Do not fabricate straight-line/interpolated roads or hide polylines in settings. A typed route-geometry schema and shared API contract must be reviewed in B6 before route polylines can be persisted and consumed.
+4. Shona/Ndebele notification copy still requires native-speaker review before notification delivery can be enabled.
+
+**B5 must not be described as production-ready or fully runtime-verified until the remote seed is authorized, the dedicated history/finance writer is reviewed, all acceptance tests pass against populated synthetic records, and the route-geometry contract is implemented.**
