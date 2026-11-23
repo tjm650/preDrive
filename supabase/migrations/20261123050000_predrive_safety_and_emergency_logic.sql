@@ -332,13 +332,112 @@ begin
 end;
 $function$;
 
+create or replace function public.resolve_incident(
+  p_school_id uuid,
+  p_incident_id uuid,
+  p_resolution_notes text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+  if not (
+    private.has_role(p_school_id, 'school_admin'::public.user_role)
+    or private.has_role(p_school_id, 'supervisor'::public.user_role)
+  ) then
+    raise exception using errcode = '42501', message = 'FORBIDDEN';
+  end if;
+  if p_resolution_notes is null
+     or char_length(btrim(p_resolution_notes)) not between 2 and 2000 then
+    raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+
+  update public.incidents
+  set status = 'resolved'::public.incident_status,
+      resolved_at = now(),
+      resolved_by = auth.uid(),
+      resolution_notes = btrim(p_resolution_notes),
+      updated_at = now()
+  where id = p_incident_id and school_id = p_school_id
+    and status <> 'resolved'::public.incident_status;
+
+  if not found then
+    raise exception using errcode = '40001', message = 'INCIDENT_NOT_RESOLVABLE';
+  end if;
+end;
+$function$;
+
+create or replace function public.resolve_sos(
+  p_school_id uuid,
+  p_sos_event_id uuid,
+  p_resolution_notes text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_alert_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'UNAUTHENTICATED';
+  end if;
+  if not (
+    private.has_role(p_school_id, 'school_admin'::public.user_role)
+    or private.has_role(p_school_id, 'supervisor'::public.user_role)
+  ) then
+    raise exception using errcode = '42501', message = 'FORBIDDEN';
+  end if;
+  if p_resolution_notes is null
+     or char_length(btrim(p_resolution_notes)) not between 2 and 2000 then
+    raise exception using errcode = '22023', message = 'VALIDATION';
+  end if;
+
+  update public.sos_events
+  set resolved_at = now(),
+      resolved_by = auth.uid(),
+      resolution_notes = btrim(p_resolution_notes)
+  where id = p_sos_event_id and school_id = p_school_id
+    and resolved_at is null
+  returning alert_id into v_alert_id;
+
+  if not found then
+    raise exception using errcode = '40001', message = 'SOS_NOT_RESOLVABLE';
+  end if;
+
+  if v_alert_id is not null then
+    update public.alerts
+    set status = 'resolved'::public.alert_status,
+        acknowledged_at = coalesce(acknowledged_at, now()),
+        acknowledged_by = coalesce(acknowledged_by, auth.uid()),
+        resolved_at = now(),
+        resolved_by = auth.uid(),
+        repeat_until_acknowledged = false,
+        next_escalation_at = null,
+        updated_at = now()
+    where id = v_alert_id and school_id = p_school_id
+      and status <> 'resolved'::public.alert_status;
+  end if;
+end;
+$function$;
+
 revoke all on function public.create_incident(uuid, text, text, public.incident_severity, uuid, uuid) from public, anon;
 revoke all on function public.raise_sos(uuid, uuid) from public, anon;
 revoke all on function public.report_trip_delay(uuid, uuid, public.delay_reason, text, smallint) from public, anon;
 revoke all on function public.acknowledge_alert(uuid, uuid) from public, anon;
 revoke all on function public.complete_vehicle_check(uuid, uuid, uuid, jsonb, boolean, timestamptz) from public, anon;
+revoke all on function public.resolve_incident(uuid, uuid, text) from public, anon;
+revoke all on function public.resolve_sos(uuid, uuid, text) from public, anon;
 grant execute on function public.create_incident(uuid, text, text, public.incident_severity, uuid, uuid) to authenticated;
 grant execute on function public.raise_sos(uuid, uuid) to authenticated;
 grant execute on function public.report_trip_delay(uuid, uuid, public.delay_reason, text, smallint) to authenticated;
 grant execute on function public.acknowledge_alert(uuid, uuid) to authenticated;
 grant execute on function public.complete_vehicle_check(uuid, uuid, uuid, jsonb, boolean, timestamptz) to authenticated;
+grant execute on function public.resolve_incident(uuid, uuid, text) to authenticated;
+grant execute on function public.resolve_sos(uuid, uuid, text) to authenticated;
