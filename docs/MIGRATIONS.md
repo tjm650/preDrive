@@ -267,9 +267,9 @@ B4.8 export-lease acceptance: the lease columns, queue index, SECURITY DEFINER f
 `supabase/migrations/20261123122938_predrive_privacy_export_path_constraint_fix.sql` replaces the over-escaped export object-path constraint introduced with the lease migration. The corrected expression accepts the exact school/request/lease UUID `.json` path and rejects malformed suffixes. Remote PostgreSQL verification and the B4.8 privacy acceptance SQL both passed. The development migration ledger contains 36 versions.
 
 
-## 20261123131500 — predrive_greenfield_demo_history_writer — applied
+## 20261123133938 — predrive_greenfield_demo_history_writer — applied
 
-- Migration source file: `supabase/migrations/20261123131500_predrive_greenfield_demo_history_writer.sql`.
+- Migration source file: `supabase/migrations/20261123133938_predrive_greenfield_demo_history_writer.sql`.
 - Supabase recorded the remote migration as version `20261123133938` (`predrive_greenfield_demo_history_writer`).
 - Adds `public.seed_greenfield_demo_history()`, a SECURITY DEFINER routine with an empty search path.
 - EXECUTE is revoked from public, anon and authenticated; only service_role may call it.
