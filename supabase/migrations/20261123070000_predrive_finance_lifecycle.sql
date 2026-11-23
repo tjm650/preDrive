@@ -342,7 +342,7 @@ begin
   end if;
   if p_invoice_number is null or char_length(btrim(p_invoice_number)) not between 3 and 64
      or p_currency is null or p_due_date is null
-     or jsonb_typeof(p_lines) <> 'array'
+     or p_lines is null or jsonb_typeof(p_lines) <> 'array'
      or jsonb_array_length(p_lines) < 1
      or jsonb_array_length(p_lines) > 50 then
     raise exception using errcode = '22023', message = 'VALIDATION';
@@ -504,7 +504,7 @@ begin
        or left(p_proof_storage_path, 1) = '/'
        or position('..' in p_proof_storage_path) > 0
        or left(p_proof_storage_path, length(p_school_id::text || '/' || auth.uid()::text || '/'))
-          <> p_school_id::text || '/' || auth.uid()::text || '/'
+          <> (p_school_id::text || '/' || auth.uid()::text || '/')
      )) then
     raise exception using errcode = '22023', message = 'VALIDATION';
   end if;
@@ -555,7 +555,7 @@ begin
   if not private.has_role(p_school_id, 'school_admin'::public.user_role) then
     raise exception using errcode = '42501', message = 'FORBIDDEN';
   end if;
-  if p_decision not in ('verified', 'rejected') then
+  if p_decision is null or p_decision not in ('verified', 'rejected') then
     raise exception using errcode = '22023', message = 'VALIDATION';
   end if;
 
