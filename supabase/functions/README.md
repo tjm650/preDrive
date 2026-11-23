@@ -27,6 +27,8 @@ All trusted application workflows run in Supabase Edge Functions (Deno/TypeScrip
 | `_shared/payments_test.ts` | Payment request, currency precision, provider routing and rate-limit hash tests |
 | `_shared/paynow.ts` | Bounded Paynow form parsing, SHA-512 callback verification and safe event projection |
 | `_shared/paynow_test.ts` | Published Paynow hash vector, signed callback and malformed-payload tests |
+| `_shared/paynow.ts` | Bounded Paynow form parsing, SHA-512 callback verification and safe event projection |
+| `_shared/paynow_test.ts` | Published Paynow hash vector, signed callback and malformed-payload tests |
 | `_shared/http_test.ts` | CORS and error-mapping tests |
 | `_shared/errors_test.ts` | Stable business-error mapping and safe-message tests |
 | `_shared/validation_test.ts` | Request-size and schema-validation tests |
@@ -41,6 +43,7 @@ Set these as Supabase Function secrets for each environment. Do not put them in 
 | `SUPABASE_SERVICE_ROLE_KEY` | Trusted server-only Supabase client | Yes |
 | `APP_ALLOWED_ORIGINS` | Comma-separated exact HTTPS origins allowed to call browser-facing functions | No |
 | `CRON_SECRET` | High-entropy credential for scheduled server-to-server invocations | Yes |
+| `PAYNOW_INTEGRATION_KEY` | Paynow SHA-512 callback verification key | Yes |
 | `PAYNOW_INTEGRATION_KEY` | Paynow SHA-512 callback verification key | Yes |
 
 The platform-provided `SUPABASE_URL` and service-role key must be checked in the target project before deployment. `APP_ALLOWED_ORIGINS` must contain the real production web origins and any explicitly approved development origin. Do not use `*`.
@@ -67,6 +70,14 @@ The Auth invitation email uses the project's configured Supabase Auth email deli
 The payment adapter intentionally has no live gateway call in this batch. EcoCash creates a `simulated` pending intent; CBZ and CABS create `manual_bank` pending intents for the existing bank-transfer submission/review workflow. Card is rejected. No intent is marked successful by this function, and no money is moved. The `PaymentProviderAdapter` interface is the seam for a future reviewed Paynow integration; provider credentials and webhook settlement belong in later B4 batches.
 
 The function returns the existing shared `Payment` shape. It does not add fields or methods to the frontend API contract. The service-role key remains server-only; the RPC request carries the already-verified user's JWT in its Authorization header so `auth.uid()` remains the guardian.
+
+## Paynow webhook inbox
+
+`paynow-webhook` accepts Paynow's standard form-encoded status update at the configured `resulturl`. It verifies the callback using Paynow's SHA-512 algorithm over decoded form values in their original order, excluding the `hash` field and appending `PAYNOW_INTEGRATION_KEY`. It uses a constant-time comparison, rejects duplicate fields, enforces a 16 KiB body limit and never logs or stores the signature, integration key, raw body, poll URL or optional payment-instrument token fields.
+
+Only after successful signature verification does it persist a sanitized event in `public.webhook_events`. The event ID is a SHA-256 digest of the exact callback body; the existing `(provider, provider_event_id)` unique constraint provides duplicate suppression. A callback settles a payment only when its merchant `reference` uniquely matches a `payments` row whose provider is `paynow`, its amount exactly matches the stored integer minor-unit amount, and its Paynow status is exactly `Paid`. Settlement is delegated to the existing service-role-only `apply_payment_result()` RPC. Non-Paid statuses and unmatched references are recorded as ignored; amount mismatches are retained as failed events and are never settled.
+
+The current B4.4 payment-intent function intentionally creates only simulated EcoCash and manual-bank intents, not Paynow intents. Consequently, this webhook receiver is a verified integration boundary but cannot settle any current B4.4 payment until a separately reviewed Paynow initiation adapter creates a `provider='paynow'` payment with a merchant reference. Do not point a live Paynow account at this endpoint until that initiation flow, the exact account currency and callback URL have been tested with Paynow-issued credentials. `verify_jwt=false` is required because Paynow cannot present a Supabase user JWT; cryptographic verification is mandatory in the handler.
 
 ## Paynow webhook inbox
 
