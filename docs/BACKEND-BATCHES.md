@@ -128,7 +128,24 @@ Known integration and acceptance boundaries:
 
 ## B4 — Edge Functions and automation (8 batches)
 
-B4.1 source implementation and a dedicated GitHub Actions Deno check workflow are committed on `main`. The current workspace has no Deno runtime, and GitHub has not yet reported a workflow run for the workflow commit. Treat runtime verification as pending until the new check completes successfully. Do not deploy functions or schedule jobs until their individual tests pass and the required project secrets are configured.
+B4.1 shared source and the dedicated GitHub Actions Deno check workflow are committed on `main`. The workflow now also type-checks the B4.2 trip-generation entrypoint. The repository workspace has no Deno runtime; no successful Deno workflow result has been verified yet. Do not deploy functions or schedule jobs until the checks pass and required project secrets are configured.
+
+### B4.2 — Daily trip generation (source authored; remote migration not applied)
+
+- [x] Add school-scoped driver and optional supervisor assignments to recurring route schedules, with composite school foreign keys.
+- [x] Add an authenticated school-admin RPC to assign schedule staff; database trigger enforces active staff role and same-school identity.
+- [x] Add a service-role-only trip generator for the current `Africa/Harare` service date. It uses schedule effective dates, PostgreSQL day-of-week values (Sunday = 0), the school's configured timezone, active school/route/bus/driver state and optional supervisor assignment.
+- [x] Generate a scheduled trip only once per school/schedule/date/direction and create trip-child rows from active child route assignments.
+- [x] Add a cron-secret-protected Edge Function entrypoint; it accepts POST only and does not accept a caller-selected service date.
+- [x] Add read-only catalog acceptance SQL and extend the Deno workflow to type-check the entrypoint.
+- [ ] Obtain a successful GitHub Actions Deno check (the Vercel status currently reports a build-rate-limit failure, which is not the Deno workflow result).
+- [ ] Apply migration `20261123090000_predrive_daily_trip_generation.sql` to the development project after explicit written approval.
+- [ ] Configure `CRON_SECRET` and `APP_ALLOWED_ORIGINS` in Supabase Function secrets; values must not be committed.
+- [ ] Deploy `generate-daily-trips` with platform JWT verification disabled only because the function independently verifies a high-entropy cron secret; do not schedule it until deployment and function smoke tests pass.
+- [ ] Run `supabase/tests/automation/b4_daily_trip_generation.sql` after the migration is applied.
+
+**Design dependency discovered:** the existing route-schedule schema did not identify a driver or supervisor, while `trips.driver_id` is mandatory. B4.2 adds those schedule assignments explicitly instead of guessing which of multiple active drivers belongs to a route. Existing schedules remain valid but are skipped by generation until an administrator assigns a driver and the route has an active bus. The current 30-method frontend API does not yet expose this new assignment RPC; B6 must add the approved adapter surface before the admin UI can manage it.
+
 
 ### B4.1 — Shared Deno Edge Function infrastructure (source authored; runtime verification pending)
 
@@ -148,7 +165,7 @@ B4.1 source implementation and a dedicated GitHub Actions Deno check workflow ar
 Shared dependency versions are pinned to `npm:@supabase/supabase-js@2.119.2` and `npm:zod@4.6.7`. Supabase recommends a separate `deno.json` per deployed function; the individual function batches will add their own entrypoints and isolated Deno configuration.
 
 1. Shared Deno Edge Function infrastructure.
-2. Daily trip generation.
+2. Daily trip generation (source and migration authored; remote migration approval and runtime acceptance pending).
 3. Invitations and authentication workflows.
 4. Payment creation and provider adapter.
 5. Webhook verification and inbox processing.
