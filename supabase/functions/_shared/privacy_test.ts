@@ -50,6 +50,13 @@ Deno.test("deletion request identifiers must be UUIDs", () => {
       "a1111111-1111-4111-8111-111111111111/privacy/b2222222-2222-4222-8222-222222222222/../private.json",
     ),
   );
+  assertFalse(
+    isValidDataExportObjectPath(
+      "a1111111-1111-4111-8111-111111111111",
+      "b2222222-2222-4222-8222-222222222222",
+      "a1111111-1111-4111-8111-111111111111/privacy/b2222222-2222-4222-8222-222222222222/c3333333-3333-4333-8333-333333333333Xjson",
+    ),
+  );
   assertFalse(isValidDeletionRequestId("not-a-uuid"));
 });
 
