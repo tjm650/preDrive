@@ -43,3 +43,14 @@ Deno.test("database details are not exposed to callers", () => {
     throw new Error("Internal database details must not be exposed.");
   }
 });
+
+Deno.test("rate-limited errors are marked retryable", () => {
+  const error = toHttpError({
+    code: "P0001",
+    message: "RATE_LIMITED",
+  });
+
+  if (!error.retryable) {
+    throw new Error("Rate-limited requests must be marked retryable.");
+  }
+});
