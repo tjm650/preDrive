@@ -247,3 +247,8 @@ The acceptance suite passed against the connected development database after cor
 `supabase/migrations/20261123114538_predrive_privacy_deletion_worker.sql` adds a service-role-only transactional RPC for approved child-record withdrawal and supporting bounded-worker indexes. Child withdrawal marks the child `withdrawn`, disables school-scoped guardian/collector/route access, and retains financial, safety, consent, trip and audit history. Active trips and unresolved incidents create a retention hold with no child-data changes. Account-wide deletion requests are held for coordinated cross-school/Auth review; no Auth user is deleted or banned.
 
 The migration is committed on `main` but has **not** been applied to the development database. Apply only after explicit user approval. The read-only acceptance suite is `supabase/tests/automation/b4_privacy_acceptance.sql`.
+
+
+## B4.8 export concurrency lease migration — source authored, remote approval pending
+
+`supabase/migrations/20261123133000_predrive_privacy_export_leases.sql` adds a paired lease ID/expiry to `deletion_requests`, an export-queue index, and service-role-only RPCs to claim, complete and release export requests. Claiming uses row locks with `SKIP LOCKED`; completion requires the same unexpired lease. A worker that loses its lease cannot remove a newer worker's export artifact. No remote migration has been applied for this lease change.
