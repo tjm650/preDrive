@@ -533,7 +533,7 @@ Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
 - [x] Keep role and school authorization in `school_memberships` and `staff_members`, not user-editable Auth metadata.
 - [x] Add `scripts/seed-greenfield-households.ts` to provision supporting Auth identities and profiles, then use the school-admin JWT for child creation, guardian linking, collector creation, route assignment and schedule-staff assignment RPCs.
 - [x] Use the service-role key only for Auth Admin, profile/membership/staff fixture provisioning and read-only verification. Business child, guardian, collector and route-assignment records are created through authenticated, school-admin RPCs.
-- [x] Create two approved collectors per child through `create_approved_collector`; the database hashes the PIN. The seed requires `PREDRIVE_DEMO_COLLECTOR_PIN` and never logs it.
+- [x] Create two approved collectors per child through `create_approved_collector`; derive a stable, unique eight-digit PIN per collector using HMAC-SHA-256 and a high-entropy server secret. The database hashes each PIN; neither PIN nor secret is logged.
 - [x] Make child creation, guardian linking, route assignment and collector creation repeat-safe by checking canonical records before invoking non-idempotent RPCs.
 - [x] Add six weekday route schedules (to-school 07:00, from-school 15:00) and assign the correct route driver/supervisor through `assign_route_schedule_staff`.
 - [x] Fail closed if a reserved Auth email, child identity tuple, schedule ID, membership, staff row or active route assignment conflicts with the canonical fixture.
@@ -548,7 +548,7 @@ Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
 deno run --allow-env --allow-net scripts/seed-greenfield-households.ts
 ```
 
-Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `PREDRIVE_DEMO_ADMIN_PASSWORD`, and `PREDRIVE_DEMO_COLLECTOR_PIN`. The five primary demo accounts must already have been provisioned by `scripts/seed-auth-users.ts`; the Greenfield foundation must already exist. Never expose the service-role key, admin password or collector PIN to a browser/mobile bundle or commit them.
+Required environment variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `PREDRIVE_DEMO_ADMIN_PASSWORD`, and a high-entropy `PREDRIVE_DEMO_COLLECTOR_PIN_SECRET` of at least 32 characters. The five primary demo accounts must already have been provisioned by `scripts/seed-auth-users.ts`; the Greenfield foundation must already exist. Never expose the service-role key, admin password, collector PIN derivation secret or derived PINs to a browser/mobile bundle or commit them.
 
 **Important fixture-account boundary:** 31 additional guardian accounts and nine additional staff accounts exist only to make the fictional dataset relationally complete. Their emails use the reserved `.invalid` domain, passwords are random and intentionally not displayed, and they are not advertised as demo sign-in accounts. The only supported demo sign-in identities remain the five primary role accounts.
 
