@@ -216,3 +216,9 @@ This is catalog acceptance, not a substitute for real-user runtime acceptance. N
 `supabase/migrations/20261123100000_predrive_invitation_staff_onboarding.sql` adds nullable `full_name` and `phone` fields to `school_invitations` and replaces `accept_school_invitation()` so accepted staff invitations create or reactivate the corresponding `staff_members` row in the same transaction as membership activation. Guardian invitations do not require staff details. Existing pending staff invitations created before this migration have no staff details and must be revoked/reissued; acceptance fails closed for those records.
 
 The migration was applied after explicit user approval. Supabase recorded it as remote version `20261123052600` (the repository file prefix remains `20261123100000`). The read-only catalog acceptance suite `supabase/tests/automation/b4_invitation_acceptance.sql` completed without errors; independent catalog checks confirmed both columns, the staff-details constraint, SECURITY DEFINER/empty search_path, authenticated-only RPC execution, invitation RLS and the service-role rate-limit grant. The remote migration ledger now contains 29 versions.
+
+## B4.6 payment reminder alert source — authored, approval pending
+
+`supabase/migrations/20261123110000_predrive_payment_reminder_alert_source.sql` extends the existing `alerts_source_type_check` constraint to permit the dedicated `payment_reminder` source type. It preserves every existing allowed source value and does not alter alert rows, recipients, policies or grants. The reminder generator uses the existing school-scoped alert deduplication and alert-recipient uniqueness indexes.
+
+The migration has been committed but **has not been applied** to the existing development project. Do not deploy or invoke `generate-payment-reminders` until the user explicitly approves this exact migration and the read-only acceptance suite `supabase/tests/automation/b4_finance_acceptance.sql` passes.
