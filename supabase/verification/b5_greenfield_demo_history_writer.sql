@@ -1,4 +1,4 @@
--- Review copy of migration 20261123131500_predrive_greenfield_demo_history_writer.sql.
+-- Review copy of migration 20261123133938_predrive_greenfield_demo_history_writer.sql.
 -- This file is not applied independently.
 
 create or replace function public.seed_greenfield_demo_history()
