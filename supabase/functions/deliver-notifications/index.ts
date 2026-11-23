@@ -297,7 +297,7 @@ async function sendExpoPush(
 
   const ticket = Array.isArray(payload.data) ? payload.data[0] : payload.data;
   if (ticket?.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
-    throw new ProviderFailure("DEVICE_NOT_REGISTERED", false);
+    throw new ProviderFailure("DEVICE_NOT_REGISTERED", false, token.id);
   }
   if (ticket?.status !== "ok" || !ticket.id) {
     throw new ProviderFailure("EXPO_PROVIDER_REJECTED", false);
@@ -356,12 +356,18 @@ async function sendEmail(
 class ProviderFailure extends Error {
   readonly code: NotificationErrorCode;
   readonly retryable: boolean;
+  readonly tokenId?: string;
 
-  constructor(code: NotificationErrorCode, retryable: boolean) {
+  constructor(
+    code: NotificationErrorCode,
+    retryable: boolean,
+    tokenId?: string,
+  ) {
     super(code);
     this.name = "ProviderFailure";
     this.code = code;
     this.retryable = retryable;
+    this.tokenId = tokenId;
   }
 }
 
@@ -509,21 +515,18 @@ const handler = createEdgeHandler(async (request) => {
       sent += 1;
     } catch (error) {
       if (error instanceof ProviderFailure) {
-        if (error.code === "DEVICE_NOT_REGISTERED" && delivery.channel === "push") {
-          const { data: recipient } = await client
-            .from("alert_recipients")
-            .select("recipient_user_id")
-            .eq("id", delivery.alert_recipient_id)
-            .maybeSingle();
-          if (recipient) {
-            await client
-              .from("device_tokens")
-              .update({ active: false, revoked_at: new Date().toISOString() })
-              .eq("school_id", delivery.school_id)
-              .eq("user_id", recipient.recipient_user_id)
-              .eq("provider", "expo")
-              .eq("active", true);
-          }
+        if (
+          error.code === "DEVICE_NOT_REGISTERED" &&
+          delivery.channel === "push" &&
+          error.tokenId
+        ) {
+          await client
+            .from("device_tokens")
+            .update({ active: false, revoked_at: new Date().toISOString() })
+            .eq("id", error.tokenId)
+            .eq("school_id", delivery.school_id)
+            .eq("provider", "expo")
+            .eq("active", true);
           await suppressDelivery(client, delivery, workerId, error.code);
           suppressed += 1;
           continue;
