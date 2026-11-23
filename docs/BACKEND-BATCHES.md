@@ -130,6 +130,22 @@ Known integration and acceptance boundaries:
 
 B4.1 shared source and the dedicated GitHub Actions Deno check workflow are committed on `main`. The workflow now also type-checks the B4.2 trip-generation entrypoint. The repository workspace has no Deno runtime; no successful Deno workflow result has been verified yet. Do not deploy functions or schedule jobs until the checks pass and required project secrets are configured.
 
+### B4.3 — Invitations and authentication workflows (source authored; runtime verification pending)
+
+- [x] Add a school-admin-only `invite-school-member` Edge Function with verified bearer identity and active school membership checks.
+- [x] Restrict inviteable roles to guardian, teacher, supervisor and driver; school-admin privilege cannot be granted through this endpoint.
+- [x] Normalize and validate email addresses, reject unknown request fields, prevent duplicate active memberships and rely on the existing pending-invitation unique index for race-safe duplicate prevention.
+- [x] Create seven-day pending school invitations and send Supabase Auth invitation emails for new accounts. Existing accounts can sign in and accept the pending invitation without creating a second Auth account.
+- [x] Update the Supabase Auth port to call the existing `accept_school_invitation()` RPC only after successful password authentication. The RPC derives the user and email from `auth.uid()`; the client supplies no identity or role.
+- [x] Add unit tests for input normalization, role escalation rejection, strict request fields and invitation expiry.
+- [x] Extend the Deno workflow to type-check the new function.
+- [ ] Obtain a successful GitHub Actions Deno check and shared test run.
+- [ ] Configure and verify Supabase Auth SMTP, Site URL and invite redirect allowlist in the development environment.
+- [ ] Deploy `invite-school-member` and test new-user and existing-user acceptance using controlled test identities.
+- [ ] Add the invitation operation to the shared frontend API and SupabaseAdapter in B6 before connecting the school-admin UI.
+
+**Operational boundary:** no new database migration was required; B3 already provides `school_invitations`, `register_school()` and `accept_school_invitation()`. The existing frontend API still has 30 methods and does not yet expose invitation creation. For an email that already belongs to an Auth account, this function creates the pending invitation but does not send a second Auth invite email; the school administrator must ask that person to sign in. Do not deploy until SMTP and redirect settings are verified. No remote Auth users, invitations, function deployments or email sends were created by this source-only batch.
+
 ### B4.2 — Daily trip generation (migration applied; function deployment pending)
 
 - [x] Add school-scoped driver and optional supervisor assignments to recurring route schedules, with composite school foreign keys.
