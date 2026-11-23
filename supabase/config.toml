@@ -22,3 +22,7 @@ verify_jwt = false
 [functions.process-data-exports]
 # Scheduled worker authenticates independently with CRON_SECRET.
 verify_jwt = false
+
+[functions.run-approved-retention]
+# Scheduled worker authenticates independently with CRON_SECRET.
+verify_jwt = false
