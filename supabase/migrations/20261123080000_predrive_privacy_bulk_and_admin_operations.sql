@@ -32,7 +32,7 @@ begin
   if ((p_subject_user_id is not null)::integer + (p_child_id is not null)::integer) <> 1
      or p_policy_version is null
      or char_length(btrim(p_policy_version)) not between 1 and 40
-     or p_status not in ('granted', 'denied')
+     or p_status is null or p_status not in ('granted', 'denied')
      or jsonb_typeof(coalesce(p_evidence, '{}'::jsonb)) <> 'object'
      or pg_column_size(coalesce(p_evidence, '{}'::jsonb)) > 4096 then
     raise exception using errcode = '22023', message = 'VALIDATION';
@@ -88,7 +88,7 @@ begin
   end if;
 
   if not (
-    v_previous.subject_user_id = auth.uid()
+    coalesce(v_previous.subject_user_id = auth.uid(), false)
     or (
       v_previous.child_id is not null
       and exists (
