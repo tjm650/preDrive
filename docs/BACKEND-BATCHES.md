@@ -284,3 +284,23 @@ The current API contract has no Realtime subscription methods or payloads. Do no
 - [ ] Add a trusted refund settlement adapter and verify partial/full refund accounting against a controlled test payment before live refunds.
 
 **Operational boundary:** the approved migration is applied and catalog acceptance passed. No functions were deployed, no cron job was scheduled, and no payment/refund/receipt/alert data was created. Runtime authentication and cron tests remain gated on secure secrets and deployment.
+
+
+## B4.7 — Push/email delivery, broadcasts and escalation (outbox migration applied; delivery runtime pending)
+
+- [x] Add `notification_deliveries`, a school-scoped transactional outbox with per-recipient channel idempotency, bounded attempts, retry scheduling and worker lease state.
+- [x] Enable RLS and restrict direct table access to service-role select/insert/update; client roles have no table privileges.
+- [x] Enqueue push only for active Expo device registrations.
+- [x] Enqueue email only for recipients with an email address and latest effective `communications` consent explicitly granted.
+- [x] Capture recipient language for downstream English, Shona and Ndebele templates without copying message bodies or personal data into the outbox.
+- [x] Materialise a deduplicated alert and active role-matched recipients when a broadcast is published.
+- [x] Add read-only catalog acceptance SQL and apply migration `20261123074827_predrive_notification_delivery_outbox.sql` after explicit approval.
+- [x] Run B4.7 catalog acceptance; RLS, grants, constraints, indexes, trigger functions and trigger installation passed. No outbox, alert, recipient or broadcast rows were created.
+- [ ] Implement atomic claim/retry worker and Expo Push/Resend adapters with provider response sanitisation and idempotent completion.
+- [ ] Add escalation worker for urgent repeat-until-acknowledged alerts, respecting acknowledgement/resolution and per-school policy.
+- [ ] Add native-reviewed English, Shona and Ndebele templates; verify language selection and fallback.
+- [ ] Configure provider secrets and verified email sender domain; deploy and smoke-test only after Deno CI passes.
+- [ ] Add controlled runtime tests for token revocation, consent withdrawal, duplicate jobs, provider failures, retries, worker lease expiry, broadcast role targeting and alert acknowledgement.
+- [ ] Schedule cron only after deployed function smoke tests and secure `CRON_SECRET`/provider configuration.
+
+**Operational boundary:** migration is applied as remote version `20261123074827`; remote ledger contains 31 versions. No Edge Functions were deployed, no cron jobs scheduled, no provider credentials configured, and no notifications sent. The outbox is empty. Email requires explicit latest communications consent; push requires an active registered Expo token. The approved migration does not send messages by itself.
