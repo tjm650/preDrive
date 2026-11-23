@@ -104,3 +104,30 @@ export function isExpoPushToken(value: string): boolean {
     value,
   );
 }
+
+
+export function classifyExpoReceipt(
+  status: string | undefined,
+  providerError: string | undefined,
+): {
+  status: "ok" | "error";
+  errorCode: "DEVICE_NOT_REGISTERED" | "EXPO_RECEIPT_ERROR" | null;
+  revokeDevice: boolean;
+} | null {
+  if (status === "ok") {
+    return { status: "ok", errorCode: null, revokeDevice: false };
+  }
+  if (status !== "error") return null;
+  if (providerError === "DeviceNotRegistered") {
+    return {
+      status: "error",
+      errorCode: "DEVICE_NOT_REGISTERED",
+      revokeDevice: true,
+    };
+  }
+  return {
+    status: "error",
+    errorCode: "EXPO_RECEIPT_ERROR",
+    revokeDevice: false,
+  };
+}
