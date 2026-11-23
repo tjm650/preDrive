@@ -141,7 +141,7 @@ B4.1 shared source and the dedicated GitHub Actions Deno check workflow are comm
 - [x] Update the Supabase Auth port to call the existing `accept_school_invitation()` RPC only after successful password authentication. The RPC derives the user and email from `auth.uid()`; the client supplies no identity or role.
 - [x] Add unit tests for input normalization, role escalation rejection, strict request fields and invitation expiry.
 - [x] Extend the Deno workflow to type-check the new function.
-- [ ] Obtain a successful GitHub Actions Deno check and shared test run.
+- [x] GitHub Actions Deno 2.9.8 type-check and all shared tests passed on commit `1dbd0fa875562096eade9a554c01357214451164` (run `45121405746`).
 - [x] Apply `20261123100000_predrive_invitation_staff_onboarding.sql` after explicit user approval; Supabase recorded remote migration version `20261123052600`.
 - [x] Run `supabase/tests/automation/b4_invitation_acceptance.sql`; the read-only DO-block acceptance suite completed without errors and independent catalog assertions passed.
 - [ ] Configure and verify Supabase Auth SMTP, Site URL and invite redirect allowlist in the development environment.
@@ -158,7 +158,7 @@ B4.1 shared source and the dedicated GitHub Actions Deno check workflow are comm
 - [x] Generate a scheduled trip only once per school/schedule/date/direction and create trip-child rows from active child route assignments.
 - [x] Add a cron-secret-protected Edge Function entrypoint; it accepts POST only and does not accept a caller-selected service date.
 - [x] Add read-only catalog acceptance SQL and extend the Deno workflow to type-check the entrypoint.
-- [ ] Obtain a successful GitHub Actions Deno check (the Vercel status currently reports a build-rate-limit failure, which is not the Deno workflow result).
+- [x] GitHub Actions Deno 2.9.8 type-check and all shared tests passed on commit `1dbd0fa875562096eade9a554c01357214451164` (run `45121405746`). The separate Vercel build-rate-limit status is unrelated to this Deno workflow.
 - [x] Apply migration `20261123051100_predrive_daily_trip_generation.sql` to the development project after explicit written approval; applied as remote version `20261123051100` after approval.
 - [ ] Configure `CRON_SECRET` and `APP_ALLOWED_ORIGINS` in Supabase Function secrets; values must not be committed.
 - [ ] Deploy `generate-daily-trips` with platform JWT verification disabled only because the function independently verifies a high-entropy cron secret; do not schedule it until deployment and function smoke tests pass.
@@ -178,7 +178,7 @@ B4.1 shared source and the dedicated GitHub Actions Deno check workflow are comm
 - [x] Dedicated high-entropy cron-secret verification helper.
 - [x] Bounded JSON parsing and Zod validation.
 - [x] Deno tests authored for CORS, error normalization and request validation.
-- [ ] Obtain a successful run of `.github/workflows/supabase-edge-functions.yml` (Deno 2.9.8 type-check and shared tests).
+- [x] `.github/workflows/supabase-edge-functions.yml` passed Deno 2.9.8 type-check and all shared tests on commit `1dbd0fa875562096eade9a554c01357214451164` (run `45121405746`).
 - [ ] Configure the real `APP_ALLOWED_ORIGINS` and `CRON_SECRET` secrets in the development project; do not commit secret values.
 - [ ] Deploy no Edge Functions in B4.1; deployment belongs to each function's implementation and acceptance batch.
 
@@ -203,7 +203,7 @@ Shared dependency versions are pinned to `npm:@supabase/supabase-js@2.119.2` and
 - [x] Preserve the existing `Payment` API result shape; no frontend contract changes and no provider credentials in source.
 - [x] Add Deno tests for request validation, minor-unit conversion, supported methods, provider routing and opaque rate-limit subjects.
 - [x] Extend the GitHub Actions Deno workflow to type-check the payment function and shared tests.
-- [ ] Verify a successful GitHub Actions Deno check/test run for the new function.
+- [x] GitHub Actions Deno 2.9.8 type-check and all shared tests passed on commit `1dbd0fa875562096eade9a554c01357214451164` (run `45121405746`).
 - [ ] Deploy `create-payment-intent` only after the Deno workflow passes and required Supabase Function secrets/CORS origins are confirmed.
 - [ ] Run authenticated guardian runtime tests for valid invoice, wrong-school invoice, non-guardian role, inactive school, idempotent replay, reused idempotency key with changed payload, amount over balance, currency mismatch, rate limiting and card rejection.
 - [ ] Do not mark EcoCash intents successful in this batch. Trusted settlement remains restricted to the service role and belongs to verified B4.5 webhook processing or a separately controlled demo simulation.
@@ -222,7 +222,7 @@ Shared dependency versions are pinned to `npm:@supabase/supabase-js@2.119.2` and
 - [x] Add Deno tests including Paynow's published SHA-512 example, a signed callback, modified hash, duplicate fields and amount precision.
 - [x] Extend the Deno CI workflow to check the Paynow webhook entrypoint.
 - [x] Configure `supabase/config.toml` with `verify_jwt = false` only for `paynow-webhook`; the handler independently verifies Paynow's signature.
-- [ ] Verify a successful GitHub Actions Deno check/test run for the complete B4.5 source.
+- [x] GitHub Actions Deno 2.9.8 type-check and all 33 shared tests passed on commit `1dbd0fa875562096eade9a554c01357214451164` (run `45121405746`).
 - [ ] Configure `PAYNOW_INTEGRATION_KEY` in Supabase Function secrets only after the school owns a Paynow integration and has securely received its key.
 - [ ] Deploy and test with Paynow-issued test credentials and an actual Paynow callback before enabling a live result URL.
 - [ ] Add a reviewed Paynow initiation adapter that creates `provider='paynow'` payments and merchant references. B4.4 currently creates simulated EcoCash and manual-bank intents only, so no current payment can be settled by this receiver.
