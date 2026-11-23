@@ -168,3 +168,13 @@ B4.7.5 verification: GitHub Actions run [45158947154](https://github.com/tjm650/
 - The worker does not email the export or expose a public bucket URL. The service-role key remains server-only.
 - This first export version intentionally does not claim to export every school operational or safety record. It covers the subject-centred personal categories listed above; financial records are included as a copy for the subject and are never deleted by export processing.
 - Both functions are source-only until secrets are configured, CI passes, and controlled authenticated/cron tests are completed.
+
+
+## Approved retention worker (B4.8.2)
+
+- `run-approved-retention` is POST-only and protected by `CRON_SECRET`.
+- It deletes at most 5,000 historical GPS rows per invocation when `recorded_at` is older than 30 days.
+- It deletes at most 5,000 terminal notification-delivery metadata rows per invocation when `updated_at` is older than 90 days. Only `sent`, `failed` and `suppressed` rows qualify; pending and processing deliveries are never selected.
+- It removes private export objects for completed, non-held data-export requests older than seven days. It leaves the deletion-request/audit metadata in place.
+- It does not delete invoices, payments, refunds, receipts, incidents, alerts, trip records, consent records, audit records, child records, profiles, memberships or Auth users.
+- Each category is bounded per run. If a category fails, the function returns a safe error rather than continuing with an unbounded destructive operation. No retention schedule is installed by source creation.
