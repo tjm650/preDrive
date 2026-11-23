@@ -466,6 +466,7 @@ B4 implementation is complete at the repository and development-schema level. Th
 - [x] Mark all map coordinates and the 27.00 ZiG/USD rate as illustrative demo values; do not represent them as surveyed pickup coordinates or live FX data.
 - [x] Configure `[db.seed]` to load only `./seed.sql`.
 - [x] Add read-only acceptance SQL at `supabase/tests/seed/b5_demo_foundation_acceptance.sql`.
+- [ ] Add the 30+ coordinate road polylines required by the product brief. The current `transport_routes` schema stores route metadata and ordered stop geography but has no route-line geometry column or API field; do not smuggle polyline data into unrelated settings. Resolve a typed route-geometry contract in B5.3/B6 before persisting it.
 - [ ] Apply the seed to the remote development project only after explicit user authorization; then run acceptance SQL and a second seed pass to verify idempotency.
 - [ ] Add staff, Auth users, children and guardians in later B5 stages after the canonical IDs and service-role Auth provisioning path are reviewed.
 
