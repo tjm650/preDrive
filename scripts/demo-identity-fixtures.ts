@@ -37,7 +37,7 @@ export const GREENFIELD_GUARDIAN_FIXTURES: readonly DemoIdentity[] =
   GUARDIAN_NAMES.slice(1).map(([first, last], index) => ({
     role: "guardian",
     email: "guardian.household." + String(index + 2).padStart(2, "0") + "@greenfield.predrive-demo.invalid",
-    fullName: "Mr/Mrs " + first + " " + last,
+    fullName: first + " " + last,
     phone: "+263771" + String(100210 + index).slice(-6),
     language: index % 3 === 0 ? "en" : index % 3 === 1 ? "sn" : "nd",
     fixtureOnly: true,
