@@ -384,7 +384,7 @@ async function ensureCollectors(
   let created = 0;
   for (let sequence = 0; sequence < GREENFIELD_COLLECTORS_PER_CHILD; sequence += 1) {
     const suffix = String(childIndex * 2 + sequence + 1).padStart(6, "0");
-    const phone = "+263771" + suffix;
+    const phone = "+263772" + suffix;
     const fullName = "Approved Collector " + String(childIndex + 1).padStart(2, "0") + (sequence === 0 ? "A" : "B");
     const current = existing.find((row) => row.phone === phone);
     if (current) {
@@ -445,6 +445,24 @@ async function ensureRouteSchedules(
       active: true,
     },
   ]);
+  const scheduleIds = schedules.map((row) => row.id);
+  const existingSchedules = await api.rows<{
+    id: string;
+    school_id: string;
+    route_id: string;
+    direction: string;
+  }>("route_schedules", { id: "in.(" + scheduleIds.join(",") + ")" });
+  for (const existing of existingSchedules) {
+    const expected = schedules.find((row) => row.id === existing.id);
+    if (
+      !expected ||
+      existing.school_id !== GREENFIELD_DEMO_SCHOOL_ID ||
+      existing.route_id !== expected.route_id ||
+      existing.direction !== expected.direction
+    ) {
+      throw new Error("A reserved route-schedule ID is already owned by a conflicting record.");
+    }
+  }
   await api.insertRows("route_schedules", schedules);
   for (let index = 0; index < routes.length; index += 1) {
     const route = routes[index];
