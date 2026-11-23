@@ -503,6 +503,8 @@ begin
        char_length(p_proof_storage_path) > 512
        or left(p_proof_storage_path, 1) = '/'
        or position('..' in p_proof_storage_path) > 0
+       or pg_catalog.array_length(pg_catalog.string_to_array(p_proof_storage_path, '/'), 1) <> 4
+       or pg_catalog.split_part(p_proof_storage_path, '/', 3) <> p_payment_id::text
        or left(p_proof_storage_path, length(p_school_id::text || '/' || auth.uid()::text || '/'))
           <> (p_school_id::text || '/' || auth.uid()::text || '/')
      )) then
