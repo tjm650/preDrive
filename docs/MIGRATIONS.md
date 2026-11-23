@@ -233,3 +233,10 @@ An `alert_recipients` insert enqueues push only when an active Expo device token
 Publishing a broadcast materialises one deduplicated `manual` alert and recipients for active memberships matching its target roles. Broadcast fan-out is transactional with publication; the recipient trigger then creates eligible outbox rows. Drafts, expired broadcasts and future-dated publications are not materialised by these triggers.
 
 The migration was applied after explicit approval and Supabase recorded remote version `20261123074827`. The read-only acceptance suite `supabase/tests/automation/b4_notification_outbox_acceptance.sql` passed. Catalog verification confirmed RLS, the two SECURITY DEFINER trigger functions with empty search paths, both trigger families, zero client privileges, service-role select/insert/update without delete, and zero outbox or business rows created. The remote ledger now contains 31 migrations. Delivery workers, provider configuration, secrets, cron scheduling and live notification tests remain separate B4.7 release gates.
+
+
+## B4.7.2 notification-cycle migration reconciliation
+
+The two B4.7.2 migrations are now present in the repository under the exact versions recorded by the development project's migration ledger: `20261123093600_predrive_notification_delivery_cycles_escalation.sql` and `20261123093624_predrive_notification_delivery_cycles_hardening.sql`. Their implementation and verification record is in [B4.7.2 Notification Cycles](./B4.7.2-NOTIFICATION-CYCLES.md). The read-only catalog acceptance suite is `supabase/tests/automation/b4_notification_cycles_acceptance.sql`.
+
+The acceptance suite passed against the connected development database after correcting its empty-search-path catalog assertion. No migration was applied during this reconciliation. The verified read-only snapshot reported 33 migration versions, zero notification deliveries, zero alerts, zero scheduled repeat alerts, and RLS enabled on the outbox. A full clean-room replay remains deferred; this source synchronization does not certify a fresh replay.
