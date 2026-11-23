@@ -2,6 +2,10 @@
 
 project_id = "predrive"
 
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
 [functions.paynow-webhook]
 # Paynow authenticates callbacks with its SHA-512 integration-key hash.
 # The function verifies this itself; no Supabase user JWT is available.
