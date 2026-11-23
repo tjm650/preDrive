@@ -26,6 +26,7 @@ interface DeliveryCandidate {
   channel: "push" | "email";
   locale: string;
   attempt_count: number;
+  device_token_id: string | null;
 }
 
 interface DeliveryRow extends DeliveryCandidate {
@@ -140,7 +141,7 @@ async function claimDelivery(
     .eq("status", "pending")
     .eq("attempt_count", candidate.attempt_count)
     .lte("next_attempt_at", claimedAt)
-    .select("id, school_id, alert_recipient_id, channel, locale, attempt_count, status")
+    .select("id, school_id, alert_recipient_id, channel, locale, attempt_count, device_token_id, status")
     .maybeSingle();
 
   if (error) throw error;
@@ -236,16 +237,19 @@ async function loadEligibleContext(
   }
 
   if (delivery.channel === "push") {
+    // Each push outbox row is bound to one device. Never substitute another
+    // device for a deleted/revoked token: doing so would break per-device
+    // idempotency and could send a duplicate to an unrelated endpoint.
+    if (!delivery.device_token_id) return null;
     const { data: token, error: tokenError } = await client
       .from("device_tokens")
       .select("id, push_token")
+      .eq("id", delivery.device_token_id)
       .eq("school_id", delivery.school_id)
       .eq("user_id", recipient.recipient_user_id)
       .eq("provider", "expo")
       .eq("active", true)
       .is("revoked_at", null)
-      .order("last_seen_at", { ascending: false })
-      .limit(1)
       .maybeSingle();
     if (tokenError) throw tokenError;
     if (!token || !isExpoPushToken(token.push_token)) return null;
@@ -400,6 +404,9 @@ async function finishDelivery(
       locked_at: null,
       locked_by: null,
       last_error_code: null,
+      ...(delivery.channel === "push"
+        ? { receipt_status: "pending", receipt_checked_at: null, receipt_error_code: null }
+        : {}),
     })
     .eq("id", delivery.id)
     .eq("status", "processing")
@@ -455,6 +462,136 @@ async function retryOrFail(
   if (error) throw error;
 }
 
+
+const RECEIPT_DELAY_MS = 15 * 60_000;
+const RECEIPT_RECHECK_MS = 5 * 60_000;
+const RECEIPT_RETENTION_MS = 24 * 60 * 60_000;
+
+async function pollExpoReceipts(client: ServiceClient): Promise<number> {
+  const now = Date.now();
+  const dueBefore = new Date(now - RECEIPT_DELAY_MS).toISOString();
+  const retryBefore = new Date(now - RECEIPT_RECHECK_MS).toISOString();
+  const { data, error } = await client
+    .from("notification_deliveries")
+    .select("id, school_id, device_token_id, provider_message_id, sent_at")
+    .eq("channel", "push")
+    .eq("status", "sent")
+    .eq("receipt_status", "pending")
+    .not("provider_message_id", "is", null)
+    .not("device_token_id", "is", null)
+    .lte("sent_at", dueBefore)
+    .or("receipt_checked_at.is.null,receipt_checked_at.lt." + retryBefore)
+    .order("sent_at", { ascending: true })
+    .limit(100);
+  if (error) throw error;
+
+  const rows = (data ?? []) as Array<{
+    id: string;
+    school_id: string;
+    device_token_id: string;
+    provider_message_id: string;
+    sent_at: string;
+  }>;
+  if (!rows.length) return 0;
+
+  const expired = rows.filter((row) => now - Date.parse(row.sent_at) >= RECEIPT_RETENTION_MS);
+  for (const row of expired) {
+    const { error: updateError } = await client
+      .from("notification_deliveries")
+      .update({
+        receipt_status: "error",
+        receipt_checked_at: new Date(now).toISOString(),
+        receipt_error_code: "EXPO_RECEIPT_EXPIRED",
+      })
+      .eq("id", row.id)
+      .eq("receipt_status", "pending");
+    if (updateError) throw updateError;
+  }
+
+  const eligible = rows.filter((row) => !expired.includes(row));
+  let checked = expired.length;
+  for (let offset = 0; offset < eligible.length; offset += 100) {
+    const batch = eligible.slice(offset, offset + 100);
+    const ids = batch.map((row) => row.provider_message_id);
+    const headers = new Headers({ "Content-Type": "application/json" });
+    const accessToken = Deno.env.get("EXPO_ACCESS_TOKEN")?.trim();
+    if (accessToken) headers.set("Authorization", "Bearer " + accessToken);
+
+    let response: Response;
+    try {
+      response = await fetch("https://exp.host/--/api/v2/push/getReceipts", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ ids }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch {
+      continue;
+    }
+    if (!response.ok) continue;
+
+    let payload: {
+      data?: Record<string, {
+        status?: string;
+        details?: { error?: string };
+      }>;
+    };
+    try {
+      payload = await response.json();
+    } catch {
+      continue;
+    }
+    const receipts = payload.data ?? {};
+    for (const row of batch) {
+      const receipt = receipts[row.provider_message_id];
+      if (!receipt) {
+        const { error: updateError } = await client
+          .from("notification_deliveries")
+          .update({ receipt_checked_at: new Date().toISOString() })
+          .eq("id", row.id)
+          .eq("receipt_status", "pending");
+        if (updateError) throw updateError;
+        checked += 1;
+        continue;
+      }
+
+      const deviceNotRegistered =
+        receipt.status === "error" &&
+        receipt.details?.error === "DeviceNotRegistered";
+      const receiptStatus = receipt.status === "ok" ? "ok" : "error";
+      const receiptErrorCode = receiptStatus === "ok"
+        ? null
+        : deviceNotRegistered
+        ? "DEVICE_NOT_REGISTERED"
+        : "EXPO_RECEIPT_ERROR";
+
+      const { error: updateError } = await client
+        .from("notification_deliveries")
+        .update({
+          receipt_status: receiptStatus,
+          receipt_checked_at: new Date().toISOString(),
+          receipt_error_code: receiptErrorCode,
+        })
+        .eq("id", row.id)
+        .eq("receipt_status", "pending");
+      if (updateError) throw updateError;
+
+      if (deviceNotRegistered) {
+        const { error: revokeError } = await client
+          .from("device_tokens")
+          .update({ active: false, revoked_at: new Date().toISOString() })
+          .eq("id", row.device_token_id)
+          .eq("school_id", row.school_id)
+          .eq("provider", "expo")
+          .eq("active", true);
+        if (revokeError) throw revokeError;
+      }
+      checked += 1;
+    }
+  }
+  return checked;
+}
+
 const handler = createEdgeHandler(async (request) => {
   if (request.method !== "POST") {
     throw new HttpError("VALIDATION", "Only POST requests are supported.", 405);
@@ -465,10 +602,11 @@ const handler = createEdgeHandler(async (request) => {
   const workerId = crypto.randomUUID();
 
   await recoverExpiredLeases(client);
+  const receiptsChecked = await pollExpoReceipts(client);
 
   const { data: candidates, error: candidatesError } = await client
     .from("notification_deliveries")
-    .select("id, school_id, alert_recipient_id, channel, locale, attempt_count")
+    .select("id, school_id, alert_recipient_id, channel, locale, attempt_count, device_token_id")
     .eq("status", "pending")
     .lte("next_attempt_at", new Date().toISOString())
     .order("next_attempt_at", { ascending: true })
@@ -585,6 +723,7 @@ const handler = createEdgeHandler(async (request) => {
     batchLimit: BATCH_SIZE,
     maxAttempts: MAX_ATTEMPTS,
     leaseMinutes: LEASE_MINUTES,
+    receiptsChecked,
   });
 }, "deliver-notifications");
 
