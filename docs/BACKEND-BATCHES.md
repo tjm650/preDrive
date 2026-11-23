@@ -112,7 +112,7 @@ The committed catalog acceptance suite `supabase/tests/business_logic/b3_busines
 - No B3 RPC is executable by `anon`; the four trusted-only operations (geofence evaluation, payment settlement, refund settlement and deletion completion) are not executable by `authenticated` and are executable by `service_role`.
 - Both new tables have `school_id` and RLS enabled. `temporary_collectors` has no direct authenticated table privileges; `child_route_assignments` is SELECT-only for authenticated and writes remain RPC-only.
 - The guardian notification-radius column and all three idempotency/deduplication indexes exist; route-stop order uniqueness is deferrable and initially deferred.
-- All 44 public application tables retain RLS. The remote migration ledger now contains 27 versions (12 B1, six B2 and nine B3).
+- All 44 public application tables retain RLS. The remote migration ledger now contains 28 versions (12 B1, six B2, nine B3 and one B4).
 
 The first B3.3 apply attempt stopped at a PL/pgSQL parse error after its idempotent index statement had been created. The expression was simplified in the committed migration, then B3.3 was successfully reapplied; the later migrations were not attempted until it succeeded. The final catalog acceptance and index checks passed.
 
@@ -130,7 +130,7 @@ Known integration and acceptance boundaries:
 
 B4.1 shared source and the dedicated GitHub Actions Deno check workflow are committed on `main`. The workflow now also type-checks the B4.2 trip-generation entrypoint. The repository workspace has no Deno runtime; no successful Deno workflow result has been verified yet. Do not deploy functions or schedule jobs until the checks pass and required project secrets are configured.
 
-### B4.2 — Daily trip generation (source authored; remote migration not applied)
+### B4.2 — Daily trip generation (migration applied; function deployment pending)
 
 - [x] Add school-scoped driver and optional supervisor assignments to recurring route schedules, with composite school foreign keys.
 - [x] Add an authenticated school-admin RPC to assign schedule staff; database trigger enforces active staff role and same-school identity.
@@ -139,10 +139,10 @@ B4.1 shared source and the dedicated GitHub Actions Deno check workflow are comm
 - [x] Add a cron-secret-protected Edge Function entrypoint; it accepts POST only and does not accept a caller-selected service date.
 - [x] Add read-only catalog acceptance SQL and extend the Deno workflow to type-check the entrypoint.
 - [ ] Obtain a successful GitHub Actions Deno check (the Vercel status currently reports a build-rate-limit failure, which is not the Deno workflow result).
-- [ ] Apply migration `20261123090000_predrive_daily_trip_generation.sql` to the development project after explicit written approval.
+- [ ] Apply migration `20261123051100_predrive_daily_trip_generation.sql` to the development project after explicit written approval. **Complete:** applied as remote version `20261123051100` after approval.
 - [ ] Configure `CRON_SECRET` and `APP_ALLOWED_ORIGINS` in Supabase Function secrets; values must not be committed.
 - [ ] Deploy `generate-daily-trips` with platform JWT verification disabled only because the function independently verifies a high-entropy cron secret; do not schedule it until deployment and function smoke tests pass.
-- [ ] Run `supabase/tests/automation/b4_daily_trip_generation.sql` after the migration is applied.
+- [ ] Run `supabase/tests/automation/b4_daily_trip_generation.sql` after the migration is applied. **Complete:** read-only acceptance suite and catalog verification passed; no trip or demo data was generated.
 
 **Design dependency discovered:** the existing route-schedule schema did not identify a driver or supervisor, while `trips.driver_id` is mandatory. B4.2 adds those schedule assignments explicitly instead of guessing which of multiple active drivers belongs to a route. Existing schedules remain valid but are skipped by generation until an administrator assigns a driver and the route has an active bus. The current 30-method frontend API does not yet expose this new assignment RPC; B6 must add the approved adapter surface before the admin UI can manage it.
 
