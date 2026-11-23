@@ -78,7 +78,7 @@ class GreenfieldSeedApi {
     this.anonKey = config.anonKey;
   }
 
-  private async request<T>(
+  async request<T>(
     path: string,
     options: {
       method?: string;
@@ -300,7 +300,7 @@ async function ensureChild(
   api: GreenfieldSeedApi,
   adminToken: string,
   fixture: typeof GREENFIELD_CHILDREN[number],
-): Promise<string> {
+): Promise<{ id: string; created: boolean }> {
   const matches = await api.rows<ChildRow>("children", {
     school_id: "eq." + GREENFIELD_DEMO_SCHOOL_ID,
     class_group_id: "eq." + fixture.classGroupId,
@@ -309,15 +309,16 @@ async function ensureChild(
     date_of_birth: "eq." + fixture.dateOfBirth,
   });
   if (matches.length > 1) throw new Error("Duplicate child identity tuples exist in the Greenfield school.");
-  if (matches.length === 1) return matches[0].id;
+  if (matches.length === 1) return { id: matches[0].id, created: false };
 
-  return await api.rpc<string>(adminToken, "create_child", {
+  const id = await api.rpc<string>(adminToken, "create_child", {
     p_school_id: GREENFIELD_DEMO_SCHOOL_ID,
     p_first_name: fixture.firstName,
     p_last_name: fixture.lastName,
     p_date_of_birth: fixture.dateOfBirth,
     p_class_group_id: fixture.classGroupId,
   });
+  return { id, created: true };
 }
 
 async function ensureRouteAssignment(
@@ -530,7 +531,9 @@ async function main(): Promise<void> {
   let collectorsCreated = 0;
   for (let index = 0; index < GREENFIELD_CHILDREN.length; index += 1) {
     const fixture = GREENFIELD_CHILDREN[index];
-    const childId = await ensureChild(api, adminToken, fixture);
+    const child = await ensureChild(api, adminToken, fixture);
+    const childId = child.id;
+    if (child.created) childrenCreated += 1;
     const guardianEmail = GREENFIELD_GUARDIAN_EMAIL_BY_CHILD_INDEX[index];
     const guardianId = guardianEmail === CHIPO_EMAIL
       ? chipoId
@@ -540,7 +543,6 @@ async function main(): Promise<void> {
     await ensureGuardianLink(api, adminToken, guardianId, childId);
     await ensureRouteAssignment(api, adminToken, childId, fixture.routeId, fixture.routeStopId);
     collectorsCreated += await ensureCollectors(api, adminToken, childId, index, config.collectorPin);
-    if (index === 0) childrenCreated += 1;
   }
 
   const staffAssignment = {
