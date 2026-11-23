@@ -71,7 +71,21 @@ const handler = createEdgeHandler(async (request) => {
       completed += 1;
     } catch {
       if (objectPath) {
-        await client.storage.from("exports").remove([objectPath]);
+        const { data: currentRequest, error: requestStateError } = await client
+          .from("deletion_requests")
+          .select("status,export_object_path")
+          .eq("id", item.id)
+          .eq("school_id", item.school_id)
+          .maybeSingle();
+
+        const alreadyCompletedWithThisArtifact =
+          !requestStateError &&
+          currentRequest?.status === "completed" &&
+          currentRequest.export_object_path === objectPath;
+
+        if (!requestStateError && !alreadyCompletedWithThisArtifact) {
+          await client.storage.from("exports").remove([objectPath]);
+        }
       }
 
       const { error: releaseError } = await client.rpc(
