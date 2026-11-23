@@ -608,3 +608,6 @@ Requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. The RPC is intentionall
 
 
 **Collector PIN continuity:** keep `PREDRIVE_DEMO_COLLECTOR_PIN_SECRET` unchanged for all retries of a partially completed seed. Each collector receives a deterministic, distinct eight-digit PIN derived from its child index and collector slot. The database stores only the bcrypt hash; the seed never prints the derived PINs.
+
+
+**B5 execution guide:** follow `docs/B5-DEMO-SEED-RUNBOOK.md` for the approved seed order, required secret environment variables, exact commands and acceptance SQL. It deliberately separates source completion from remote activation.
