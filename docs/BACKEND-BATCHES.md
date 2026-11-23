@@ -392,3 +392,21 @@ The escalation RPC uses row-level `FOR UPDATE SKIP LOCKED` locking, increments t
 - [ ] Configure secrets, deploy and run a dry-run/controlled test before scheduling the worker.
 
 **Operational boundary:** source only. No migration, remote row deletion, export-file deletion, secret configuration, deployment or cron schedule was performed. Retention policy values are engineering defaults approved by the user, not a statement of Zimbabwean statutory retention periods.
+
+
+### B4.8.3 — Controlled deletion and child withdrawal (source authored; migration approval pending)
+
+- [x] Add a transaction-safe `execute_approved_deletion_request(school_id, request_id)` RPC in migration `20261123120000_predrive_privacy_deletion_worker.sql`.
+- [x] Lock and validate the approved `processing` request and child row before any state change.
+- [x] Place a retention hold without changing child data when an active trip or unresolved incident exists.
+- [x] Otherwise mark the child `withdrawn` and deactivate guardian links, approved collectors, temporary collectors and route assignments.
+- [x] Preserve invoices, payments, refunds, receipts, consent records, incidents, alerts, trip/attendance history and audit records.
+- [x] Hold account-wide deletion for coordinated review across every linked school and Auth lifecycle; never delete or ban Auth users in this worker.
+- [x] Add bounded indexes for GPS retention, terminal notification retention and the deletion worker queue.
+- [x] Add `process-approved-deletions`, a cron-secret-protected worker that processes only reviewed `processing` requests.
+- [x] Add read-only catalog acceptance SQL at `supabase/tests/automation/b4_privacy_acceptance.sql`.
+- [ ] Obtain explicit approval before applying migration `20261123120000` to the remote development database.
+- [ ] After approval and application, run the catalog acceptance SQL and controlled tests for child withdrawal, active-trip hold, unresolved-incident hold, account-wide hold and tenant isolation.
+- [ ] Configure secrets, deploy and smoke-test only after the migration and Deno CI pass.
+
+**Operational boundary:** migration source and worker are committed; migration has not been applied remotely. No child, account, school membership, or protected record has been changed. Account deletion remains held for coordinated review rather than pretending a single-school approval is sufficient for a multi-school account.
