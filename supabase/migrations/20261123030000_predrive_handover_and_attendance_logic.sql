@@ -21,6 +21,7 @@ as $function$
 declare
   v_trip public.trips%rowtype;
   v_trip_child public.trip_children%rowtype;
+  v_existing_event public.trip_events%rowtype;
   v_actor uuid := auth.uid();
   v_event_type text;
 begin
@@ -47,11 +48,24 @@ begin
     raise exception using errcode = '42501', message = 'ACTIVE_SUPERVISOR_TRIP_REQUIRED';
   end if;
 
-  if exists (
-    select 1 from public.trip_events e
-    where e.school_id = p_school_id and e.idempotency_key = p_idempotency_key
-  ) then
-    return;
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_school_id::text || p_idempotency_key::text, 0)
+  );
+
+  select e.* into v_existing_event
+  from public.trip_events e
+  where e.school_id = p_school_id and e.idempotency_key = p_idempotency_key;
+  if found then
+    if v_existing_event.trip_id = p_trip_id
+       and v_existing_event.event_type = case when p_status = 'absent'::public.trip_child_status
+         then 'child_marked_absent' else 'child_boarded' end
+       and exists (
+         select 1 from public.trip_children tc
+         where tc.id = v_existing_event.trip_child_id and tc.child_id = p_child_id
+       ) then
+      return;
+    end if;
+    raise exception using errcode = '23505', message = 'IDEMPOTENCY_KEY_REUSED';
   end if;
 
   select tc.* into v_trip_child
