@@ -1,6 +1,19 @@
 -- B4.8: controlled child-record withdrawal for approved privacy requests.
 -- Financial, safety, consent, trip and audit history is retained.
 
+create index if not exists bus_position_history_recorded_retention_idx
+  on public.bus_position_history (recorded_at);
+
+create index if not exists notification_deliveries_terminal_retention_idx
+  on public.notification_deliveries (updated_at)
+  where status in ('sent', 'failed', 'suppressed');
+
+create index if not exists deletion_requests_worker_queue_idx
+  on public.deletion_requests (requested_at)
+  where status = 'processing'
+    and request_type in ('account', 'child_record', 'data_export');
+
+
 create or replace function public.execute_approved_deletion_request(
   p_school_id uuid,
   p_request_id uuid
