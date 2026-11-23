@@ -49,6 +49,11 @@ begin
     where table_schema = 'public'
       and table_name = 'deletion_requests'
       and column_name = 'processing_lease_expires_at'
+  ) or not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'deletion_requests'
+      and column_name = 'export_object_path'
   ) then
     raise exception 'B4.8: export lease columns missing';
   end if;
@@ -100,7 +105,7 @@ begin
     where n.nspname = 'public'
       and p.proname = 'complete_data_export_request'
       and pg_get_function_identity_arguments(p.oid) =
-        'p_school_id uuid, p_request_id uuid, p_lease_id uuid'
+        'p_school_id uuid, p_request_id uuid, p_lease_id uuid, p_object_path text'
       and p.prosecdef
       and p.proconfig @> array['search_path=""']
       and has_function_privilege('service_role', p.oid, 'EXECUTE')
