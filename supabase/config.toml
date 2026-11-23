@@ -15,7 +15,10 @@ verify_jwt = false
 # Scheduled delivery worker authenticates independently with CRON_SECRET.
 verify_jwt = false
 
-
 [functions.enqueue-alert-escalations]
 # Scheduled invocation authenticates independently with CRON_SECRET.
+verify_jwt = false
+
+[functions.process-data-exports]
+# Scheduled worker authenticates independently with CRON_SECRET.
 verify_jwt = false
