@@ -25,9 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: github.ref == 'refs/heads/main'
-    env:
-      SUPABASE_URL: ${{ secrets.PREDRIVE_DEMO_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PREDRIVE_DEMO_SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - name: Check out main
         uses: actions/checkout@v4
@@ -72,18 +69,22 @@ jobs:
           PY
         env:
           INPUT_STAGE: ${{ inputs.stage }}
-          PREDRIVE_DEMO_ADMIN_PASSWORD: ${{ secrets.PREDRIVE_DEMO_ADMIN_PASSWORD }}
-          PREDRIVE_DEMO_GUARDIAN_PASSWORD: ${{ secrets.PREDRIVE_DEMO_GUARDIAN_PASSWORD }}
-          PREDRIVE_DEMO_SUPERVISOR_PASSWORD: ${{ secrets.PREDRIVE_DEMO_SUPERVISOR_PASSWORD }}
-          PREDRIVE_DEMO_DRIVER_PASSWORD: ${{ secrets.PREDRIVE_DEMO_DRIVER_PASSWORD }}
-          PREDRIVE_DEMO_TEACHER_PASSWORD: ${{ secrets.PREDRIVE_DEMO_TEACHER_PASSWORD }}
-          SUPABASE_ANON_KEY: ${{ secrets.PREDRIVE_DEMO_SUPABASE_ANON_KEY }}
-          PREDRIVE_DEMO_COLLECTOR_PIN_SECRET: ${{ secrets.PREDRIVE_DEMO_COLLECTOR_PIN_SECRET }}
+          SUPABASE_URL: ${{ secrets.PREDRIVE_DEMO_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PREDRIVE_DEMO_SUPABASE_SERVICE_ROLE_KEY }}
+          PREDRIVE_DEMO_ADMIN_PASSWORD: ${{ (inputs.stage == 'auth' || inputs.stage == 'households') && secrets.PREDRIVE_DEMO_ADMIN_PASSWORD || '' }}
+          PREDRIVE_DEMO_GUARDIAN_PASSWORD: ${{ inputs.stage == 'auth' && secrets.PREDRIVE_DEMO_GUARDIAN_PASSWORD || '' }}
+          PREDRIVE_DEMO_SUPERVISOR_PASSWORD: ${{ inputs.stage == 'auth' && secrets.PREDRIVE_DEMO_SUPERVISOR_PASSWORD || '' }}
+          PREDRIVE_DEMO_DRIVER_PASSWORD: ${{ inputs.stage == 'auth' && secrets.PREDRIVE_DEMO_DRIVER_PASSWORD || '' }}
+          PREDRIVE_DEMO_TEACHER_PASSWORD: ${{ inputs.stage == 'auth' && secrets.PREDRIVE_DEMO_TEACHER_PASSWORD || '' }}
+          SUPABASE_ANON_KEY: ${{ inputs.stage == 'households' && secrets.PREDRIVE_DEMO_SUPABASE_ANON_KEY || '' }}
+          PREDRIVE_DEMO_COLLECTOR_PIN_SECRET: ${{ inputs.stage == 'households' && secrets.PREDRIVE_DEMO_COLLECTOR_PIN_SECRET || '' }}
 
       - name: Provision five primary Auth identities
         if: inputs.stage == 'auth'
         run: deno run --config=deno.json --allow-env --allow-net scripts/seed-auth-users.ts
         env:
+          SUPABASE_URL: ${{ secrets.PREDRIVE_DEMO_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PREDRIVE_DEMO_SUPABASE_SERVICE_ROLE_KEY }}
           PREDRIVE_DEMO_ADMIN_PASSWORD: ${{ secrets.PREDRIVE_DEMO_ADMIN_PASSWORD }}
           PREDRIVE_DEMO_GUARDIAN_PASSWORD: ${{ secrets.PREDRIVE_DEMO_GUARDIAN_PASSWORD }}
           PREDRIVE_DEMO_SUPERVISOR_PASSWORD: ${{ secrets.PREDRIVE_DEMO_SUPERVISOR_PASSWORD }}
@@ -94,6 +95,8 @@ jobs:
         if: inputs.stage == 'households'
         run: deno run --config=deno.json --allow-env --allow-net scripts/seed-greenfield-households.ts
         env:
+          SUPABASE_URL: ${{ secrets.PREDRIVE_DEMO_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PREDRIVE_DEMO_SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_ANON_KEY: ${{ secrets.PREDRIVE_DEMO_SUPABASE_ANON_KEY }}
           PREDRIVE_DEMO_ADMIN_PASSWORD: ${{ secrets.PREDRIVE_DEMO_ADMIN_PASSWORD }}
           PREDRIVE_DEMO_COLLECTOR_PIN_SECRET: ${{ secrets.PREDRIVE_DEMO_COLLECTOR_PIN_SECRET }}
@@ -101,3 +104,6 @@ jobs:
       - name: Generate historical trips and finance records
         if: inputs.stage == 'history'
         run: deno run --config=deno.json --allow-env --allow-net scripts/seed-greenfield-history.ts
+        env:
+          SUPABASE_URL: ${{ secrets.PREDRIVE_DEMO_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PREDRIVE_DEMO_SUPABASE_SERVICE_ROLE_KEY }}
