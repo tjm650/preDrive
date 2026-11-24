@@ -122,6 +122,36 @@ It temporarily creates a second school, class, pupil and membership, switches to
 
 Then test all five primary demo logins and their role-specific restrictions. Use only synthetic records; do not send notifications or invoke live payment providers.
 
+## Secure GitHub Actions execution
+
+A manual, main-branch-only workflow is available at `.github/workflows/b5-greenfield-demo-seed.yml`. It runs the existing Deno seed scripts on GitHub-hosted runners and does not print secret values. It verifies that the configured URL resolves to the approved project ref `rjsdhgbjvghjnuiilizm`. The workflow is deliberately split into three dispatches so the read-only SQL acceptance suite can be run between stages.
+
+Before dispatching, add these repository Actions secrets under **Settings → Secrets and variables → Actions**:
+
+| GitHub Actions secret | Value |
+|---|---|
+| `PREDRIVE_DEMO_SUPABASE_URL` | `https://rjsdhgbjvghjnuiilizm.supabase.co` |
+| `PREDRIVE_DEMO_SUPABASE_SERVICE_ROLE_KEY` | Development project's service-role key |
+| `PREDRIVE_DEMO_SUPABASE_ANON_KEY` | Development project's anon/publishable key |
+| `PREDRIVE_DEMO_ADMIN_PASSWORD` | Strong password for the primary admin account |
+| `PREDRIVE_DEMO_GUARDIAN_PASSWORD` | Strong password for Chipo's account |
+| `PREDRIVE_DEMO_SUPERVISOR_PASSWORD` | Strong password for the Route A supervisor |
+| `PREDRIVE_DEMO_DRIVER_PASSWORD` | Strong password for the Route A driver |
+| `PREDRIVE_DEMO_TEACHER_PASSWORD` | Strong password for the Sunbeams teacher |
+| `PREDRIVE_DEMO_COLLECTOR_PIN_SECRET` | High-entropy secret of at least 32 characters |
+
+Do not put these values in workflow YAML, repository files, issues, pull requests or chat. The workflow maps Actions secrets to the exact environment variable names expected by the scripts.
+
+Open **Actions → B5 Greenfield demo provisioning → Run workflow**, select the `main` branch, and dispatch only one stage at a time:
+
+1. Select `auth`; after success, run `supabase/tests/seed/b5_demo_auth_acceptance.sql` in the Supabase SQL Editor and confirm it passes.
+2. Select `households`; after success, run `supabase/tests/seed/b5_demo_operational_acceptance.sql` and confirm it passes.
+3. Select `history`; after success, run `supabase/tests/seed/b5_demo_history_acceptance.sql` and confirm it passes.
+
+The workflow never deploys Edge Functions, configures cron, sends notifications, calls a live payment provider, or executes acceptance SQL. Do not proceed to the next stage if the previous stage's acceptance suite fails. The history script independently checks its RPC response against the exact expected counts.
+
+The tenant-isolation SQL test is intentionally not included in this workflow because it performs temporary remote writes. Run it only after all three acceptance suites pass and after explicit authorization for that rollback-only test.
+
 ## Current status
 
 All scripts, fixtures, migration source and acceptance SQL are committed. The Deno workflow type-checks the seed tooling and reports 86 passing tests. The Greenfield foundation is seeded and its acceptance SQL passed: 1 school, 3 classes, 3 buses, 3 routes, 15 stops, 4 fee items and 6 settings. The history-writer migration is applied as remote version `20261123133938`, and its catalog acceptance passed. No Auth users, profiles, memberships, children, trips, invoices, payments or receipts have been created yet.
