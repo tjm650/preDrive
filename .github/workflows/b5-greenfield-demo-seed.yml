@@ -1,0 +1,97 @@
+name: B5 Greenfield demo provisioning
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Provisioning stage to run against the Greenfield development tenant
+        required: true
+        type: choice
+        options:
+          - auth
+          - households
+          - history
+          - all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: predrive-greenfield-demo-seed
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Seed Greenfield demo data
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.ref == 'refs/heads/main'
+    env:
+      SUPABASE_URL: ${{ secrets.PREDRIVE_DEMO_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PREDRIVE_DEMO_SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_ANON_KEY: ${{ secrets.PREDRIVE_DEMO_SUPABASE_ANON_KEY }}
+      PREDRIVE_DEMO_ADMIN_PASSWORD: ${{ secrets.PREDRIVE_DEMO_ADMIN_PASSWORD }}
+      PREDRIVE_DEMO_GUARDIAN_PASSWORD: ${{ secrets.PREDRIVE_DEMO_GUARDIAN_PASSWORD }}
+      PREDRIVE_DEMO_SUPERVISOR_PASSWORD: ${{ secrets.PREDRIVE_DEMO_SUPERVISOR_PASSWORD }}
+      PREDRIVE_DEMO_DRIVER_PASSWORD: ${{ secrets.PREDRIVE_DEMO_DRIVER_PASSWORD }}
+      PREDRIVE_DEMO_TEACHER_PASSWORD: ${{ secrets.PREDRIVE_DEMO_TEACHER_PASSWORD }}
+      PREDRIVE_DEMO_COLLECTOR_PIN_SECRET: ${{ secrets.PREDRIVE_DEMO_COLLECTOR_PIN_SECRET }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.8
+
+      - name: Verify target project and required secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+
+          expected_host = "rjsdhgbjvghjnuiilizm.supabase.co"
+          value = os.environ.get("SUPABASE_URL", "")
+          parsed = urlparse(value)
+          if parsed.scheme != "https" or parsed.hostname != expected_host or parsed.path not in ("", "/") or parsed.query or parsed.fragment or parsed.username or parsed.password:
+              raise SystemExit("PREDRIVE_DEMO_SUPABASE_URL must target the approved Greenfield development project.")
+          required = [
+              "SUPABASE_SERVICE_ROLE_KEY",
+              "PREDRIVE_DEMO_ADMIN_PASSWORD",
+          ]
+          stage = os.environ["INPUT_STAGE"]
+          if stage in ("auth", "all"):
+              required += [
+                  "PREDRIVE_DEMO_GUARDIAN_PASSWORD",
+                  "PREDRIVE_DEMO_SUPERVISOR_PASSWORD",
+                  "PREDRIVE_DEMO_DRIVER_PASSWORD",
+                  "PREDRIVE_DEMO_TEACHER_PASSWORD",
+              ]
+          if stage in ("households", "history", "all"):
+              required += ["SUPABASE_ANON_KEY"]
+          if stage in ("households", "all"):
+              required += ["PREDRIVE_DEMO_COLLECTOR_PIN_SECRET"]
+          missing = [name for name in required if not os.environ.get(name)]
+          if missing:
+              raise SystemExit("Missing required GitHub Actions secrets: " + ", ".join(missing))
+          print("Target project and required secret presence verified; secret values were not displayed.")
+          PY
+        env:
+          INPUT_STAGE: ${{ inputs.stage }}
+
+      - name: Provision five primary Auth identities
+        if: inputs.stage == 'auth' || inputs.stage == 'all'
+        run: deno run --config=deno.json --allow-env --allow-net scripts/seed-auth-users.ts
+
+      - name: Provision households, staff, children, collectors and schedules
+        if: inputs.stage == 'households' || inputs.stage == 'all'
+        run: deno run --config=deno.json --allow-env --allow-net scripts/seed-greenfield-households.ts
+
+      - name: Generate historical trips and finance records
+        if: inputs.stage == 'history' || inputs.stage == 'all'
+        run: deno run --config=deno.json --allow-env --allow-net scripts/seed-greenfield-history.ts
