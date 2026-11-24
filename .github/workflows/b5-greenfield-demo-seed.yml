@@ -11,7 +11,6 @@ on:
           - auth
           - households
           - history
-          - all
 
 permissions:
   contents: read
@@ -62,16 +61,16 @@ jobs:
               raise SystemExit("PREDRIVE_DEMO_SUPABASE_URL must target the approved Greenfield development project.")
           required = ["SUPABASE_SERVICE_ROLE_KEY"]
           stage = os.environ["INPUT_STAGE"]
-          if stage in ("auth", "households", "all"):
+          if stage in ("auth", "households"):
               required += ["PREDRIVE_DEMO_ADMIN_PASSWORD"]
-          if stage in ("auth", "all"):
+          if stage == "auth":
               required += [
                   "PREDRIVE_DEMO_GUARDIAN_PASSWORD",
                   "PREDRIVE_DEMO_SUPERVISOR_PASSWORD",
                   "PREDRIVE_DEMO_DRIVER_PASSWORD",
                   "PREDRIVE_DEMO_TEACHER_PASSWORD",
               ]
-          if stage in ("households", "all"):
+          if stage == "households":
               required += ["SUPABASE_ANON_KEY", "PREDRIVE_DEMO_COLLECTOR_PIN_SECRET"]
           missing = [name for name in required if not os.environ.get(name)]
           if missing:
@@ -82,13 +81,13 @@ jobs:
           INPUT_STAGE: ${{ inputs.stage }}
 
       - name: Provision five primary Auth identities
-        if: inputs.stage == 'auth' || inputs.stage == 'all'
+        if: inputs.stage == 'auth'
         run: deno run --config=deno.json --allow-env --allow-net scripts/seed-auth-users.ts
 
       - name: Provision households, staff, children, collectors and schedules
-        if: inputs.stage == 'households' || inputs.stage == 'all'
+        if: inputs.stage == 'households'
         run: deno run --config=deno.json --allow-env --allow-net scripts/seed-greenfield-households.ts
 
       - name: Generate historical trips and finance records
-        if: inputs.stage == 'history' || inputs.stage == 'all'
+        if: inputs.stage == 'history'
         run: deno run --config=deno.json --allow-env --allow-net scripts/seed-greenfield-history.ts
