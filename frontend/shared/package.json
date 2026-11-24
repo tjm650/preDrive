@@ -13,7 +13,8 @@
     "./api": "./lib/api/index.ts",
     "./offline": "./lib/offline/index.ts",
     "./auth/permissions": "./lib/auth/permissions.ts",
-    "./*": "./*"
+    "./*": "./*",
+    "./supabase": "./lib/supabase/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
