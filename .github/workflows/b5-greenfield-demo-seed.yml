@@ -60,11 +60,10 @@ jobs:
           parsed = urlparse(value)
           if parsed.scheme != "https" or parsed.hostname != expected_host or parsed.path not in ("", "/") or parsed.query or parsed.fragment or parsed.username or parsed.password:
               raise SystemExit("PREDRIVE_DEMO_SUPABASE_URL must target the approved Greenfield development project.")
-          required = [
-              "SUPABASE_SERVICE_ROLE_KEY",
-              "PREDRIVE_DEMO_ADMIN_PASSWORD",
-          ]
+          required = ["SUPABASE_SERVICE_ROLE_KEY"]
           stage = os.environ["INPUT_STAGE"]
+          if stage in ("auth", "households", "all"):
+              required += ["PREDRIVE_DEMO_ADMIN_PASSWORD"]
           if stage in ("auth", "all"):
               required += [
                   "PREDRIVE_DEMO_GUARDIAN_PASSWORD",
@@ -72,10 +71,8 @@ jobs:
                   "PREDRIVE_DEMO_DRIVER_PASSWORD",
                   "PREDRIVE_DEMO_TEACHER_PASSWORD",
               ]
-          if stage in ("households", "history", "all"):
-              required += ["SUPABASE_ANON_KEY"]
           if stage in ("households", "all"):
-              required += ["PREDRIVE_DEMO_COLLECTOR_PIN_SECRET"]
+              required += ["SUPABASE_ANON_KEY", "PREDRIVE_DEMO_COLLECTOR_PIN_SECRET"]
           missing = [name for name in required if not os.environ.get(name)]
           if missing:
               raise SystemExit("Missing required GitHub Actions secrets: " + ", ".join(missing))
