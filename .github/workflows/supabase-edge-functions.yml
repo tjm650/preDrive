@@ -12,6 +12,7 @@ on:
       - "supabase/config.toml"
       - "docs/**"
       - ".github/workflows/supabase-edge-functions.yml"
+      - ".github/workflows/b5-greenfield-demo-seed.yml"
   pull_request:
     paths:
       - "supabase/functions/**"
