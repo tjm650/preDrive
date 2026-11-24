@@ -140,7 +140,7 @@ Before dispatching, add these repository Actions secrets under **Settings → Se
 | `PREDRIVE_DEMO_TEACHER_PASSWORD` | Strong password for the Sunbeams teacher |
 | `PREDRIVE_DEMO_COLLECTOR_PIN_SECRET` | High-entropy secret of at least 32 characters |
 
-Do not put these values in workflow YAML, repository files, issues, pull requests or chat. The workflow maps Actions secrets to the exact environment variable names expected by the scripts.
+Do not put these values in workflow YAML, repository files, issues, pull requests or chat. The workflow maps Actions secrets to the exact environment variable names expected by the scripts. It scopes password and PIN secrets to the relevant provisioning step rather than exposing them to every workflow step.
 
 Open **Actions → B5 Greenfield demo provisioning → Run workflow**, select the `main` branch, and dispatch only one stage at a time:
 
