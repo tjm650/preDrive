@@ -71,7 +71,7 @@ export function PasswordResetForm({ copy }: { copy: MobileAuthCopy }) {
         disabled={!mobileApi}
       />
       {message ? (
-        <View accessibilityRole="status" style={s.notice}>
+        <View accessibilityLiveRegion="polite" style={s.notice}>
           <Text style={s.noticeTitle}>{copy.resetUnavailableTitle}</Text>
           <Text style={s.noticeBody}>{message}</Text>
         </View>
