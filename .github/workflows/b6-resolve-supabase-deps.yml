@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - ".github/workflows/b6-resolve-supabase-deps.yml"
+      - "frontend/mobile/app.config.js"
 
 permissions:
   contents: write
@@ -40,7 +41,7 @@ jobs:
       - name: Install pinned Supabase SDK dependencies
         run: |
           pnpm --filter @predrive/mobile add --save-exact @supabase/supabase-js
-          pnpm --filter @predrive/mobile exec expo install expo-secure-store
+          pnpm --filter @predrive/mobile add --save-exact expo-secure-store@15.0.8 react-native-url-polyfill
           pnpm --filter @predrive/web add --save-exact @supabase/supabase-js @supabase/ssr
 
       - name: Verify workspace
