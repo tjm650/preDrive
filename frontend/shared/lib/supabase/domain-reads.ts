@@ -4,6 +4,7 @@ import type {
   Bus,
   Child,
   Incident,
+  Invoice,
   School,
   StaffMember,
   TransportRoute,
@@ -13,6 +14,7 @@ import {
   mapBus,
   mapChild,
   mapIncident,
+  mapInvoice,
   mapSchool,
   mapStaffMember,
   mapRoute,
@@ -38,6 +40,8 @@ const INCIDENT_COLUMNS =
   "id,school_id,title,description,severity,status,trip_id,child_id,reported_by,occurred_at,created_at,updated_at";
 const ALERT_COLUMNS =
   "id,school_id,title,message,severity,status,acknowledged_at,created_at,updated_at,alert_recipients(recipient_user_id)";
+const INVOICE_COLUMNS =
+  "id,school_id,child_id,guardian_user_id,invoice_number,currency,total_minor,balance_minor,status,due_date,created_at,updated_at,invoice_lines(id,description,line_total_minor)";
 
 function mapPage<T>(
   page: PageResult<DatabaseRow>,
@@ -208,6 +212,22 @@ export class SupabaseDomainReadAdapter {
       request,
     );
     return result.ok ? mapPage(result.data, mapIncident) : result;
+  }
+
+  async listInvoices(
+    request: PageRequest,
+  ): Promise<ApiResult<PageResult<Invoice>>> {
+    const result = await selectPage<DatabaseRow>(
+      this.client,
+      {
+        table: "invoices",
+        columns: INVOICE_COLUMNS,
+        orderBy: "due_date",
+        ascending: true,
+      },
+      request,
+    );
+    return result.ok ? mapPage(result.data, mapInvoice) : result;
   }
 
   async listAlerts(
