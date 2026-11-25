@@ -9,7 +9,7 @@ import type {
   UpdateSchoolSettingsInput,
   UpdateTransportRouteInput,
 } from "../api/inputs";
-import type { Child, School } from "../../types";
+import type { Bus, Child, School, TransportRoute } from "../../types";
 import type { SupabaseRuntime } from "./runtime";
 import type { SupabaseReadClient } from "./read";
 import type { SupabaseRpcClient } from "./trip-commands";
@@ -130,15 +130,15 @@ export class SupabaseAdapter implements PreDriveApi {
     };
     this.transport = {
       listBuses: (request) => this.reads.listBuses(request),
-      createBus: (_data: CreateBusInput) =>
-        unavailable("Bus creation requires the pending audited bus-management RPC."),
-      updateBus: (_busId: string, _data: UpdateBusInput) =>
-        unavailable("Bus updates require the pending audited bus-management RPC."),
+      createBus: async (_data: CreateBusInput) =>
+        unavailable<Bus>("Bus creation requires the pending audited bus-management RPC."),
+      updateBus: async (_busId: string, _data: UpdateBusInput) =>
+        unavailable<Bus>("Bus updates require the pending audited bus-management RPC."),
       listRoutes: (request) => this.reads.listRoutes(request),
-      createRoute: (_data: CreateTransportRouteInput) =>
-        unavailable("Route creation requires the pending transactional route-and-stops RPC."),
-      updateRoute: (_routeId: string, _data: UpdateTransportRouteInput) =>
-        unavailable("Route updates require the pending transactional route-and-stops RPC."),
+      createRoute: async (_data: CreateTransportRouteInput) =>
+        unavailable<TransportRoute>("Route creation requires the pending transactional route-and-stops RPC."),
+      updateRoute: async (_routeId: string, _data: UpdateTransportRouteInput) =>
+        unavailable<TransportRoute>("Route updates require the pending transactional route-and-stops RPC."),
       listTrips: (request) => this.reads.listTrips(request),
       startTrip: (data) => this.trips.startTrip(data),
       recordChildStatus: (data) => this.trips.recordChildStatus(data),
