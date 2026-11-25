@@ -7,6 +7,9 @@ on:
     paths:
       - ".github/workflows/b6-resolve-supabase-deps.yml"
       - "frontend/mobile/app.config.js"
+      - "frontend/shared/lib/supabase/**"
+      - "frontend/mobile/src/lib/supabase/**"
+      - "frontend/web/lib/supabase/**"
 
 permissions:
   contents: write
