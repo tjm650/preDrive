@@ -1,6 +1,7 @@
 import type { AuthSessionSource } from "../auth/session";
 import type { AuthenticatedSession } from "../auth/session-validation";
 import { mobileSupabase } from "./supabase/client";
+const client = mobileSupabase;
 import { mobileSupabaseRuntime } from "./supabase/runtime";
 
 async function getSnapshot(): Promise<AuthenticatedSession | null> {
@@ -23,13 +24,13 @@ async function getSnapshot(): Promise<AuthenticatedSession | null> {
 
 /** Adapts the shared Supabase session to the existing Expo auth gate. */
 export const mobileAuthSessionSource: AuthSessionSource | undefined =
-  mobileSupabase && mobileSupabaseRuntime
+  client && mobileSupabaseRuntime
     ? {
         getSnapshot,
         subscribe(listener) {
           const {
             data: { subscription },
-          } = mobileSupabase.auth.onAuthStateChange(() => {
+          } = client.auth.onAuthStateChange(() => {
             // Defer SDK reads until after the auth callback returns.
             void Promise.resolve()
               .then(getSnapshot)
