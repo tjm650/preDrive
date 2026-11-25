@@ -75,7 +75,7 @@ export class SupabaseTripCommandAdapter {
     try {
       const { data, error } = await this.client.rpc<DatabaseRow>("start_trip", {
         p_school_id: schoolId,
-        p_trip_id: input.tripId,
+        p_trip_id: input.tripId?.trim() || null,
         p_started_at: input.startedAt,
       });
       if (error) return { ok: false, error: toSupabaseApiError(error) };
@@ -157,7 +157,6 @@ export class SupabaseTripCommandAdapter {
   }): Promise<ApiResult<void>> {
     const schoolId = this.getActiveSchoolId();
     if (!schoolId) return invalid("Sign in and select a school before raising SOS.");
-    if (!input.tripId?.trim()) return invalid("An active trip is required to raise trip SOS.");
     if (input.latitude !== undefined || input.longitude !== undefined) {
       return invalid(
         "Location-aware SOS is unavailable because the current database RPC does not accept coordinates.",
