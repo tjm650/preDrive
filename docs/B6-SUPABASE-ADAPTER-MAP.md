@@ -70,7 +70,7 @@
 - Mobile sign-in and password reset forms call the shared API; the root auth provider reads Supabase sessions and role routing includes teachers.
 - Web sign-in and password reset forms call the shared API. Dashboard login accepts school-admin membership only.
 - The Vercel web project has NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY configured for Production, Preview and Development. No secret/service-role credential was added.
-- Expo EAS environment variables are not configured through the available deployment integration. Native builds still require EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY in the EAS environment. Until then, the mobile API intentionally remains unavailable rather than using an unsafe fallback.
+- Expo EAS development and preview build profiles now receive EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY from eas.json. Local Expo development still requires the same values in frontend/mobile/.env.local or the shell environment.
 - No Supabase schema or production records were changed as part of B6 adapter implementation.
 
 ## Remaining release gates
