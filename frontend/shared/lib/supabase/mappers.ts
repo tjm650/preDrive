@@ -1,6 +1,6 @@
 import type {
   Alert, Bus, Child, Incident, Invoice, InvoiceLineItem, Money, School,
-  StaffMember, Trip, UserRole,
+  StaffMember, Trip,
 } from "../../types";
 import type { CurrencyCode } from "../../types/common";
 
