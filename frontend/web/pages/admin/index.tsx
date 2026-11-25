@@ -47,6 +47,20 @@ export default function AdminOverview() {
     setError("");
     try {
       const api = getWebApi();
+      const session = await api.auth.getSession();
+      if (!session.ok || !session.data?.activeSchool) {
+        setError("Your secure school session could not be verified. Sign in again.");
+        return;
+      }
+      const membership = session.data.memberships.find(
+        (item) =>
+          item.schoolId === session.data?.activeSchool?.id &&
+          item.active,
+      );
+      if (membership?.role !== "school_admin") {
+        setError("This dashboard is available to school administrators only.");
+        return;
+      }
       const page = createPageRequest(1, 1);
       const [school, children, buses, routes, alerts, incidents, invoices] =
         await Promise.all([
