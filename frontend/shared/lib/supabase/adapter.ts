@@ -21,6 +21,7 @@ import { SupabaseCollectorReadAdapter } from "./collector-reads";
 import { SupabaseSafetyCommandAdapter } from "./safety-commands";
 import { SupabaseFinanceCommandAdapter } from "./finance-commands";
 import { mapChild, mapSchool, type DatabaseRow } from "./mappers";
+import { selectOne } from "./read";
 
 interface MutationResult {
   data: DatabaseRow | null;
@@ -90,19 +91,21 @@ export class SupabaseAdapter implements PreDriveApi {
   private readonly collectors: SupabaseCollectorReadAdapter;
   private readonly safetyCommands: SupabaseSafetyCommandAdapter;
   private readonly financeCommands: SupabaseFinanceCommandAdapter;
+  private readonly getActiveSchoolId: () => string | null;
 
   constructor(input: {
     runtime: SupabaseRuntime;
     readClient: SupabaseReadClient;
-    rpcClient: SupabaseRpcClient;
+    rpcClient: SupabaseRpcClient & SupabaseReadClient;
     mutationClient: SupabaseMutationClient;
   }) {
     const getActiveSchoolId = input.runtime.getActiveSchoolId;
+    this.getActiveSchoolId = getActiveSchoolId;
     this.reads = new SupabaseDomainReadAdapter(input.readClient, getActiveSchoolId);
     this.trips = new SupabaseTripCommandAdapter(input.rpcClient, getActiveSchoolId);
     this.collectors = new SupabaseCollectorReadAdapter(input.rpcClient, getActiveSchoolId);
     this.safetyCommands = new SupabaseSafetyCommandAdapter(
-      input.rpcClient as SupabaseRpcClient & SupabaseReadClient,
+      input.rpcClient,
       getActiveSchoolId,
     );
     this.financeCommands = new SupabaseFinanceCommandAdapter(
@@ -173,7 +176,7 @@ export class SupabaseAdapter implements PreDriveApi {
     ) {
       return validation("Check the child's name, date of birth and class.");
     }
-    const activeSchoolId = this.activeSchoolId();
+    const activeSchoolId = this.getActiveSchoolId();
     if (!activeSchoolId) return validation("Sign in and select a school before adding a child.");
 
     try {
@@ -188,7 +191,6 @@ export class SupabaseAdapter implements PreDriveApi {
       if (typeof data !== "string" || !data.trim()) {
         return unavailable("The child record could not be confirmed. Refresh before retrying.");
       }
-      const { selectOne } = await import("./read");
       const result = await selectOne<DatabaseRow>(
         readClient,
         "children",
@@ -228,10 +230,9 @@ export class SupabaseAdapter implements PreDriveApi {
           indicative_zig_per_usd: input.indicativeZigPerUsd,
         })
         .eq("id", schoolId)
-        .select("id,school_id,name,status,address,timezone,indicative_zig_per_usd,created_at,updated_at")
+        .select("id,name,status,address,timezone,indicative_zig_per_usd,created_at,updated_at")
         .maybeSingle();
       if (error) return { ok: false, error: toSupabaseApiError(error) };
-      if (data && !("school_id" in data)) data.school_id = schoolId;
       return mapRecord(data, mapSchool, "The school settings could not be found.");
     } catch (error) {
       return { ok: false, error: toSupabaseApiError(error) };
@@ -294,17 +295,4 @@ export class SupabaseAdapter implements PreDriveApi {
     }
   }
 
-  private activeSchoolId(): string | null {
-    return this.runtimeSchoolId();
-  }
-
-  private runtimeSchoolId(): string | null {
-    return this.currentSchoolId;
-  }
-
-  private get currentSchoolId(): string | null {
-    return this._getActiveSchoolId();
-  }
-
-  private _getActiveSchoolId: () => string | null = () => null;
 }
