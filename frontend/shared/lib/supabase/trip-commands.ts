@@ -128,7 +128,7 @@ export class SupabaseTripCommandAdapter {
     if (
       !input.tripId.trim() ||
       !input.childId.trim() ||
-      !/^\\d{4,8}-[0-9a-f-]{27,36}$/i.test(input.idempotencyKey) ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.idempotencyKey) ||
       !Number.isFinite(Date.parse(input.recordedAt))
     ) {
       return invalid("A valid trip, child, recording time and idempotency key are required.");
