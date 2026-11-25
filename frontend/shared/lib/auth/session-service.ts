@@ -252,6 +252,12 @@ export class AuthSessionService {
           isUsableMembership(item, identity.userId),
       )?.school ?? null;
 
+    // Restore the default membership into the tenant-scoped data adapter
+    // after a fresh app launch, not only after an explicit school switch.
+    if (activeSchoolId && activeSchoolId !== preferredSchoolId) {
+      await this.port.setActiveSchool?.(activeSchoolId);
+    }
+
     return {
       ok: true,
       data: {
