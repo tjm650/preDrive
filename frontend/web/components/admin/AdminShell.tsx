@@ -20,7 +20,6 @@ export function AdminShell({
   onSignOut?: () => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [access, setAccess] = useState<AccessState>("checking");
   const [sessionSchoolName, setSessionSchoolName] = useState(schoolName);
   const [sessionUserName, setSessionUserName] = useState(userName);
