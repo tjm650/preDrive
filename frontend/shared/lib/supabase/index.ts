@@ -9,3 +9,4 @@ export * from "./collector-reads";
 export * from "./finance-commands";
 export * from "./safety-commands";
 export * from "./adapter";
+export type { SupabaseAuthClient } from "../auth/supabase-auth-port";
