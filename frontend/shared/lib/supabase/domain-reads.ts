@@ -47,6 +47,17 @@ const INVOICE_COLUMNS =
 const TRIP_COLUMNS =
   "id,school_id,route_id,bus_id,supervisor_id,driver_id,direction,status,scheduled_at,started_at,ended_at,created_at,updated_at";
 
+function rlsReadUnavailable<T>(domain: string): ApiResult<T> {
+  return {
+    ok: false,
+    error: {
+      code: "UNAVAILABLE",
+      message: `The ${domain} read endpoint is not enabled for authenticated users yet. No records were changed. Please try again after the secure read policy is deployed.`,
+      retryable: false,
+    },
+  };
+}
+
 function mapPage<T>(
   page: PageResult<DatabaseRow>,
   mapper: (row: DatabaseRow) => T,
