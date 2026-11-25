@@ -1,0 +1,61 @@
+name: Resolve B6 Supabase dependencies
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/b6-resolve-supabase-deps.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: b6-supabase-dependencies
+  cancel-in-progress: false
+
+jobs:
+  resolve-dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install pinned Supabase SDK dependencies
+        run: |
+          pnpm --filter @predrive/mobile add --save-exact @supabase/supabase-js
+          pnpm --filter @predrive/mobile exec expo install expo-secure-store
+          pnpm --filter @predrive/web add --save-exact @supabase/supabase-js @supabase/ssr
+
+      - name: Verify workspace
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm typecheck
+
+      - name: Commit resolved manifests and lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/mobile/package.json frontend/web/package.json pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo "Dependencies are already resolved."
+            exit 0
+          fi
+          git commit -m "build(b6): pin Supabase SDK dependencies"
+          git push origin main
