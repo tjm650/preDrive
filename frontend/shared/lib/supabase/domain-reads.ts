@@ -8,6 +8,7 @@ import type {
   School,
   StaffMember,
   TransportRoute,
+  Trip,
 } from "../../types";
 import {
   mapAlert,
@@ -17,6 +18,7 @@ import {
   mapInvoice,
   mapSchool,
   mapStaffMember,
+  mapTrip,
   mapRoute,
   type DatabaseRow,
 } from "./mappers";
@@ -42,6 +44,8 @@ const ALERT_COLUMNS =
   "id,school_id,title,message,severity,status,acknowledged_at,created_at,updated_at,alert_recipients(recipient_user_id)";
 const INVOICE_COLUMNS =
   "id,school_id,child_id,guardian_user_id,invoice_number,currency,total_minor,balance_minor,status,due_date,created_at,updated_at,invoice_lines(id,description,line_total_minor)";
+const TRIP_COLUMNS =
+  "id,school_id,route_id,bus_id,supervisor_id,driver_id,direction,status,scheduled_at,started_at,ended_at,created_at,updated_at";
 
 function mapPage<T>(
   page: PageResult<DatabaseRow>,
@@ -212,6 +216,22 @@ export class SupabaseDomainReadAdapter {
       request,
     );
     return result.ok ? mapPage(result.data, mapIncident) : result;
+  }
+
+  async listTrips(
+    request: PageRequest,
+  ): Promise<ApiResult<PageResult<Trip>>> {
+    const result = await selectPage<DatabaseRow>(
+      this.client,
+      {
+        table: "trips",
+        columns: TRIP_COLUMNS,
+        orderBy: "scheduled_at",
+        ascending: false,
+      },
+      request,
+    );
+    return result.ok ? mapPage(result.data, mapTrip) : result;
   }
 
   async listInvoices(
