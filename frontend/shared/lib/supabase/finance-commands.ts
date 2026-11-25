@@ -162,37 +162,15 @@ export class SupabaseFinanceCommandAdapter {
 
   async getReceipt(paymentId: string): Promise<ApiResult<PaymentReceipt>> {
     if (!paymentId.trim()) return validation("A valid payment is required.");
-    try {
-      const { data, error } = await this.client
-        .from("receipts")
-        .select("id,school_id,payment_id,receipt_number,issued_at,created_at")
-        .eq("payment_id", paymentId)
-        .maybeSingle<DatabaseRow>();
-      if (error) return { ok: false, error: toSupabaseApiError(error) };
-      if (!data) {
-        return {
-          ok: false,
-          error: {
-            code: "NOT_FOUND",
-            message: "A receipt is not available for this payment yet.",
-            retryable: false,
-          },
-        };
-      }
-      try {
-        return { ok: true, data: mapReceipt(data) };
-      } catch {
-        return {
-          ok: false,
-          error: {
-            code: "UNAVAILABLE",
-            message: "The receipt could not be loaded. Please try again.",
-            retryable: true,
-          },
-        };
-      }
-    } catch (error) {
-      return { ok: false, error: toSupabaseApiError(error) };
-    }
+    return {
+      ok: false,
+      error: {
+        code: "UNAVAILABLE",
+        message:
+          "Receipt reads are not enabled for authenticated users yet. A secure read endpoint must be deployed before receipt availability can be determined.",
+        retryable: false,
+      },
+    };
   }
+
 }
