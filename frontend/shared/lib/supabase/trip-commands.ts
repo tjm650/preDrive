@@ -122,10 +122,32 @@ export class SupabaseTripCommandAdapter {
     }
   }
 
-  async recordChildStatus(_input: ChildStatusInput): Promise<ApiResult<void>> {
-    return invalid(
-      "Child status recording is unavailable until the API supplies the required boarding status.",
-    );
+  async recordChildStatus(input: ChildStatusInput): Promise<ApiResult<void>> {
+    const schoolId = this.getActiveSchoolId();
+    if (!schoolId) return invalid("Sign in and select a school before recording a child status.");
+    if (
+      !input.tripId.trim() ||
+      !input.childId.trim() ||
+      !/^\\d{4,8}-[0-9a-f-]{27,36}$/i.test(input.idempotencyKey) ||
+      !Number.isFinite(Date.parse(input.recordedAt))
+    ) {
+      return invalid("A valid trip, child, recording time and idempotency key are required.");
+    }
+
+    try {
+      const { error } = await this.client.rpc<void>("record_child_status", {
+        p_school_id: schoolId,
+        p_trip_id: input.tripId,
+        p_child_id: input.childId,
+        p_recorded_at: input.recordedAt,
+        p_idempotency_key: input.idempotencyKey,
+        p_status: "on_board",
+      });
+      if (error) return { ok: false, error: toSupabaseApiError(error) };
+      return { ok: true, data: undefined };
+    } catch (error) {
+      return { ok: false, error: toSupabaseApiError(error) };
+    }
   }
 
   async raiseSos(input: {
