@@ -1,5 +1,5 @@
 import { createSupabaseRuntime } from "@predrive/shared/supabase";
-import type { SupabaseAuthClient } from "@predrive/shared/lib/auth/supabase-auth-port";
+import type { SupabaseAuthClient } from "@predrive/shared/supabase";
 import { getSupabaseBrowserClient } from "./client";
 
 let runtime: ReturnType<typeof createSupabaseRuntime> | undefined;
