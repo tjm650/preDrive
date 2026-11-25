@@ -6,6 +6,7 @@ import type {
   Incident,
   School,
   StaffMember,
+  TransportRoute,
 } from "../../types";
 import {
   mapAlert,
@@ -14,6 +15,7 @@ import {
   mapIncident,
   mapSchool,
   mapStaffMember,
+  mapRoute,
   type DatabaseRow,
 } from "./mappers";
 import {
@@ -30,6 +32,8 @@ const STAFF_COLUMNS =
   "id,school_id,user_id,full_name,role,phone,active,created_at,updated_at";
 const BUS_COLUMNS =
   "id,school_id,registration_number,make,model,capacity,status,created_at,updated_at";
+const ROUTE_COLUMNS =
+  "id,school_id,name,code,status,assigned_bus_id,created_at,updated_at,route_stops(id,name,address,stop_order,location,active)";
 const INCIDENT_COLUMNS =
   "id,school_id,title,description,severity,status,trip_id,child_id,reported_by,occurred_at,created_at,updated_at";
 const ALERT_COLUMNS =
@@ -172,6 +176,22 @@ export class SupabaseDomainReadAdapter {
       request,
     );
     return result.ok ? mapPage(result.data, mapBus) : result;
+  }
+
+  async listRoutes(
+    request: PageRequest,
+  ): Promise<ApiResult<PageResult<TransportRoute>>> {
+    const result = await selectPage<DatabaseRow>(
+      this.client,
+      {
+        table: "transport_routes",
+        columns: ROUTE_COLUMNS,
+        orderBy: "name",
+        ascending: true,
+      },
+      request,
+    );
+    return result.ok ? mapPage(result.data, mapRoute) : result;
   }
 
   async listIncidents(
