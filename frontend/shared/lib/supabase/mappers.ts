@@ -108,6 +108,73 @@ export function mapBus(row: DatabaseRow): Bus {
   };
 }
 
+function optionalCoordinate(value: unknown): { latitude: number; longitude: number } | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const location = value as DatabaseRow;
+  const coordinates = location.coordinates;
+  if (
+    location.type !== "Point" ||
+    !Array.isArray(coordinates) ||
+    coordinates.length < 2
+  ) {
+    return undefined;
+  }
+
+  const longitude = coordinates[0];
+  const latitude = coordinates[1];
+  if (
+    typeof longitude !== "number" ||
+    typeof latitude !== "number" ||
+    !Number.isFinite(longitude) ||
+    !Number.isFinite(latitude) ||
+    longitude < -180 ||
+    longitude > 180 ||
+    latitude < -90 ||
+    latitude > 90
+  ) {
+    return undefined;
+  }
+
+  return { latitude, longitude };
+}
+
+export function mapRoute(row: DatabaseRow): import("../../types").TransportRoute {
+  const status = requiredString(row, "status");
+  if (status !== "active" && status !== "inactive") {
+    throw new Error("Invalid database record");
+  }
+
+  const stopRows = row.route_stops;
+  if (!Array.isArray(stopRows)) throw new Error("Invalid database record");
+
+  const stops = stopRows
+    .filter((item): item is DatabaseRow => typeof item === "object" && item !== null)
+    .filter((stop) => stop.active !== false)
+    .map((stop) => {
+      const coordinate = optionalCoordinate(stop.location);
+      return {
+        id: requiredString(stop, "id"),
+        name: requiredString(stop, "name"),
+        address: requiredString(stop, "address"),
+        order: requiredNumber(stop, "stop_order"),
+        ...(coordinate ? { coordinate } : {}),
+      };
+    })
+    .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+
+  return {
+    ...timestamps(row),
+    schoolId: schoolId(row),
+    name: requiredString(row, "name"),
+    code: requiredString(row, "code"),
+    status,
+    stops,
+    ...(optionalString(row, "assigned_bus_id")
+      ? { busId: optionalString(row, "assigned_bus_id") }
+      : {}),
+  };
+}
+
 export function mapTrip(row: DatabaseRow): Trip {
   const direction = requiredString(row, "direction");
   const status = requiredString(row, "status");
