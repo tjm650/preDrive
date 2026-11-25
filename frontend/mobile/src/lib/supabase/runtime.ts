@@ -1,5 +1,5 @@
 import { createSupabaseRuntime } from "@predrive/shared/supabase";
-import type { SupabaseAuthClient } from "@predrive/shared/lib/auth/supabase-auth-port";
+import type { SupabaseAuthClient } from "@predrive/shared/supabase";
 import { mobileSupabase } from "./client";
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
