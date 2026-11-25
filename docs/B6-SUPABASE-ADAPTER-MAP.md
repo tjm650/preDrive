@@ -33,13 +33,13 @@
 | Transport | recordChildStatus | Implemented for boarding only: sends p_status = on_board. The input cannot express absent or alighting. `record_child_status(p_school_id,p_trip_id,p_child_id,p_recorded_at,p_idempotency_key,p_status)`. The contract must distinguish boarding from alighting before mapping the enum. |
 | Transport | verifyHandover | Implemented:  `verify_handover(p_school_id,p_trip_id,p_child_id,p_collector_id,p_pin)`; PIN is sent only to the RPC over TLS and never stored client-side. |
 | Transport | listApprovedCollectors | Implemented:  `list_approved_collectors(p_school_id,p_child_id)`; RPC result excludes PIN hash and lock internals. |
-| Safety | listAlerts | Implemented:  `alerts` joined to `alert_recipients`; recipient IDs must be limited to the signed-in user's school/recipient scope. |
-| Safety | listIncidents | Implemented:  `incidents`. |
+| Safety | listAlerts | Deliberately fails closed: live `alerts` and `alert_recipients` have RLS enabled but no authenticated SELECT policies. A role-scoped read RPC or reviewed RLS policy is required. |
+| Safety | listIncidents | Deliberately fails closed: live `incidents` has RLS enabled but no authenticated SELECT policy. A role-scoped read RPC or reviewed RLS policy is required. |
 | Safety | createIncident | Implemented:  `create_incident(p_school_id,p_title,p_description,p_severity,p_trip_id,p_child_id)`. |
 | Safety | raiseSos | Implemented only when coordinates are omitted; coordinate-bearing requests fail validation. `raise_sos(p_school_id,p_trip_id)`; the current RPC does not accept client coordinates. Do not silently add coordinates to an unsupported RPC. |
-| Finance | listInvoices | Implemented: minor-unit conversion currently uses 100:1; currency scale still needs accounting acceptance. `invoices` with `invoice_lines`; map integer minor units to the shared `Money` type only after confirming currency scale. |
+| Finance | listInvoices | Deliberately fails closed: live `invoices` and `invoice_lines` have RLS enabled but no authenticated SELECT policies. Currency minor-unit scale also remains unverified. |
 | Finance | initiatePayment | Implemented: creates pending simulated/manual payments only; does not represent provider settlement. `initiate_payment(p_school_id,p_invoice_id,p_amount_minor,p_currency,p_method,p_idempotency_key)`; never call the provider from the client. |
-| Finance | getReceipt | Implemented: receipt lookup; returns NOT_FOUND until issued. `receipts` by payment ID, with document access mediated by a short-lived authorized Storage URL if a file is required. |
+| Finance | getReceipt | Deliberately fails closed: live `receipts` has RLS enabled but no authenticated SELECT policy. It no longer reports a false NOT_FOUND for a row hidden by RLS. |
 
 ## Live schema facts confirmed
 
@@ -85,3 +85,11 @@
 8. Confirm SOS coordinate handling, currency minor-unit scale and receipt issuance semantics with end-to-end tests; add authenticated RLS tests for each role, adapter contract tests, and mobile/web sign-in smoke tests.
 
 Do not claim B6 complete until these gates pass.
+
+
+## Live security-advisor findings (25 November 2026)
+
+- Supabase security advisor reports 21 RLS-enabled public tables without policies. This is fail-closed by default, but means direct authenticated reads return no visible rows. The adapter explicitly blocks the affected alert, incident, invoice and receipt reads until safe role-scoped access is deployed.
+- The advisor also reports 42 `SECURITY DEFINER` functions executable by `authenticated`. This is not automatically a vulnerability: operational RPCs require authenticated execution. Each function must be reviewed for `auth.uid()` checks, tenant membership, role checks, fixed `search_path`, and parameter validation. Several inspected operational functions set an empty search path and validate the actor/role; the full set still requires review.
+- `pg_net` is installed in `public`; advisor recommends moving it to a non-exposed schema. This is a database maintenance change and is not applied as part of this source-only batch.
+- No production database changes were applied during this audit.
