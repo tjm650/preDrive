@@ -109,7 +109,7 @@ export class SupabaseAdapter implements PreDriveApi {
       getActiveSchoolId,
     );
     this.financeCommands = new SupabaseFinanceCommandAdapter(
-      input.rpcClient as SupabaseRpcClient & SupabaseReadClient,
+      input.rpcClient,
       getActiveSchoolId,
     );
 
@@ -163,8 +163,6 @@ export class SupabaseAdapter implements PreDriveApi {
     readClient: SupabaseReadClient,
     input: CreateChildInput,
   ): Promise<ApiResult<Child>> {
-    const schoolId = this.reads["getActiveSchoolId"];
-    void schoolId;
     if (
       input.firstName.trim().length < 1 ||
       input.firstName.trim().length > 100 ||
@@ -208,7 +206,7 @@ export class SupabaseAdapter implements PreDriveApi {
     client: SupabaseMutationClient,
     input: UpdateSchoolSettingsInput,
   ): Promise<ApiResult<School>> {
-    const schoolId = this.activeSchoolId();
+    const schoolId = this.getActiveSchoolId();
     if (!schoolId) return validation("Sign in and select a school before updating school settings.");
     if (
       input.name.trim().length < 2 ||
@@ -270,7 +268,6 @@ export class SupabaseAdapter implements PreDriveApi {
       values.class_group_id = input.classGroupId;
     }
     if (Object.keys(values).length === 0) {
-      const { selectOne } = await import("./read");
       const result = await selectOne<DatabaseRow>(
         readClient,
         "children",
