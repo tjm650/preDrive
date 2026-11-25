@@ -1,6 +1,6 @@
 # B6 Supabase Adapter Implementation Map
 
-**Status:** B6 source adapters and both platform client bootstraps implemented; live app configuration, complete domain coverage and end-to-end verification remain in progress.
+**Status:** B6 source adapters and both platform client bootstraps implemented; production web deployment is READY and workspace TypeScript checks pass. Authenticated end-to-end verification and secure read access for several RLS-protected domains remain release gates.
 **Source of truth:** `BRIEF.md`, `frontend/shared/lib/api/contract.ts`, shared domain types, and the live development database schema inspected read-only on 25 November 2026.
 
 ## Security invariants
@@ -43,7 +43,7 @@
 
 ## Live schema facts confirmed
 
-- The inspected public tables have RLS enabled, including tenant, child, staff, transport, safety and finance tables.
+- The inspected public tables have RLS enabled. However, the live security advisor and `pg_policies` inspection found no authenticated policies on `alerts`, `alert_recipients`, `incidents`, `invoices`, `invoice_lines`, `payments` and `receipts` (among 21 tables total). RLS therefore denies direct authenticated reads from these tables. The adapter now fails closed for alert, incident, invoice and receipt reads instead of presenting an empty result or false NOT_FOUND. Safe read RPCs/policies must be added before enabling those reads.
 - Tenant root is `schools`; memberships are in `school_memberships`; user profiles are in `profiles`.
 - Children are linked to `class_groups`; guardian relationships are represented by `guardian_children`.
 - Routes use `transport_routes` and `route_stops`; stop coordinates are stored as PostGIS `geography`.
@@ -78,10 +78,10 @@
 1. Confirm CI has committed the real dependency manifests and lockfile, then pass workspace typecheck and web production build.
 2. Configure Expo EAS public environment variables and run a development build; Expo Go cannot fully validate native SecureStore-backed session behavior.
 3. Add a password-reset completion screen and verify the recovery redirect flow.
-4. Resolve ChildStatusInput so absent/alighting events can be expressed; the current adapter implements boarding only.
-5. Resolve nullable database trips.supervisor_id versus required shared Trip.supervisorId.
-6. Implement transactional route/bus mutations and audit semantics; the adapter currently fails closed for those methods.
-7. Confirm SOS coordinate handling, currency minor-unit scale and receipt issuance semantics with end-to-end tests.
-8. Add authenticated RLS tests for each role, adapter contract tests, and mobile/web sign-in smoke tests.
+4. Add secure, role-scoped read RPCs or reviewed RLS policies for alerts, incidents, invoices and receipts; current direct reads fail closed because those tables have no authenticated policies.
+5. Resolve ChildStatusInput so absent/alighting events can be expressed; the current adapter implements boarding only.
+6. Resolve nullable database trips.supervisor_id versus required shared Trip.supervisorId.
+7. Implement transactional route/bus mutations and audit semantics; the adapter currently fails closed for those methods.
+8. Confirm SOS coordinate handling, currency minor-unit scale and receipt issuance semantics with end-to-end tests; add authenticated RLS tests for each role, adapter contract tests, and mobile/web sign-in smoke tests.
 
 Do not claim B6 complete until these gates pass.
