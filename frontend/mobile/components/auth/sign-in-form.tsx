@@ -117,7 +117,7 @@ export function SignInForm({ copy }: { copy: MobileAuthCopy }) {
         </View>
       ) : null}
       {!mobileApi ? (
-        <View accessibilityRole="status" style={s.notice}>
+        <View accessibilityLiveRegion="polite" style={s.notice}>
           <Text style={s.noticeTitle}>{copy.serviceUnavailableTitle}</Text>
           <Text style={s.noticeBody}>{copy.serviceUnavailableDescription}</Text>
         </View>
