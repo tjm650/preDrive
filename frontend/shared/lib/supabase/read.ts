@@ -14,7 +14,8 @@ export interface SupabaseReadQuery<T> extends PromiseLike<SupabaseReadResult<T>>
     options?: { ascending?: boolean; nullsFirst?: boolean },
   ): SupabaseReadQuery<T>;
   range(from: number, to: number): SupabaseReadQuery<T>;
-  maybeSingle(): PromiseLike<SupabaseReadResult<T>>;
+  eq(column: string, value: string): SupabaseReadQuery<T>;
+  maybeSingle<U = T>(): PromiseLike<SupabaseReadResult<U>>;
 }
 
 export interface SupabaseReadClient {
@@ -139,12 +140,8 @@ export async function selectOne<T>(
   }
 
   try {
-    const query = client
-      .from(table)
-      .select(columns)
-      .order("id", { ascending: true }) as SupabaseReadQuery<unknown[]>;
-
-    const { data, error } = await query.maybeSingle();
+    const query = client.from(table).select(columns) as SupabaseReadQuery<unknown[]>;
+    const { data, error } = await query.eq("id", id).maybeSingle<Record<string, unknown>>();
     if (error) return { ok: false, error: toSupabaseApiError(error) };
     if (data === null) {
       return {
