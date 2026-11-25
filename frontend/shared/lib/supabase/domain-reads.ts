@@ -11,11 +11,8 @@ import type {
   Trip,
 } from "../../types";
 import {
-  mapAlert,
   mapBus,
   mapChild,
-  mapIncident,
-  mapInvoice,
   mapSchool,
   mapStaffMember,
   mapTrip,
@@ -38,12 +35,6 @@ const BUS_COLUMNS =
   "id,school_id,registration_number,make,model,capacity,status,created_at,updated_at";
 const ROUTE_COLUMNS =
   "id,school_id,name,code,status,assigned_bus_id,created_at,updated_at,route_stops(id,name,address,stop_order,location,active)";
-const INCIDENT_COLUMNS =
-  "id,school_id,title,description,severity,status,trip_id,child_id,reported_by,occurred_at,created_at,updated_at";
-const ALERT_COLUMNS =
-  "id,school_id,title,message,severity,status,acknowledged_at,created_at,updated_at,alert_recipients(recipient_user_id)";
-const INVOICE_COLUMNS =
-  "id,school_id,child_id,guardian_user_id,invoice_number,currency,total_minor,balance_minor,status,due_date,created_at,updated_at,invoice_lines(id,description,line_total_minor)";
 const TRIP_COLUMNS =
   "id,school_id,route_id,bus_id,supervisor_id,driver_id,direction,status,scheduled_at,started_at,ended_at,created_at,updated_at";
 
@@ -214,19 +205,9 @@ export class SupabaseDomainReadAdapter {
   }
 
   async listIncidents(
-    request: PageRequest,
+    _request: PageRequest,
   ): Promise<ApiResult<PageResult<Incident>>> {
-    const result = await selectPage<DatabaseRow>(
-      this.client,
-      {
-        table: "incidents",
-        columns: INCIDENT_COLUMNS,
-        orderBy: "occurred_at",
-        ascending: false,
-      },
-      request,
-    );
-    return result.ok ? mapPage(result.data, mapIncident) : result;
+    return rlsReadUnavailable("Incident");
   }
 
   async listTrips(
@@ -246,34 +227,15 @@ export class SupabaseDomainReadAdapter {
   }
 
   async listInvoices(
-    request: PageRequest,
+    _request: PageRequest,
   ): Promise<ApiResult<PageResult<Invoice>>> {
-    const result = await selectPage<DatabaseRow>(
-      this.client,
-      {
-        table: "invoices",
-        columns: INVOICE_COLUMNS,
-        orderBy: "due_date",
-        ascending: true,
-      },
-      request,
-    );
-    return result.ok ? mapPage(result.data, mapInvoice) : result;
+    return rlsReadUnavailable("Invoice");
   }
 
   async listAlerts(
-    request: PageRequest,
+    _request: PageRequest,
   ): Promise<ApiResult<PageResult<Alert>>> {
-    const result = await selectPage<DatabaseRow>(
-      this.client,
-      {
-        table: "alerts",
-        columns: ALERT_COLUMNS,
-        orderBy: "created_at",
-        ascending: false,
-      },
-      request,
-    );
-    return result.ok ? mapPage(result.data, mapAlert) : result;
+    return rlsReadUnavailable("Alert");
   }
+
 }
