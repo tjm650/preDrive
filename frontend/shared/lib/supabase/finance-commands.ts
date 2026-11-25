@@ -1,8 +1,7 @@
 import type { ApiResult } from "../api/types";
 import type { InitiatePaymentInput } from "../api/inputs";
-import type { Money } from "../../types/common";
+import type { CurrencyCode, Money } from "../../types/common";
 import type {
-  CurrencyCode,
   Payment,
   PaymentMethod,
   PaymentReceipt,
