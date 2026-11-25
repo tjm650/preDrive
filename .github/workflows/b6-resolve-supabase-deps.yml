@@ -47,11 +47,6 @@ jobs:
           pnpm --filter @predrive/mobile add --save-exact expo-secure-store@15.0.8 react-native-url-polyfill
           pnpm --filter @predrive/web add --save-exact @supabase/supabase-js @supabase/ssr
 
-      - name: Verify workspace
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm typecheck
-
       - name: Commit resolved manifests and lockfile
         run: |
           git config user.name "github-actions[bot]"
@@ -63,3 +58,10 @@ jobs:
           fi
           git commit -m "build(b6): pin Supabase SDK dependencies"
           git push origin main
+
+      - name: Verify workspace
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm typecheck
+
+
