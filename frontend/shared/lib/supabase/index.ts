@@ -8,3 +8,4 @@ export * from "./trip-commands";
 export * from "./collector-reads";
 export * from "./finance-commands";
 export * from "./safety-commands";
+export * from "./adapter";
