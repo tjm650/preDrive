@@ -15,6 +15,7 @@ if (isAndroidEasBuild && !googleServicesFile) {
 
 module.exports = {
   ...appJson.expo,
+  plugins: [...(appJson.expo.plugins ?? []), "expo-secure-store"],
   android: {
     ...appJson.expo.android,
     ...(googleServicesFile ? { googleServicesFile } : {}),
