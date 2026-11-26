@@ -1,19 +1,18 @@
 import { createSupabaseRuntime } from "@predrive/shared/supabase";
 import type { SupabaseAuthClient } from "@predrive/shared/supabase";
-import { mobileSupabase } from "./client";
-
-const url = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-const publishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+import { mobileSupabase, mobileSupabaseConfig } from "./client";
 
 /**
  * Shared authentication/session services composed with the native Supabase
- * client. Data modules are attached to the same authenticated client by the
- * application API factory.
+ * client. Uses the same resolved public configuration as the SDK client.
  */
 export const mobileSupabaseRuntime =
-  mobileSupabase && url && publishableKey
+  mobileSupabase && mobileSupabaseConfig.url && mobileSupabaseConfig.publishableKey
     ? createSupabaseRuntime({
-        config: { url, publishableKey },
+        config: {
+          url: mobileSupabaseConfig.url,
+          publishableKey: mobileSupabaseConfig.publishableKey,
+        },
         client: mobileSupabase as unknown as SupabaseAuthClient,
       })
     : null;
