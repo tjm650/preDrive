@@ -22,6 +22,8 @@
       "typedRoutes": true
     },
     "extra": {
+      "supabaseUrl": "https://rjsdhgbjvghjnuiilizm.supabase.co",
+      "supabasePublishableKey": "sb_publishable_gDQQYCpTNj_B0jeh3lUrjA_lwt9goQ1",
       "eas": {
         "projectId": "6b904474-dcd6-4602-8ee1-b530850e6ded"
       }
