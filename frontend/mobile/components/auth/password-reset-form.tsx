@@ -21,7 +21,7 @@ export function PasswordResetForm({ copy }: { copy: MobileAuthCopy }) {
       setMessage("");
       return;
     }
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       setError(copy.emailInvalid);
       setMessage("");
       return;
