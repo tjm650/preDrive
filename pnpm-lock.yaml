@@ -42,7 +42,7 @@ importers:
         specifier: ~6.0.0
         version: 6.0.24(e155e354b26f5ff9e85622b4136b82d1)
       expo-secure-store:
-        specifier: 15.0.8
+        specifier: ~15.0.8
         version: 15.0.8(expo@54.0.38)
       expo-status-bar:
         specifier: ~3.0.0
