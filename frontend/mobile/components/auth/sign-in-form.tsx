@@ -26,7 +26,7 @@ export function SignInForm({ copy }: { copy: MobileAuthCopy }) {
 
   async function submit() {
     const normalized = email.trim();
-    const valid = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalized);
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
     setEmailError(!normalized ? copy.emailRequired : !valid ? copy.emailInvalid : "");
     setPasswordError(password ? "" : copy.passwordRequired);
     setErrorMessage("");
